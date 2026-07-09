@@ -75,7 +75,11 @@ export class UniversitiesService {
 
     try {
       return await this.schemasService.findByUniversityId(id);
-    } catch {
+    } catch (error) {
+      if (!(error instanceof NotFoundException)) {
+        throw error;
+      }
+
       throw new NotFoundException(`University "${id}" was not found.`);
     }
   }

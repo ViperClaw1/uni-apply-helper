@@ -11,6 +11,7 @@ const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
+const applications_module_js_1 = require("./applications/applications.module.js");
 const documents_module_js_1 = require("./documents/documents.module.js");
 const letters_module_js_1 = require("./letters/letters.module.js");
 const notifications_module_1 = require("./notifications/notifications.module");
@@ -28,6 +29,7 @@ exports.AppModule = AppModule = __decorate([
             config_1.ConfigModule.forRoot({ isGlobal: true }),
             prisma_module_1.PrismaModule,
             queue_module_1.QueueModule,
+            applications_module_js_1.ApplicationsModule,
             documents_module_js_1.DocumentsModule,
             letters_module_js_1.LettersModule,
             notifications_module_1.NotificationsModule,

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { ApplicationsModule } from './applications/applications.module.js';
 import { DocumentsModule } from './documents/documents.module.js';
 import { LettersModule } from './letters/letters.module.js';
 import { NotificationsModule } from './notifications/notifications.module';
@@ -16,6 +17,7 @@ import { WebhookModule } from './webhook/webhook.module';
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
     QueueModule,
+    ApplicationsModule,
     DocumentsModule,
     LettersModule,
     NotificationsModule,

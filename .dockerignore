@@ -1,0 +1,14 @@
+.cursor
+.env
+**/.env
+**/.env.*
+!**/.env.example
+**/dist
+**/node_modules
+coverage
+.git
+.gitignore
+Dockerfile
+docker-compose.yml
+pnpm-store
+

@@ -1,4 +1,38 @@
 services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP: api
+    env_file:
+      - path: apps/api/.env
+        required: false
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/uni_apply
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "3000:3000"
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP: worker
+    env_file:
+      - path: apps/worker/.env
+        required: false
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/uni_apply
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+
   postgres:
     image: postgres:16-alpine
     environment:

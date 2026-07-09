@@ -4,14 +4,14 @@ export declare class StudentsController {
     constructor(studentsService: StudentsService);
     findAll(): Promise<({
         applicationTargets: {
-            id: string;
-            studentId: string;
             universityRaw: string;
             universityId: string | null;
             degree: string | null;
             major: string | null;
             duration: string | null;
             fundingSource: string | null;
+            id: string;
+            studentId: string;
         }[];
     } & {
         id: string;

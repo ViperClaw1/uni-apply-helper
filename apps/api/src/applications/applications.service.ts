@@ -1,0 +1,455 @@
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { QUEUES } from '@uni-apply/shared';
+import type { StudentProfile } from '@uni-apply/shared';
+import { NotificationsService } from '../notifications/notifications.service.js';
+import { PrismaService } from '../prisma/prisma.service.js';
+import { QueueService } from '../queue/queue.service.js';
+import { StudentsService } from '../students/students.service.js';
+import { UniversitiesService } from '../universities/universities.service.js';
+import type {
+  ApplicationBatchResponse,
+  ApplicationProcessJobData,
+  ApplicationResponse,
+  ApplicationStatus,
+  ApplicationStepResponse,
+  CreateApplicationBatchInput,
+  UpdateApplicationInput,
+} from './types/application-api.types.js';
+
+type ApplicationTarget = StudentProfile['applicationTargets'][number];
+
+type ApplicationRecord = {
+  id: string;
+  batchId: string;
+  universityId: string;
+  status: string;
+  blockedReason: string | null;
+  motivationLetterId: string | null;
+  screenshotBefore: string | null;
+  screenshotAfter: string | null;
+  submittedAt: Date | null;
+  errorMessage: string | null;
+  createdAt: Date;
+  steps: ApplicationStepRecord[];
+};
+
+type ApplicationStepRecord = {
+  id: string;
+  applicationId: string;
+  stepName: string;
+  status: string;
+  errorMessage: string | null;
+  startedAt: Date | null;
+  completedAt: Date | null;
+};
+
+type ApplicationBatchRecord = {
+  id: string;
+  studentId: string;
+  status: string;
+  total: number;
+  submitted: number;
+  blocked: number;
+  failed: number;
+  createdAt: Date;
+  applications: ApplicationRecord[];
+};
+
+type PreparedApplication = {
+  universityId: string;
+  status: ApplicationStatus;
+  blockedReason?: string;
+  motivationLetterId?: string;
+};
+
+type PreparedBatch = {
+  applications: PreparedApplication[];
+  unresolvedTargets: string[];
+};
+
+@Injectable()
+export class ApplicationsService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly studentsService: StudentsService,
+    private readonly universitiesService: UniversitiesService,
+    private readonly queueService: QueueService,
+    private readonly notificationsService: NotificationsService,
+  ) {}
+
+  async createBatch(
+    input: CreateApplicationBatchInput,
+  ): Promise<ApplicationBatchResponse> {
+    if (!input.studentId?.trim()) {
+      throw new BadRequestException('studentId is required.');
+    }
+
+    const profile = await this.studentsService.getFullProfile(input.studentId);
+
+    if (profile.applicationTargets.length === 0) {
+      throw new BadRequestException('Student has no application targets.');
+    }
+
+    const prepared = await this.prepareApplications(profile);
+    const unresolvedCount = prepared.unresolvedTargets.length;
+    const blockedCount =
+      prepared.applications.filter((application) => application.status === 'blocked')
+        .length + unresolvedCount;
+
+    const batch = await this.prisma.applicationBatch.create({
+      data: {
+        studentId: input.studentId,
+        total: profile.applicationTargets.length,
+        blocked: blockedCount,
+        status: prepared.applications.some(
+          (application) => application.status === 'queued',
+        )
+          ? 'queued'
+          : 'completed',
+        applications: {
+          create: prepared.applications.map((application) => ({
+            universityId: application.universityId,
+            status: application.status,
+            blockedReason: application.blockedReason,
+            motivationLetterId: application.motivationLetterId,
+            steps: {
+              create: [
+                {
+                  stepName: 'validate_requirements',
+                  status:
+                    application.status === 'blocked' ? 'blocked' : 'completed',
+                  errorMessage: application.blockedReason,
+                  startedAt: new Date(),
+                  completedAt: new Date(),
+                },
+              ],
+            },
+          })),
+        },
+      },
+      include: this.batchInclude,
+    });
+
+    await this.enqueueQueuedApplications(batch);
+    await this.notifyUnresolvedTargets(profile, prepared.unresolvedTargets);
+    await this.notificationsService.notifyBatchCreated(batch, profile);
+
+    return this.toBatchResponse(batch);
+  }
+
+  async findByStudent(studentId: string): Promise<ApplicationBatchResponse[]> {
+    await this.studentsService.findOne(studentId);
+
+    const batches = await this.prisma.applicationBatch.findMany({
+      where: { studentId },
+      orderBy: { createdAt: 'desc' },
+      include: this.batchInclude,
+    });
+
+    return batches.map((batch) => this.toBatchResponse(batch));
+  }
+
+  async findBatch(id: string): Promise<ApplicationBatchResponse> {
+    const batch = await this.prisma.applicationBatch.findUnique({
+      where: { id },
+      include: this.batchInclude,
+    });
+
+    if (!batch) {
+      throw new NotFoundException(`Application batch "${id}" was not found.`);
+    }
+
+    return this.toBatchResponse(batch);
+  }
+
+  async findApplication(id: string): Promise<ApplicationResponse> {
+    const application = await this.prisma.application.findUnique({
+      where: { id },
+      include: { steps: true },
+    });
+
+    if (!application) {
+      throw new NotFoundException(`Application "${id}" was not found.`);
+    }
+
+    return this.toApplicationResponse(application);
+  }
+
+  async updateApplication(
+    id: string,
+    input: UpdateApplicationInput,
+  ): Promise<ApplicationResponse> {
+    await this.findApplication(id);
+
+    const data = this.toApplicationUpdateInput(input);
+    const application = await this.prisma.application.update({
+      where: { id },
+      data,
+      include: { steps: true },
+    });
+
+    await this.recalculateBatchCounters(application.batchId);
+
+    return this.toApplicationResponse(application);
+  }
+
+  async addStep(
+    applicationId: string,
+    input: {
+      stepName: string;
+      status: string;
+      errorMessage?: string;
+    },
+  ): Promise<ApplicationStepResponse> {
+    await this.findApplication(applicationId);
+
+    if (!input.stepName?.trim()) {
+      throw new BadRequestException('stepName is required.');
+    }
+
+    if (!input.status?.trim()) {
+      throw new BadRequestException('status is required.');
+    }
+
+    const step = await this.prisma.applicationStep.create({
+      data: {
+        applicationId,
+        stepName: input.stepName.trim(),
+        status: input.status.trim(),
+        errorMessage: input.errorMessage,
+        startedAt: new Date(),
+        completedAt: ['completed', 'failed', 'blocked'].includes(input.status)
+          ? new Date()
+          : null,
+      },
+    });
+
+    return this.toStepResponse(step);
+  }
+
+  private readonly batchInclude = {
+    applications: {
+      orderBy: { createdAt: 'asc' },
+      include: { steps: true },
+    },
+  } satisfies Prisma.ApplicationBatchInclude;
+
+  private async prepareApplications(
+    profile: StudentProfile,
+  ): Promise<PreparedBatch> {
+    const applications: PreparedApplication[] = [];
+    const unresolvedTargets: string[] = [];
+
+    for (const target of profile.applicationTargets) {
+      const resolvedUniversityId = await this.resolveUniversityId(target);
+
+      if (!resolvedUniversityId) {
+        unresolvedTargets.push(target.universityRaw);
+        continue;
+      }
+
+      const university = await this.universitiesService.findOne(resolvedUniversityId);
+      const missingDocuments = university.requiredDocuments.filter(
+        (documentType) => !profile.documents[documentType],
+      );
+      const approvedLetter = university.requiresEssay
+        ? await this.findApprovedLetter(profile.id, university.id)
+        : null;
+      const missing = [
+        ...missingDocuments,
+        university.requiresEssay && !approvedLetter ? 'approved motivation letter' : null,
+      ].filter((item): item is string => item !== null);
+
+      applications.push({
+        universityId: university.id,
+        status: missing.length > 0 ? 'blocked' : 'queued',
+        blockedReason:
+          missing.length > 0 ? `Missing requirements: ${missing.join(', ')}` : undefined,
+        motivationLetterId: approvedLetter?.id,
+      });
+
+      if (missing.length > 0) {
+        const studentName = this.getStudentName(profile);
+        await this.notificationsService.notifyBlocked(
+          studentName,
+          university.displayName,
+          missing,
+        );
+      }
+    }
+
+    return { applications, unresolvedTargets };
+  }
+
+  private async resolveUniversityId(
+    target: ApplicationTarget,
+  ): Promise<string | null> {
+    if (target.universityId) {
+      return target.universityId;
+    }
+
+    const resolved = await this.universitiesService.resolve(target.universityRaw);
+
+    if (!resolved.university) {
+      return null;
+    }
+
+    return resolved.university.id;
+  }
+
+  private async findApprovedLetter(studentId: string, universityId: string) {
+    return this.prisma.generatedDocument.findFirst({
+      where: {
+        studentId,
+        universityId,
+        approvedByConsultant: true,
+        type: { in: ['motivation_letter', 'essay'] },
+      },
+      orderBy: { approvedAt: 'desc' },
+      select: { id: true },
+    });
+  }
+
+  private async enqueueQueuedApplications(
+    batch: ApplicationBatchRecord,
+  ): Promise<void> {
+    const queuedApplications = batch.applications.filter(
+      (application) => application.status === 'queued',
+    );
+
+    await Promise.all(
+      queuedApplications.map((application) => {
+        const data: ApplicationProcessJobData = {
+          applicationId: application.id,
+          batchId: batch.id,
+          studentId: batch.studentId,
+          universityId: application.universityId,
+        };
+
+        return this.queueService.addJob(QUEUES.APPLICATION_PROCESS, data, {
+          jobId: application.id,
+        });
+      }),
+    );
+  }
+
+  private async notifyUnresolvedTargets(
+    profile: StudentProfile,
+    unresolvedTargets: string[],
+  ): Promise<void> {
+    if (unresolvedTargets.length > 0) {
+      await this.notificationsService.notifyUnresolved(
+        this.getStudentName(profile),
+        unresolvedTargets,
+      );
+    }
+  }
+
+  private async recalculateBatchCounters(batchId: string): Promise<void> {
+    const applications = await this.prisma.application.findMany({
+      where: { batchId },
+      select: { status: true },
+    });
+
+    const submitted = applications.filter(
+      (application) => application.status === 'submitted',
+    ).length;
+    const blocked = applications.filter(
+      (application) => application.status === 'blocked',
+    ).length;
+    const failed = applications.filter(
+      (application) => application.status === 'failed',
+    ).length;
+    const status =
+      applications.length > 0 &&
+      applications.every((application) =>
+        ['submitted', 'blocked', 'failed'].includes(application.status),
+      )
+        ? 'completed'
+        : 'processing';
+
+    await this.prisma.applicationBatch.update({
+      where: { id: batchId },
+      data: {
+        submitted,
+        blocked,
+        failed,
+        status,
+      },
+    });
+  }
+
+  private toApplicationUpdateInput(
+    input: UpdateApplicationInput,
+  ): Prisma.ApplicationUpdateInput {
+    return {
+      status: input.status,
+      blockedReason: input.blockedReason,
+      motivationLetterId: input.motivationLetterId,
+      screenshotBefore: input.screenshotBefore,
+      screenshotAfter: input.screenshotAfter,
+      submittedAt:
+        input.submittedAt === undefined
+          ? undefined
+          : input.submittedAt
+            ? new Date(input.submittedAt)
+            : null,
+      errorMessage: input.errorMessage,
+    };
+  }
+
+  private toBatchResponse(batch: ApplicationBatchRecord): ApplicationBatchResponse {
+    return {
+      id: batch.id,
+      studentId: batch.studentId,
+      status: batch.status,
+      total: batch.total,
+      submitted: batch.submitted,
+      blocked: batch.blocked,
+      failed: batch.failed,
+      createdAt: batch.createdAt.toISOString(),
+      applications: batch.applications.map((application) =>
+        this.toApplicationResponse(application),
+      ),
+    };
+  }
+
+  private toApplicationResponse(
+    application: ApplicationRecord,
+  ): ApplicationResponse {
+    return {
+      id: application.id,
+      batchId: application.batchId,
+      universityId: application.universityId,
+      status: application.status,
+      blockedReason: application.blockedReason ?? undefined,
+      motivationLetterId: application.motivationLetterId ?? undefined,
+      screenshotBefore: application.screenshotBefore ?? undefined,
+      screenshotAfter: application.screenshotAfter ?? undefined,
+      submittedAt: application.submittedAt?.toISOString(),
+      errorMessage: application.errorMessage ?? undefined,
+      createdAt: application.createdAt.toISOString(),
+      steps: application.steps.map((step) => this.toStepResponse(step)),
+    };
+  }
+
+  private toStepResponse(step: ApplicationStepRecord): ApplicationStepResponse {
+    return {
+      id: step.id,
+      applicationId: step.applicationId,
+      stepName: step.stepName,
+      status: step.status,
+      errorMessage: step.errorMessage ?? undefined,
+      startedAt: step.startedAt?.toISOString(),
+      completedAt: step.completedAt?.toISOString(),
+    };
+  }
+
+  private getStudentName(profile: StudentProfile): string {
+    return [profile.personal.givenName, profile.personal.surname]
+      .filter(Boolean)
+      .join(' ');
+  }
+}
+

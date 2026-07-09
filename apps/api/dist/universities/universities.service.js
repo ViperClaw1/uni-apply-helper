@@ -57,7 +57,10 @@ let UniversitiesService = class UniversitiesService {
         try {
             return await this.schemasService.findByUniversityId(id);
         }
-        catch {
+        catch (error) {
+            if (!(error instanceof common_1.NotFoundException)) {
+                throw error;
+            }
             throw new common_1.NotFoundException(`University "${id}" was not found.`);
         }
     }

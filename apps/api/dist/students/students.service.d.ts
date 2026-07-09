@@ -30,14 +30,14 @@ export declare class StudentsService {
     getFullProfile(studentId: string): Promise<StudentProfile>;
     findAll(): Promise<({
         applicationTargets: {
-            id: string;
-            studentId: string;
             universityRaw: string;
             universityId: string | null;
             degree: string | null;
             major: string | null;
             duration: string | null;
             fundingSource: string | null;
+            id: string;
+            studentId: string;
         }[];
     } & {
         id: string;
