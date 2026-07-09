@@ -8,7 +8,7 @@ export declare class LettersService {
     private readonly configService;
     private readonly studentsService;
     private readonly universitiesService;
-    private readonly anthropic?;
+    private readonly gemini?;
     private readonly model;
     constructor(prisma: PrismaService, configService: ConfigService, studentsService: StudentsService, universitiesService: UniversitiesService);
     generate(input: GenerateLetterInput): Promise<LetterResponse>;
@@ -19,7 +19,7 @@ export declare class LettersService {
     approve(id: string): Promise<LetterResponse>;
     unapprove(id: string): Promise<LetterResponse>;
     remove(id: string): Promise<LetterResponse>;
-    private generateWithClaude;
+    private generateWithGemini;
     private buildPrompt;
     private assertGenerateInput;
     private toResponse;

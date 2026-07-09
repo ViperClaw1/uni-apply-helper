@@ -8,14 +8,11 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LettersService = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
-const sdk_1 = __importDefault(require("@anthropic-ai/sdk"));
+const genai_1 = require("@google/genai");
 const prisma_service_js_1 = require("../prisma/prisma.service.js");
 const students_service_js_1 = require("../students/students.service.js");
 const universities_service_js_1 = require("../universities/universities.service.js");
@@ -24,20 +21,19 @@ let LettersService = class LettersService {
     configService;
     studentsService;
     universitiesService;
-    anthropic;
+    gemini;
     model;
     constructor(prisma, configService, studentsService, universitiesService) {
         this.prisma = prisma;
         this.configService = configService;
         this.studentsService = studentsService;
         this.universitiesService = universitiesService;
-        const apiKey = this.configService.get('ANTHROPIC_API_KEY');
+        const apiKey = this.configService.get('GEMINI_API_KEY');
         if (apiKey) {
-            this.anthropic = new sdk_1.default({ apiKey });
+            this.gemini = new genai_1.GoogleGenAI({ apiKey });
         }
         this.model =
-            this.configService.get('ANTHROPIC_LETTER_MODEL') ??
-                'claude-sonnet-4-5';
+            this.configService.get('GEMINI_LETTER_MODEL') || 'gemini-2.5-flash';
     }
     async generate(input) {
         this.assertGenerateInput(input);
@@ -46,7 +42,7 @@ let LettersService = class LettersService {
             this.studentsService.getFullProfile(input.studentId),
             this.universitiesService.findOne(input.universityId),
         ]);
-        const content = await this.generateWithClaude({
+        const content = await this.generateWithGemini({
             profile,
             university,
             type,
@@ -120,25 +116,20 @@ let LettersService = class LettersService {
         });
         return this.toResponse(letter);
     }
-    async generateWithClaude(input) {
-        if (!this.anthropic) {
-            throw new common_1.ServiceUnavailableException('ANTHROPIC_API_KEY is not configured.');
+    async generateWithGemini(input) {
+        if (!this.gemini) {
+            throw new common_1.ServiceUnavailableException('GEMINI_API_KEY is not configured.');
         }
-        const message = await this.anthropic.messages.create({
+        const response = await this.gemini.models.generateContent({
             model: this.model,
-            max_tokens: 4096,
-            messages: [
+            contents: [
                 {
                     role: 'user',
-                    content: this.buildPrompt(input),
+                    parts: [{ text: this.buildPrompt(input) }],
                 },
             ],
         });
-        return message.content
-            .filter((block) => block.type === 'text')
-            .map((block) => block.text)
-            .join('\n')
-            .trim();
+        return (response.text ?? '').trim();
     }
     buildPrompt(input) {
         const studentName = [

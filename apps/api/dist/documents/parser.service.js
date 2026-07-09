@@ -8,30 +8,26 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ParserService = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
-const sdk_1 = __importDefault(require("@anthropic-ai/sdk"));
+const genai_1 = require("@google/genai");
 const prisma_service_js_1 = require("../prisma/prisma.service.js");
 let ParserService = class ParserService {
     prisma;
     configService;
-    anthropic;
+    gemini;
     model;
     constructor(prisma, configService) {
         this.prisma = prisma;
         this.configService = configService;
-        const apiKey = this.configService.get('ANTHROPIC_API_KEY');
+        const apiKey = this.configService.get('GEMINI_API_KEY');
         if (apiKey) {
-            this.anthropic = new sdk_1.default({ apiKey });
+            this.gemini = new genai_1.GoogleGenAI({ apiKey });
         }
         this.model =
-            this.configService.get('ANTHROPIC_DOCUMENT_MODEL') ??
-                'claude-sonnet-4-5';
+            this.configService.get('GEMINI_DOCUMENT_MODEL') || 'gemini-2.5-flash';
     }
     async parseDocument(documentId) {
         const document = await this.prisma.studentDocument.findUnique({
@@ -40,15 +36,15 @@ let ParserService = class ParserService {
         if (!document) {
             throw new common_1.NotFoundException(`Document "${documentId}" was not found.`);
         }
-        if (!this.anthropic) {
-            throw new common_1.ServiceUnavailableException('ANTHROPIC_API_KEY is not configured.');
+        if (!this.gemini) {
+            throw new common_1.ServiceUnavailableException('GEMINI_API_KEY is not configured.');
         }
         await this.prisma.studentDocument.update({
             where: { id: documentId },
             data: { parseStatus: 'processing' },
         });
         try {
-            const parsedData = await this.parseWithClaude(document);
+            const parsedData = await this.parseWithGemini(document);
             const updatedDocument = await this.prisma.studentDocument.update({
                 where: { id: documentId },
                 data: {
@@ -71,68 +67,58 @@ let ParserService = class ParserService {
             throw error;
         }
     }
-    async parseWithClaude(document) {
+    async parseWithGemini(document) {
         const source = await this.fetchDocumentSource(document.fileUrl);
-        const content = [
-            {
-                type: 'text',
-                text: [
-                    'Extract structured data from this student application document.',
-                    `Document type: ${document.type}`,
-                    'Return only valid JSON. Do not wrap it in markdown.',
-                ].join('\n'),
-            },
-            source,
-        ];
-        const message = await this.anthropic.messages.create({
+        const response = await this.gemini.models.generateContent({
             model: this.model,
-            max_tokens: 2048,
-            messages: [
+            contents: [
                 {
                     role: 'user',
-                    content: content,
+                    parts: [
+                        {
+                            text: [
+                                'Extract structured data from this student application document.',
+                                `Document type: ${document.type}`,
+                                'Return only valid JSON. Do not wrap it in markdown.',
+                            ].join('\n'),
+                        },
+                        source,
+                    ],
                 },
             ],
+            config: {
+                responseMimeType: 'application/json',
+            },
         });
-        const text = message.content
-            .filter((block) => block.type === 'text')
-            .map((block) => block.text)
-            .join('\n')
-            .trim();
-        return this.parseJsonObject(text);
+        return this.parseJsonObject(response.text ?? '');
     }
     async fetchDocumentSource(fileUrl) {
         const response = await fetch(fileUrl);
         if (!response.ok) {
             throw new Error(`Failed to download document: ${response.status}`);
         }
-        const contentType = response.headers.get('content-type') ?? 'application/octet-stream';
+        const mimeType = response.headers.get('content-type') ?? 'application/octet-stream';
         const data = Buffer.from(await response.arrayBuffer()).toString('base64');
-        if (contentType.startsWith('image/')) {
-            return {
-                type: 'image',
-                source: {
-                    type: 'base64',
-                    media_type: contentType,
-                    data,
-                },
-            };
-        }
         return {
-            type: 'document',
-            source: {
-                type: 'base64',
-                media_type: contentType,
+            inlineData: {
+                mimeType,
                 data,
             },
         };
     }
     parseJsonObject(text) {
-        const parsed = JSON.parse(text);
+        const normalizedText = this.stripMarkdownFence(text);
+        const parsed = JSON.parse(normalizedText);
         if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-            throw new Error('Claude response is not a JSON object.');
+            throw new Error('Gemini response is not a JSON object.');
         }
         return parsed;
+    }
+    stripMarkdownFence(text) {
+        return text
+            .trim()
+            .replace(/^```(?:json)?\s*/i, '')
+            .replace(/\s*```$/i, '');
     }
     toResponse(document) {
         return {

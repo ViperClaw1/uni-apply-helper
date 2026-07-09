@@ -5,7 +5,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenAI } from '@google/genai';
 import type { StudentProfile, UniversitySchema } from '@uni-apply/shared';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { StudentsService } from '../students/students.service.js';
@@ -30,7 +30,7 @@ type GeneratedDocumentRecord = {
 
 @Injectable()
 export class LettersService {
-  private readonly anthropic?: Anthropic;
+  private readonly gemini?: GoogleGenAI;
   private readonly model: string;
 
   constructor(
@@ -39,15 +39,14 @@ export class LettersService {
     private readonly studentsService: StudentsService,
     private readonly universitiesService: UniversitiesService,
   ) {
-    const apiKey = this.configService.get<string>('ANTHROPIC_API_KEY');
+    const apiKey = this.configService.get<string>('GEMINI_API_KEY');
 
     if (apiKey) {
-      this.anthropic = new Anthropic({ apiKey });
+      this.gemini = new GoogleGenAI({ apiKey });
     }
 
     this.model =
-      this.configService.get<string>('ANTHROPIC_LETTER_MODEL') ??
-      'claude-sonnet-4-5';
+      this.configService.get<string>('GEMINI_LETTER_MODEL') || 'gemini-2.5-flash';
   }
 
   async generate(input: GenerateLetterInput): Promise<LetterResponse> {
@@ -59,7 +58,7 @@ export class LettersService {
       this.universitiesService.findOne(input.universityId),
     ]);
 
-    const content = await this.generateWithClaude({
+    const content = await this.generateWithGemini({
       profile,
       university,
       type,
@@ -155,32 +154,27 @@ export class LettersService {
     return this.toResponse(letter);
   }
 
-  private async generateWithClaude(input: {
+  private async generateWithGemini(input: {
     profile: StudentProfile;
     university: UniversitySchema;
     type: LetterType;
     prompt?: string;
   }): Promise<string> {
-    if (!this.anthropic) {
-      throw new ServiceUnavailableException('ANTHROPIC_API_KEY is not configured.');
+    if (!this.gemini) {
+      throw new ServiceUnavailableException('GEMINI_API_KEY is not configured.');
     }
 
-    const message = await this.anthropic.messages.create({
+    const response = await this.gemini.models.generateContent({
       model: this.model,
-      max_tokens: 4096,
-      messages: [
+      contents: [
         {
           role: 'user',
-          content: this.buildPrompt(input),
+          parts: [{ text: this.buildPrompt(input) }],
         },
       ],
     });
 
-    return message.content
-      .filter((block) => block.type === 'text')
-      .map((block) => block.text)
-      .join('\n')
-      .trim();
+    return (response.text ?? '').trim();
   }
 
   private buildPrompt(input: {

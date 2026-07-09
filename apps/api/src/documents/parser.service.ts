@@ -4,7 +4,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenAI } from '@google/genai';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { StudentDocumentResponse } from './types/document-api.types.js';
@@ -21,22 +21,21 @@ type StudentDocumentRecord = {
 
 @Injectable()
 export class ParserService {
-  private readonly anthropic?: Anthropic;
+  private readonly gemini?: GoogleGenAI;
   private readonly model: string;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
   ) {
-    const apiKey = this.configService.get<string>('ANTHROPIC_API_KEY');
+    const apiKey = this.configService.get<string>('GEMINI_API_KEY');
 
     if (apiKey) {
-      this.anthropic = new Anthropic({ apiKey });
+      this.gemini = new GoogleGenAI({ apiKey });
     }
 
     this.model =
-      this.configService.get<string>('ANTHROPIC_DOCUMENT_MODEL') ??
-      'claude-sonnet-4-5';
+      this.configService.get<string>('GEMINI_DOCUMENT_MODEL') || 'gemini-2.5-flash';
   }
 
   async parseDocument(documentId: string): Promise<StudentDocumentResponse> {
@@ -48,8 +47,8 @@ export class ParserService {
       throw new NotFoundException(`Document "${documentId}" was not found.`);
     }
 
-    if (!this.anthropic) {
-      throw new ServiceUnavailableException('ANTHROPIC_API_KEY is not configured.');
+    if (!this.gemini) {
+      throw new ServiceUnavailableException('GEMINI_API_KEY is not configured.');
     }
 
     await this.prisma.studentDocument.update({
@@ -58,7 +57,7 @@ export class ParserService {
     });
 
     try {
-      const parsedData = await this.parseWithClaude(document);
+      const parsedData = await this.parseWithGemini(document);
       const updatedDocument = await this.prisma.studentDocument.update({
         where: { id: documentId },
         data: {
@@ -83,40 +82,33 @@ export class ParserService {
     }
   }
 
-  private async parseWithClaude(
+  private async parseWithGemini(
     document: StudentDocumentRecord,
   ): Promise<Record<string, unknown>> {
     const source = await this.fetchDocumentSource(document.fileUrl);
-    const content = [
-      {
-        type: 'text',
-        text: [
-          'Extract structured data from this student application document.',
-          `Document type: ${document.type}`,
-          'Return only valid JSON. Do not wrap it in markdown.',
-        ].join('\n'),
-      },
-      source,
-    ];
-
-    const message = await this.anthropic!.messages.create({
+    const response = await this.gemini!.models.generateContent({
       model: this.model,
-      max_tokens: 2048,
-      messages: [
+      contents: [
         {
           role: 'user',
-          content: content as any,
+          parts: [
+            {
+              text: [
+                'Extract structured data from this student application document.',
+                `Document type: ${document.type}`,
+                'Return only valid JSON. Do not wrap it in markdown.',
+              ].join('\n'),
+            },
+            source,
+          ],
         },
       ],
+      config: {
+        responseMimeType: 'application/json',
+      },
     });
 
-    const text = message.content
-      .filter((block) => block.type === 'text')
-      .map((block) => block.text)
-      .join('\n')
-      .trim();
-
-    return this.parseJsonObject(text);
+    return this.parseJsonObject(response.text ?? '');
   }
 
   private async fetchDocumentSource(fileUrl: string) {
@@ -126,39 +118,34 @@ export class ParserService {
       throw new Error(`Failed to download document: ${response.status}`);
     }
 
-    const contentType =
+    const mimeType =
       response.headers.get('content-type') ?? 'application/octet-stream';
     const data = Buffer.from(await response.arrayBuffer()).toString('base64');
 
-    if (contentType.startsWith('image/')) {
-      return {
-        type: 'image',
-        source: {
-          type: 'base64',
-          media_type: contentType,
-          data,
-        },
-      };
-    }
-
     return {
-      type: 'document',
-      source: {
-        type: 'base64',
-        media_type: contentType,
+      inlineData: {
+        mimeType,
         data,
       },
     };
   }
 
   private parseJsonObject(text: string): Record<string, unknown> {
-    const parsed = JSON.parse(text) as unknown;
+    const normalizedText = this.stripMarkdownFence(text);
+    const parsed = JSON.parse(normalizedText) as unknown;
 
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      throw new Error('Claude response is not a JSON object.');
+      throw new Error('Gemini response is not a JSON object.');
     }
 
     return parsed as Record<string, unknown>;
+  }
+
+  private stripMarkdownFence(text: string): string {
+    return text
+      .trim()
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/i, '');
   }
 
   private toResponse(document: StudentDocumentRecord): StudentDocumentResponse {
