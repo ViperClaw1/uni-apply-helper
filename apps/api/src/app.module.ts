@@ -2,10 +2,12 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { DocumentsModule } from './documents/documents.module.js';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { QueueModule } from './queue/queue.module';
 import { StudentsModule } from './students/students.module';
+import { UniversitiesModule } from './universities/universities.module.js';
 import { WebhookModule } from './webhook/webhook.module';
 
 @Module({
@@ -13,8 +15,10 @@ import { WebhookModule } from './webhook/webhook.module';
     ConfigModule.forRoot({ isGlobal: true }),
     PrismaModule,
     QueueModule,
+    DocumentsModule,
     NotificationsModule,
     StudentsModule,
+    UniversitiesModule,
     WebhookModule,
   ],
   controllers: [AppController],

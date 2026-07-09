@@ -5,16 +5,15 @@ export declare class StudentsController {
     findAll(): Promise<({
         applicationTargets: {
             id: string;
+            studentId: string;
             universityRaw: string;
             universityId: string | null;
             degree: string | null;
             major: string | null;
             duration: string | null;
             fundingSource: string | null;
-            studentId: string;
         }[];
     } & {
-        email: string;
         id: string;
         surname: string;
         givenName: string;
@@ -28,6 +27,7 @@ export declare class StudentsController {
         passportExpiry: Date | null;
         consulate: string | null;
         maritalStatus: string | null;
+        email: string;
         phone: string | null;
         hobby: string | null;
         permanentAddress: string | null;
@@ -38,7 +38,6 @@ export declare class StudentsController {
         createdAt: Date;
     })[]>;
     findOne(id: string): Promise<{
-        email: string;
         id: string;
         surname: string;
         givenName: string;
@@ -52,6 +51,7 @@ export declare class StudentsController {
         passportExpiry: Date | null;
         consulate: string | null;
         maritalStatus: string | null;
+        email: string;
         phone: string | null;
         hobby: string | null;
         permanentAddress: string | null;
