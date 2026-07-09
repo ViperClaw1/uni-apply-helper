@@ -37,5 +37,7 @@ ENV NODE_ENV=production
 
 COPY --from=build /app /app
 
+RUN if [ "$APP" = "worker" ]; then pnpm --filter worker exec playwright install --with-deps chromium; fi
+
 CMD ["sh", "-c", "pnpm --filter \"$APP\" start:prod"]
 
