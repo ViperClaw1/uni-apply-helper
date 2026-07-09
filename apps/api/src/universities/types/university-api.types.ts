@@ -18,3 +18,14 @@ export type ResolvedUniversity = {
   university: UniversitySchemaResponse | null;
 };
 
+export type UniversitySchemaFile = UniversitySchema & {
+  aliases?: string[];
+  versionHash?: string;
+  lastValidatedAt?: string;
+};
+
+export type SeedUniversitySchemasResult = {
+  schemas: number;
+  aliases: number;
+};
+

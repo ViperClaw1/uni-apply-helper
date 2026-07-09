@@ -1,0 +1,45 @@
+{
+  "id": "test-university",
+  "displayName": "Test University",
+  "formUrl": "https://example.com/apply",
+  "aliases": ["Test University", "Test Uni", "Тестовый университет"],
+  "requiredDocuments": ["passport", "diploma", "transcript"],
+  "fields": [
+    {
+      "selector": "input[name='surname']",
+      "mapsTo": "personal.surname",
+      "type": "text",
+      "required": true
+    },
+    {
+      "selector": "input[name='givenName']",
+      "mapsTo": "personal.givenName",
+      "type": "text",
+      "required": true
+    },
+    {
+      "selector": "input[name='email']",
+      "mapsTo": "personal.email",
+      "type": "text",
+      "required": true
+    },
+    {
+      "selector": "textarea[name='motivation']",
+      "mapsTo": null,
+      "type": "essay",
+      "required": false,
+      "essayPrompt": "Explain why you want to study at Test University."
+    },
+    {
+      "selector": "input[name='passport']",
+      "mapsTo": null,
+      "type": "file",
+      "required": true,
+      "documentType": "passport"
+    }
+  ],
+  "requiresEssay": true,
+  "essayPrompt": "Explain why you want to study at Test University.",
+  "notes": "Minimal schema used for local development and end-to-end smoke tests."
+}
+

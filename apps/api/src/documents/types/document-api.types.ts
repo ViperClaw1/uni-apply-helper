@@ -1,4 +1,4 @@
-export type DocumentParseStatus = 'pending' | 'parsed' | 'failed';
+export type DocumentParseStatus = 'pending' | 'processing' | 'parsed' | 'failed';
 
 export type StudentDocumentResponse = {
   id: string;
@@ -23,5 +23,9 @@ export type UploadedDocumentFile = {
   originalname: string;
   mimetype: string;
   buffer: Buffer;
+};
+
+export type DocumentParseJobData = {
+  documentId: string;
 };
 

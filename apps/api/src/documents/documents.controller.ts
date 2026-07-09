@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { DocumentsService } from './documents.service.js';
+import { ParserService } from './parser.service.js';
 import type {
   CreateDocumentInput,
   UpdateDocumentInput,
@@ -18,7 +19,10 @@ import type {
 
 @Controller()
 export class DocumentsController {
-  constructor(private readonly documentsService: DocumentsService) {}
+  constructor(
+    private readonly documentsService: DocumentsService,
+    private readonly parserService: ParserService,
+  ) {}
 
   @Get('students/:studentId/documents')
   findByStudent(@Param('studentId') studentId: string) {
@@ -51,6 +55,11 @@ export class DocumentsController {
   @Patch('documents/:id')
   update(@Param('id') id: string, @Body() body: UpdateDocumentInput) {
     return this.documentsService.update(id, body);
+  }
+
+  @Post('documents/:id/parse')
+  parse(@Param('id') id: string) {
+    return this.parserService.parseDocument(id);
   }
 
   @Delete('documents/:id')

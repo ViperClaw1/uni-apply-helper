@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DocumentsModule } from './documents/documents.module.js';
+import { LettersModule } from './letters/letters.module.js';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { QueueModule } from './queue/queue.module';
@@ -16,6 +17,7 @@ import { WebhookModule } from './webhook/webhook.module';
     PrismaModule,
     QueueModule,
     DocumentsModule,
+    LettersModule,
     NotificationsModule,
     StudentsModule,
     UniversitiesModule,

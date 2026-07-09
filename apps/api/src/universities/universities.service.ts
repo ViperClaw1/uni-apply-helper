@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type { FieldConfig } from '@uni-apply/shared';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { SchemasService } from './schemas.service.js';
 import type {
   ResolvedUniversity,
   UniversitySchemaResponse,
@@ -22,7 +23,10 @@ type UniversityRecord = {
 
 @Injectable()
 export class UniversitiesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly schemasService: SchemasService,
+  ) {}
 
   async findAll(): Promise<UniversitySummary[]> {
     const universities = await this.prisma.universitySchema.findMany({
@@ -39,10 +43,25 @@ export class UniversitiesService {
       universities.map((university) => university.id),
     );
 
-    return universities.map((university) => ({
+    const databaseSummaries = universities.map((university) => ({
       ...university,
       aliases: aliasesByUniversityId.get(university.id) ?? [],
     }));
+
+    const existingIds = new Set(databaseSummaries.map((university) => university.id));
+    const fileSummaries = (await this.schemasService.findAllFromFiles())
+      .filter((university) => !existingIds.has(university.id))
+      .map((university) => ({
+        id: university.id,
+        displayName: university.displayName,
+        formUrl: university.formUrl,
+        requiresEssay: university.requiresEssay,
+        aliases: university.aliases,
+      }));
+
+    return [...databaseSummaries, ...fileSummaries].sort((a, b) =>
+      a.displayName.localeCompare(b.displayName),
+    );
   }
 
   async findOne(id: string): Promise<UniversitySchemaResponse> {
@@ -50,17 +69,21 @@ export class UniversitiesService {
       where: { id },
     });
 
-    if (!university) {
-      throw new NotFoundException(`University "${id}" was not found.`);
+    if (university) {
+      return this.toResponse(university);
     }
 
-    return this.toResponse(university);
+    try {
+      return await this.schemasService.findByUniversityId(id);
+    } catch {
+      throw new NotFoundException(`University "${id}" was not found.`);
+    }
   }
 
   async findAliases(universityId: string): Promise<string[]> {
-    await this.findOne(universityId);
+    const university = await this.findOne(universityId);
 
-    return this.getAliases(universityId);
+    return university.aliases;
   }
 
   async resolve(rawName: string): Promise<ResolvedUniversity> {
@@ -102,7 +125,9 @@ export class UniversitiesService {
 
     return {
       rawName,
-      university: university ? await this.toResponse(university) : null,
+      university: university
+        ? await this.toResponse(university)
+        : await this.schemasService.resolveFromFiles(rawName),
     };
   }
 

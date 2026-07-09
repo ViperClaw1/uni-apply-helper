@@ -7,11 +7,14 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { Prisma } from '@prisma/client';
+import { QUEUES } from '@uni-apply/shared';
 import { randomUUID } from 'node:crypto';
 import { extname } from 'node:path';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { QueueService } from '../queue/queue.service.js';
 import type {
   CreateDocumentInput,
+  DocumentParseJobData,
   StudentDocumentResponse,
   UpdateDocumentInput,
   UploadedDocumentFile,
@@ -36,6 +39,7 @@ export class DocumentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
+    private readonly queueService: QueueService,
   ) {
     this.bucket = this.configService.get<string>('R2_BUCKET');
     this.publicUrl = this.configService.get<string>('R2_PUBLIC_URL');
@@ -95,6 +99,10 @@ export class DocumentsService {
         parseStatus: input.parseStatus ?? 'pending',
       },
     });
+
+    if (document.parseStatus === 'pending') {
+      await this.enqueueParse(document.id);
+    }
 
     return this.toResponse(document);
   }
@@ -221,6 +229,14 @@ export class DocumentsService {
     );
 
     return `${this.publicUrl.replace(/\/$/, '')}/${key}`;
+  }
+
+  private async enqueueParse(documentId: string): Promise<void> {
+    const data: DocumentParseJobData = { documentId };
+
+    await this.queueService.addJob(QUEUES.DOCUMENT_PARSE, data, {
+      jobId: documentId,
+    });
   }
 
   private toJsonInput(value: unknown): Prisma.InputJsonValue | undefined {

@@ -12,6 +12,7 @@ const config_1 = require("@nestjs/config");
 const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
 const documents_module_js_1 = require("./documents/documents.module.js");
+const letters_module_js_1 = require("./letters/letters.module.js");
 const notifications_module_1 = require("./notifications/notifications.module");
 const prisma_module_1 = require("./prisma/prisma.module");
 const queue_module_1 = require("./queue/queue.module");
@@ -28,6 +29,7 @@ exports.AppModule = AppModule = __decorate([
             prisma_module_1.PrismaModule,
             queue_module_1.QueueModule,
             documents_module_js_1.DocumentsModule,
+            letters_module_js_1.LettersModule,
             notifications_module_1.NotificationsModule,
             students_module_1.StudentsModule,
             universities_module_js_1.UniversitiesModule,

@@ -14,11 +14,14 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UniversitiesController = void 0;
 const common_1 = require("@nestjs/common");
+const schemas_service_js_1 = require("./schemas.service.js");
 const universities_service_js_1 = require("./universities.service.js");
 let UniversitiesController = class UniversitiesController {
     universitiesService;
-    constructor(universitiesService) {
+    schemasService;
+    constructor(universitiesService, schemasService) {
         this.universitiesService = universitiesService;
+        this.schemasService = schemasService;
     }
     findAll() {
         return this.universitiesService.findAll();
@@ -28,6 +31,9 @@ let UniversitiesController = class UniversitiesController {
             throw new common_1.BadRequestException('Query param "name" is required.');
         }
         return this.universitiesService.resolve(name);
+    }
+    seedSchemas() {
+        return this.schemasService.seedFromFiles();
     }
     findOne(id) {
         return this.universitiesService.findOne(id);
@@ -51,6 +57,12 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], UniversitiesController.prototype, "resolve", null);
 __decorate([
+    (0, common_1.Post)('schemas/seed'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], UniversitiesController.prototype, "seedSchemas", null);
+__decorate([
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
@@ -66,6 +78,7 @@ __decorate([
 ], UniversitiesController.prototype, "findAliases", null);
 exports.UniversitiesController = UniversitiesController = __decorate([
     (0, common_1.Controller)('universities'),
-    __metadata("design:paramtypes", [universities_service_js_1.UniversitiesService])
+    __metadata("design:paramtypes", [universities_service_js_1.UniversitiesService,
+        schemas_service_js_1.SchemasService])
 ], UniversitiesController);
 //# sourceMappingURL=universities.controller.js.map

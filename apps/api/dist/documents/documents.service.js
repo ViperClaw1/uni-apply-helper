@@ -13,18 +13,22 @@ exports.DocumentsService = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const client_s3_1 = require("@aws-sdk/client-s3");
+const shared_1 = require("@uni-apply/shared");
 const node_crypto_1 = require("node:crypto");
 const node_path_1 = require("node:path");
 const prisma_service_js_1 = require("../prisma/prisma.service.js");
+const queue_service_js_1 = require("../queue/queue.service.js");
 let DocumentsService = class DocumentsService {
     prisma;
     configService;
+    queueService;
     s3;
     bucket;
     publicUrl;
-    constructor(prisma, configService) {
+    constructor(prisma, configService, queueService) {
         this.prisma = prisma;
         this.configService = configService;
+        this.queueService = queueService;
         this.bucket = this.configService.get('R2_BUCKET');
         this.publicUrl = this.configService.get('R2_PUBLIC_URL');
         const endpoint = this.configService.get('R2_ENDPOINT');
@@ -70,6 +74,9 @@ let DocumentsService = class DocumentsService {
                 parseStatus: input.parseStatus ?? 'pending',
             },
         });
+        if (document.parseStatus === 'pending') {
+            await this.enqueueParse(document.id);
+        }
         return this.toResponse(document);
     }
     async upload(studentId, type, file) {
@@ -157,6 +164,12 @@ let DocumentsService = class DocumentsService {
         }));
         return `${this.publicUrl.replace(/\/$/, '')}/${key}`;
     }
+    async enqueueParse(documentId) {
+        const data = { documentId };
+        await this.queueService.addJob(shared_1.QUEUES.DOCUMENT_PARSE, data, {
+            jobId: documentId,
+        });
+    }
     toJsonInput(value) {
         if (value === undefined) {
             return undefined;
@@ -186,6 +199,7 @@ exports.DocumentsService = DocumentsService;
 exports.DocumentsService = DocumentsService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_js_1.PrismaService,
-        config_1.ConfigService])
+        config_1.ConfigService,
+        queue_service_js_1.QueueService])
 ], DocumentsService);
 //# sourceMappingURL=documents.service.js.map

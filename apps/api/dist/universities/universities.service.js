@@ -12,10 +12,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UniversitiesService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_js_1 = require("../prisma/prisma.service.js");
+const schemas_service_js_1 = require("./schemas.service.js");
 let UniversitiesService = class UniversitiesService {
     prisma;
-    constructor(prisma) {
+    schemasService;
+    constructor(prisma, schemasService) {
         this.prisma = prisma;
+        this.schemasService = schemasService;
     }
     async findAll() {
         const universities = await this.prisma.universitySchema.findMany({
@@ -28,23 +31,39 @@ let UniversitiesService = class UniversitiesService {
             },
         });
         const aliasesByUniversityId = await this.getAliasesByUniversityId(universities.map((university) => university.id));
-        return universities.map((university) => ({
+        const databaseSummaries = universities.map((university) => ({
             ...university,
             aliases: aliasesByUniversityId.get(university.id) ?? [],
         }));
+        const existingIds = new Set(databaseSummaries.map((university) => university.id));
+        const fileSummaries = (await this.schemasService.findAllFromFiles())
+            .filter((university) => !existingIds.has(university.id))
+            .map((university) => ({
+            id: university.id,
+            displayName: university.displayName,
+            formUrl: university.formUrl,
+            requiresEssay: university.requiresEssay,
+            aliases: university.aliases,
+        }));
+        return [...databaseSummaries, ...fileSummaries].sort((a, b) => a.displayName.localeCompare(b.displayName));
     }
     async findOne(id) {
         const university = await this.prisma.universitySchema.findUnique({
             where: { id },
         });
-        if (!university) {
+        if (university) {
+            return this.toResponse(university);
+        }
+        try {
+            return await this.schemasService.findByUniversityId(id);
+        }
+        catch {
             throw new common_1.NotFoundException(`University "${id}" was not found.`);
         }
-        return this.toResponse(university);
     }
     async findAliases(universityId) {
-        await this.findOne(universityId);
-        return this.getAliases(universityId);
+        const university = await this.findOne(universityId);
+        return university.aliases;
     }
     async resolve(rawName) {
         const normalizedName = rawName.trim();
@@ -80,7 +99,9 @@ let UniversitiesService = class UniversitiesService {
         });
         return {
             rawName,
-            university: university ? await this.toResponse(university) : null,
+            university: university
+                ? await this.toResponse(university)
+                : await this.schemasService.resolveFromFiles(rawName),
         };
     }
     async toResponse(university) {
@@ -151,6 +172,7 @@ let UniversitiesService = class UniversitiesService {
 exports.UniversitiesService = UniversitiesService;
 exports.UniversitiesService = UniversitiesService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_js_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_js_1.PrismaService,
+        schemas_service_js_1.SchemasService])
 ], UniversitiesService);
 //# sourceMappingURL=universities.service.js.map

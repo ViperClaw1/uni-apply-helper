@@ -1,9 +1,20 @@
-import { BadRequestException, Controller, Get, Param, Query } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
+import { SchemasService } from './schemas.service.js';
 import { UniversitiesService } from './universities.service.js';
 
 @Controller('universities')
 export class UniversitiesController {
-  constructor(private readonly universitiesService: UniversitiesService) {}
+  constructor(
+    private readonly universitiesService: UniversitiesService,
+    private readonly schemasService: SchemasService,
+  ) {}
 
   @Get()
   findAll() {
@@ -17,6 +28,11 @@ export class UniversitiesController {
     }
 
     return this.universitiesService.resolve(name);
+  }
+
+  @Post('schemas/seed')
+  seedSchemas() {
+    return this.schemasService.seedFromFiles();
   }
 
   @Get(':id')
