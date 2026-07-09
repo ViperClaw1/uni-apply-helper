@@ -1,0 +1,206 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Student {
+  id                 String    @id @default(uuid())
+  surname            String
+  givenName          String
+  sex                String?
+  nationality        String?
+  cityOfBirth        String?
+  dateOfBirth        DateTime?
+  chineseName        String?
+  religion           String?
+  passportNo         String?
+  passportExpiry     DateTime?
+  consulate          String?
+  maritalStatus      String?
+  email              String
+  phone              String?
+  hobby              String?
+  permanentAddress   String?
+  postCode           String?
+  currentInstitution String?
+  beenToChina        Boolean   @default(false)
+  studiedInChina     Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+
+  education          Education[]
+  workExperience     WorkExperience[]
+  languageSkills     LanguageSkill[]
+  familyMembers      FamilyMember[]
+  guarantor          Guarantor?
+  emergencyContact   EmergencyContact?
+  documents          StudentDocument[]
+  applicationTargets ApplicationTarget[]
+  batches            ApplicationBatch[]
+}
+
+model Education {
+  id          String    @id @default(uuid())
+  studentId   String
+  student     Student   @relation(fields: [studentId], references: [id])
+  degree      String
+  institution String
+  major       String?
+  periodStart DateTime?
+  periodEnd   DateTime?
+}
+
+model WorkExperience {
+  id          String    @id @default(uuid())
+  studentId   String
+  student     Student   @relation(fields: [studentId], references: [id])
+  company     String
+  position    String?
+  periodStart DateTime?
+  periodEnd   DateTime?
+}
+
+model LanguageSkill {
+  id          String  @id @default(uuid())
+  studentId   String
+  student     Student @relation(fields: [studentId], references: [id])
+  language    String
+  certificate String?
+  level       String?
+  score       String?
+}
+
+model FamilyMember {
+  id           String  @id @default(uuid())
+  studentId    String
+  student      Student @relation(fields: [studentId], references: [id])
+  fullName     String
+  relationship String
+  nationality  String?
+  age          Int?
+  company      String?
+  position     String?
+  phone        String?
+  email        String?
+}
+
+model Guarantor {
+  id           String  @id @default(uuid())
+  studentId    String  @unique
+  student      Student @relation(fields: [studentId], references: [id])
+  name         String
+  relationship String
+  nationality  String?
+  company      String?
+  position     String?
+  homeAddress  String?
+  phone        String?
+  email        String?
+}
+
+model EmergencyContact {
+  id           String  @id @default(uuid())
+  studentId    String  @unique
+  student      Student @relation(fields: [studentId], references: [id])
+  name         String
+  relationship String
+  nationality  String?
+  company      String?
+  homeAddress  String?
+  phone        String?
+  email        String?
+}
+
+model StudentDocument {
+  id          String   @id @default(uuid())
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id])
+  type        String
+  fileUrl     String
+  parsedData  Json?
+  parseStatus String   @default("pending")
+  uploadedAt  DateTime @default(now())
+}
+
+model ApplicationTarget {
+  id            String  @id @default(uuid())
+  studentId     String
+  student       Student @relation(fields: [studentId], references: [id])
+  universityRaw String
+  universityId  String?
+  degree        String?
+  major         String?
+  duration      String?
+  fundingSource String?
+}
+
+model UniversityAlias {
+  alias        String @id
+  universityId String
+}
+
+model UniversitySchema {
+  id                String    @id
+  displayName       String
+  formUrl           String
+  requiredDocuments Json
+  fields            Json
+  requiresEssay     Boolean   @default(false)
+  essayPrompt       String?
+  versionHash       String?
+  lastValidatedAt   DateTime?
+  notes             String?
+}
+
+model ApplicationBatch {
+  id           String        @id @default(uuid())
+  studentId    String
+  student      Student       @relation(fields: [studentId], references: [id])
+  status       String        @default("queued")
+  total        Int
+  submitted    Int           @default(0)
+  blocked      Int           @default(0)
+  failed       Int           @default(0)
+  createdAt    DateTime      @default(now())
+  applications Application[]
+}
+
+model Application {
+  id                 String           @id @default(uuid())
+  batchId            String
+  batch              ApplicationBatch @relation(fields: [batchId], references: [id])
+  universityId       String
+  status             String           @default("queued")
+  blockedReason      String?
+  motivationLetterId String?
+  screenshotBefore   String?
+  screenshotAfter    String?
+  submittedAt        DateTime?
+  errorMessage       String?
+  createdAt          DateTime         @default(now())
+  steps              ApplicationStep[]
+}
+
+model GeneratedDocument {
+  id                   String    @id @default(uuid())
+  studentId            String
+  universityId         String
+  type                 String
+  content              String
+  approvedByConsultant Boolean   @default(false)
+  approvedAt           DateTime?
+  generatedAt          DateTime  @default(now())
+}
+
+model ApplicationStep {
+  id            String      @id @default(uuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id])
+  stepName      String
+  status        String
+  errorMessage  String?
+  startedAt     DateTime?
+  completedAt   DateTime?
+}
