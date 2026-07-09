@@ -14,6 +14,8 @@ const app_service_1 = require("./app.service");
 const notifications_module_1 = require("./notifications/notifications.module");
 const prisma_module_1 = require("./prisma/prisma.module");
 const queue_module_1 = require("./queue/queue.module");
+const students_module_1 = require("./students/students.module");
+const webhook_module_1 = require("./webhook/webhook.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -24,6 +26,8 @@ exports.AppModule = AppModule = __decorate([
             prisma_module_1.PrismaModule,
             queue_module_1.QueueModule,
             notifications_module_1.NotificationsModule,
+            students_module_1.StudentsModule,
+            webhook_module_1.WebhookModule,
         ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],

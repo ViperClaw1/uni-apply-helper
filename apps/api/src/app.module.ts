@@ -5,6 +5,8 @@ import { AppService } from './app.service';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { QueueModule } from './queue/queue.module';
+import { StudentsModule } from './students/students.module';
+import { WebhookModule } from './webhook/webhook.module';
 
 @Module({
   imports: [
@@ -12,6 +14,8 @@ import { QueueModule } from './queue/queue.module';
     PrismaModule,
     QueueModule,
     NotificationsModule,
+    StudentsModule,
+    WebhookModule,
   ],
   controllers: [AppController],
   providers: [AppService],
