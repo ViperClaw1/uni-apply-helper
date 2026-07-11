@@ -2,9 +2,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        APP: api
+      dockerfile: apps/api/Dockerfile
     env_file:
       - path: apps/api/.env
         required: false
@@ -20,9 +18,7 @@ services:
   worker:
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        APP: worker
+      dockerfile: apps/worker/Dockerfile
     env_file:
       - path: apps/worker/.env
         required: false

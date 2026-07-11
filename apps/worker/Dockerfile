@@ -22,8 +22,6 @@ RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
 
-ARG APP=api
-ENV APP=$APP
 ENV CI=true
 
 COPY . .
@@ -31,18 +29,17 @@ COPY . .
 RUN pnpm --filter @uni-apply/shared build \
   && DATABASE_URL="postgresql://postgres:postgres@localhost:5432/uni_apply" pnpm --filter @uni-apply/database generate \
   && pnpm --filter @uni-apply/database build \
-  && pnpm --filter "$APP" build \
+  && pnpm --filter worker build \
   && pnpm prune --prod --config.confirmModulesPurge=false
 
 FROM base AS runner
 
-ARG APP=api
-ENV APP=$APP
+ENV APP=worker
 ENV NODE_ENV=production
 
 COPY --from=build /app /app
 
-RUN if [ "$APP" = "worker" ]; then pnpm --filter worker exec playwright install --with-deps chromium; fi
+RUN pnpm --filter worker exec playwright install --with-deps chromium
 
-CMD ["sh", "-c", "pnpm --filter \"$APP\" start:prod"]
+CMD ["pnpm", "--filter", "worker", "start:prod"]
 
