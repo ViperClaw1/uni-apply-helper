@@ -20,6 +20,7 @@ export declare class LettersService {
     unapprove(id: string): Promise<LetterResponse>;
     remove(id: string): Promise<LetterResponse>;
     private generateWithGemini;
+    private toGeminiUnavailableException;
     private buildPrompt;
     private assertGenerateInput;
     private toResponse;

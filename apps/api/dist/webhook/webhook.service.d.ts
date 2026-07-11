@@ -1,10 +1,10 @@
-import { NotificationsService } from '../notifications/notifications.service';
-import { StudentsService } from '../students/students.service';
+import { NotificationsService } from '../notifications/notifications.service.js';
+import { StudentsService } from '../students/students.service.js';
 export declare class WebhookService {
     private readonly studentsService;
     private readonly notificationsService;
     constructor(studentsService: StudentsService, notificationsService: NotificationsService);
-    processFormSubmission(raw: Record<string, unknown>): Promise<{
+    processFormSubmission(raw: unknown): Promise<{
         email: string;
         id: string;
         surname: string;
@@ -28,5 +28,8 @@ export declare class WebhookService {
         studiedInChina: boolean;
         createdAt: Date;
     }>;
+    private extractPayload;
+    private parseRawBody;
     private normalizeValue;
+    private isRecord;
 }

@@ -12,8 +12,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.WebhookService = void 0;
 const common_1 = require("@nestjs/common");
 const lodash_1 = require("lodash");
-const notifications_service_1 = require("../notifications/notifications.service");
-const students_service_1 = require("../students/students.service");
+const notifications_service_js_1 = require("../notifications/notifications.service.js");
+const students_service_js_1 = require("../students/students.service.js");
 const FIELD_MAP = {
     'Фамилия (заглавными буквами) / Surname': 'personal.surname',
     'Имя (заглавными буквами) / Given Name': 'personal.givenName',
@@ -54,8 +54,9 @@ let WebhookService = class WebhookService {
         this.notificationsService = notificationsService;
     }
     async processFormSubmission(raw) {
+        const payload = this.extractPayload(raw);
         const normalized = {};
-        for (const [key, value] of Object.entries(raw)) {
+        for (const [key, value] of Object.entries(payload)) {
             const path = FIELD_MAP[key];
             if (path) {
                 (0, lodash_1.set)(normalized, path, this.normalizeValue(value));
@@ -65,17 +66,49 @@ let WebhookService = class WebhookService {
         await this.notificationsService.notifyNewStudent(student);
         return student;
     }
+    extractPayload(raw) {
+        const parsedRaw = this.parseRawBody(raw);
+        if (!this.isRecord(parsedRaw)) {
+            throw new common_1.BadRequestException('Expected a JSON object body.');
+        }
+        const candidate = parsedRaw.namedValues ?? parsedRaw.data ?? parsedRaw.payload ?? parsedRaw;
+        if (!this.isRecord(candidate)) {
+            throw new common_1.BadRequestException('Expected form payload as root object, namedValues, data, or payload.');
+        }
+        return candidate;
+    }
+    parseRawBody(raw) {
+        if (raw === undefined || raw === null) {
+            throw new common_1.BadRequestException('Request body was not parsed. Send JSON body with Content-Type: application/json.');
+        }
+        if (typeof raw !== 'string') {
+            return raw;
+        }
+        const trimmed = raw.trim();
+        if (!trimmed) {
+            throw new common_1.BadRequestException('Request body is empty.');
+        }
+        try {
+            return JSON.parse(trimmed);
+        }
+        catch {
+            throw new common_1.BadRequestException('Expected body to be valid JSON.');
+        }
+    }
     normalizeValue(value) {
         if (Array.isArray(value)) {
             return value.length === 1 ? value[0] : value;
         }
         return value;
     }
+    isRecord(value) {
+        return typeof value === 'object' && value !== null && !Array.isArray(value);
+    }
 };
 exports.WebhookService = WebhookService;
 exports.WebhookService = WebhookService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [students_service_1.StudentsService,
-        notifications_service_1.NotificationsService])
+    __metadata("design:paramtypes", [students_service_js_1.StudentsService,
+        notifications_service_js_1.NotificationsService])
 ], WebhookService);
 //# sourceMappingURL=webhook.service.js.map

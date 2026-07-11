@@ -9,6 +9,7 @@ export declare class ParserService {
     constructor(prisma: PrismaService, configService: ConfigService);
     parseDocument(documentId: string): Promise<StudentDocumentResponse>;
     private parseWithGemini;
+    private toGeminiUnavailableException;
     private fetchDocumentSource;
     private parseJsonObject;
     private stripMarkdownFence;

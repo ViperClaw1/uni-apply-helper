@@ -7,7 +7,7 @@ export class WebhookController {
 
   @Post('google-form')
   @HttpCode(200)
-  async handleGoogleForm(@Body() body: Record<string, unknown>) {
+  async handleGoogleForm(@Body() body: unknown) {
     await this.webhookService.processFormSubmission(body);
 
     return { ok: true };

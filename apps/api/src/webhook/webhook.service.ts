@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { set } from 'lodash';
-import { NotificationsService } from '../notifications/notifications.service';
-import { StudentsService } from '../students/students.service';
+import { NotificationsService } from '../notifications/notifications.service.js';
+import { StudentsService } from '../students/students.service.js';
 
 const FIELD_MAP: Record<string, string> = {
   'Фамилия (заглавными буквами) / Surname': 'personal.surname',
@@ -51,10 +51,11 @@ export class WebhookService {
     private readonly notificationsService: NotificationsService,
   ) {}
 
-  async processFormSubmission(raw: Record<string, unknown>) {
+  async processFormSubmission(raw: unknown) {
+    const payload = this.extractPayload(raw);
     const normalized: Record<string, unknown> = {};
 
-    for (const [key, value] of Object.entries(raw)) {
+    for (const [key, value] of Object.entries(payload)) {
       const path = FIELD_MAP[key];
 
       if (path) {
@@ -69,11 +70,58 @@ export class WebhookService {
     return student;
   }
 
+  private extractPayload(raw: unknown): Record<string, unknown> {
+    const parsedRaw = this.parseRawBody(raw);
+
+    if (!this.isRecord(parsedRaw)) {
+      throw new BadRequestException('Expected a JSON object body.');
+    }
+
+    const candidate =
+      parsedRaw.namedValues ?? parsedRaw.data ?? parsedRaw.payload ?? parsedRaw;
+
+    if (!this.isRecord(candidate)) {
+      throw new BadRequestException(
+        'Expected form payload as root object, namedValues, data, or payload.',
+      );
+    }
+
+    return candidate;
+  }
+
+  private parseRawBody(raw: unknown): unknown {
+    if (raw === undefined || raw === null) {
+      throw new BadRequestException(
+        'Request body was not parsed. Send JSON body with Content-Type: application/json.',
+      );
+    }
+
+    if (typeof raw !== 'string') {
+      return raw;
+    }
+
+    const trimmed = raw.trim();
+
+    if (!trimmed) {
+      throw new BadRequestException('Request body is empty.');
+    }
+
+    try {
+      return JSON.parse(trimmed) as unknown;
+    } catch {
+      throw new BadRequestException('Expected body to be valid JSON.');
+    }
+  }
+
   private normalizeValue(value: unknown) {
     if (Array.isArray(value)) {
       return value.length === 1 ? value[0] : value;
     }
 
     return value;
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
   }
 }

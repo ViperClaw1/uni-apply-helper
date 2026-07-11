@@ -33,7 +33,7 @@ let LettersService = class LettersService {
             this.gemini = new genai_1.GoogleGenAI({ apiKey });
         }
         this.model =
-            this.configService.get('GEMINI_LETTER_MODEL') || 'gemini-2.5-flash';
+            this.configService.get('GEMINI_LETTER_MODEL') || 'gemini-3.5-flash';
     }
     async generate(input) {
         this.assertGenerateInput(input);
@@ -120,16 +120,25 @@ let LettersService = class LettersService {
         if (!this.gemini) {
             throw new common_1.ServiceUnavailableException('GEMINI_API_KEY is not configured.');
         }
-        const response = await this.gemini.models.generateContent({
-            model: this.model,
-            contents: [
-                {
-                    role: 'user',
-                    parts: [{ text: this.buildPrompt(input) }],
-                },
-            ],
-        });
-        return (response.text ?? '').trim();
+        try {
+            const response = await this.gemini.models.generateContent({
+                model: this.model,
+                contents: [
+                    {
+                        role: 'user',
+                        parts: [{ text: this.buildPrompt(input) }],
+                    },
+                ],
+            });
+            return (response.text ?? '').trim();
+        }
+        catch (error) {
+            throw this.toGeminiUnavailableException(error);
+        }
+    }
+    toGeminiUnavailableException(error) {
+        const message = error instanceof Error ? error.message : 'Unknown Gemini error';
+        return new common_1.ServiceUnavailableException(`Gemini letter generation failed for model "${this.model}": ${message}`);
     }
     buildPrompt(input) {
         const studentName = [

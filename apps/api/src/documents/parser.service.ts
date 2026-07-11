@@ -35,7 +35,7 @@ export class ParserService {
     }
 
     this.model =
-      this.configService.get<string>('GEMINI_DOCUMENT_MODEL') || 'gemini-2.5-flash';
+      this.configService.get<string>('GEMINI_DOCUMENT_MODEL') || 'gemini-3.5-flash';
   }
 
   async parseDocument(documentId: string): Promise<StudentDocumentResponse> {
@@ -86,29 +86,41 @@ export class ParserService {
     document: StudentDocumentRecord,
   ): Promise<Record<string, unknown>> {
     const source = await this.fetchDocumentSource(document.fileUrl);
-    const response = await this.gemini!.models.generateContent({
-      model: this.model,
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            {
-              text: [
-                'Extract structured data from this student application document.',
-                `Document type: ${document.type}`,
-                'Return only valid JSON. Do not wrap it in markdown.',
-              ].join('\n'),
-            },
-            source,
-          ],
+    try {
+      const response = await this.gemini!.models.generateContent({
+        model: this.model,
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              {
+                text: [
+                  'Extract structured data from this student application document.',
+                  `Document type: ${document.type}`,
+                  'Return only valid JSON. Do not wrap it in markdown.',
+                ].join('\n'),
+              },
+              source,
+            ],
+          },
+        ],
+        config: {
+          responseMimeType: 'application/json',
         },
-      ],
-      config: {
-        responseMimeType: 'application/json',
-      },
-    });
+      });
 
-    return this.parseJsonObject(response.text ?? '');
+      return this.parseJsonObject(response.text ?? '');
+    } catch (error) {
+      throw this.toGeminiUnavailableException(error);
+    }
+  }
+
+  private toGeminiUnavailableException(error: unknown): ServiceUnavailableException {
+    const message = error instanceof Error ? error.message : 'Unknown Gemini error';
+
+    return new ServiceUnavailableException(
+      `Gemini document parsing failed for model "${this.model}": ${message}`,
+    );
   }
 
   private async fetchDocumentSource(fileUrl: string) {

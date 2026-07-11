@@ -27,7 +27,7 @@ let ParserService = class ParserService {
             this.gemini = new genai_1.GoogleGenAI({ apiKey });
         }
         this.model =
-            this.configService.get('GEMINI_DOCUMENT_MODEL') || 'gemini-2.5-flash';
+            this.configService.get('GEMINI_DOCUMENT_MODEL') || 'gemini-3.5-flash';
     }
     async parseDocument(documentId) {
         const document = await this.prisma.studentDocument.findUnique({
@@ -69,28 +69,37 @@ let ParserService = class ParserService {
     }
     async parseWithGemini(document) {
         const source = await this.fetchDocumentSource(document.fileUrl);
-        const response = await this.gemini.models.generateContent({
-            model: this.model,
-            contents: [
-                {
-                    role: 'user',
-                    parts: [
-                        {
-                            text: [
-                                'Extract structured data from this student application document.',
-                                `Document type: ${document.type}`,
-                                'Return only valid JSON. Do not wrap it in markdown.',
-                            ].join('\n'),
-                        },
-                        source,
-                    ],
+        try {
+            const response = await this.gemini.models.generateContent({
+                model: this.model,
+                contents: [
+                    {
+                        role: 'user',
+                        parts: [
+                            {
+                                text: [
+                                    'Extract structured data from this student application document.',
+                                    `Document type: ${document.type}`,
+                                    'Return only valid JSON. Do not wrap it in markdown.',
+                                ].join('\n'),
+                            },
+                            source,
+                        ],
+                    },
+                ],
+                config: {
+                    responseMimeType: 'application/json',
                 },
-            ],
-            config: {
-                responseMimeType: 'application/json',
-            },
-        });
-        return this.parseJsonObject(response.text ?? '');
+            });
+            return this.parseJsonObject(response.text ?? '');
+        }
+        catch (error) {
+            throw this.toGeminiUnavailableException(error);
+        }
+    }
+    toGeminiUnavailableException(error) {
+        const message = error instanceof Error ? error.message : 'Unknown Gemini error';
+        return new common_1.ServiceUnavailableException(`Gemini document parsing failed for model "${this.model}": ${message}`);
     }
     async fetchDocumentSource(fileUrl) {
         const response = await fetch(fileUrl);

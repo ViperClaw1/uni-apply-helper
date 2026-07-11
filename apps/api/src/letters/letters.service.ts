@@ -46,7 +46,7 @@ export class LettersService {
     }
 
     this.model =
-      this.configService.get<string>('GEMINI_LETTER_MODEL') || 'gemini-2.5-flash';
+      this.configService.get<string>('GEMINI_LETTER_MODEL') || 'gemini-3.5-flash';
   }
 
   async generate(input: GenerateLetterInput): Promise<LetterResponse> {
@@ -164,17 +164,29 @@ export class LettersService {
       throw new ServiceUnavailableException('GEMINI_API_KEY is not configured.');
     }
 
-    const response = await this.gemini.models.generateContent({
-      model: this.model,
-      contents: [
-        {
-          role: 'user',
-          parts: [{ text: this.buildPrompt(input) }],
-        },
-      ],
-    });
+    try {
+      const response = await this.gemini.models.generateContent({
+        model: this.model,
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: this.buildPrompt(input) }],
+          },
+        ],
+      });
 
-    return (response.text ?? '').trim();
+      return (response.text ?? '').trim();
+    } catch (error) {
+      throw this.toGeminiUnavailableException(error);
+    }
+  }
+
+  private toGeminiUnavailableException(error: unknown): ServiceUnavailableException {
+    const message = error instanceof Error ? error.message : 'Unknown Gemini error';
+
+    return new ServiceUnavailableException(
+      `Gemini letter generation failed for model "${this.model}": ${message}`,
+    );
   }
 
   private buildPrompt(input: {
