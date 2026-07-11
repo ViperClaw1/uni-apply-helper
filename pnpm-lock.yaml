@@ -249,6 +249,9 @@ importers:
       bullmq:
         specifier: ^5.79.3
         version: 5.79.3
+      express:
+        specifier: ^5.2.1
+        version: 5.2.1
       grammy:
         specifier: ^1.44.0
         version: 1.44.0
