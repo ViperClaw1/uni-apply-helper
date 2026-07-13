@@ -10,13 +10,6 @@
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@11.10.0",
-  "devEngines": {
-    "packageManager": {
-      "name": "pnpm",
-      "version": "11.10.0",
-      "onFail": "download"
-    }
-  },
   "type": "module",
   "devDependencies": {
     "turbo": "^2.10.4"
