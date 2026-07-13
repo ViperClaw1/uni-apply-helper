@@ -6,9 +6,11 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
+    "prebuild": "pnpm --filter @uni-apply/database generate",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
+    "prestart:dev": "pnpm --filter @uni-apply/database generate",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",

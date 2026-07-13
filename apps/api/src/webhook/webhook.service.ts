@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { set } from 'lodash';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { StudentsService } from '../students/students.service.js';
@@ -46,6 +46,8 @@ const FIELD_MAP: Record<string, string> = {
 
 @Injectable()
 export class WebhookService {
+  private readonly logger = new Logger(WebhookService.name);
+
   constructor(
     private readonly studentsService: StudentsService,
     private readonly notificationsService: NotificationsService,
@@ -56,10 +58,12 @@ export class WebhookService {
     const normalized: Record<string, unknown> = {};
 
     for (const [key, value] of Object.entries(payload)) {
-      const path = FIELD_MAP[key];
+      const path = FIELD_MAP[key] ?? this.resolveFieldPath(key);
 
       if (path) {
         set(normalized, path, this.normalizeValue(value));
+      } else {
+        this.logger.debug(`Skipped unmapped Google Form field: "${key}"`);
       }
     }
 
@@ -119,6 +123,180 @@ export class WebhookService {
     }
 
     return value;
+  }
+
+  private resolveFieldPath(key: string): string | undefined {
+    const normalizedKey = this.normalizeKey(key);
+
+    if (this.hasAny(normalizedKey, ['surname', 'фамилия'])) {
+      return 'personal.surname';
+    }
+
+    if (this.hasAny(normalizedKey, ['given name', 'имя'])) {
+      return 'personal.givenName';
+    }
+
+    if (this.hasAny(normalizedKey, ['sex', 'пол'])) {
+      return 'personal.sex';
+    }
+
+    if (this.hasAny(normalizedKey, ['nationality', 'гражданство'])) {
+      return 'personal.nationality';
+    }
+
+    if (this.hasAny(normalizedKey, ['city of birth', 'город рождения'])) {
+      return 'personal.cityOfBirth';
+    }
+
+    if (this.hasAny(normalizedKey, ['date of birth', 'дата рождения'])) {
+      return 'personal.dateOfBirth';
+    }
+
+    if (this.hasAny(normalizedKey, ['chinese name', 'китайское имя'])) {
+      return 'personal.chineseName';
+    }
+
+    if (this.hasAny(normalizedKey, ['religion', 'религия'])) {
+      return 'personal.religion';
+    }
+
+    if (this.hasAny(normalizedKey, ['passport no', 'номер паспорта'])) {
+      return 'personal.passportNo';
+    }
+
+    if (
+      this.hasAny(normalizedKey, [
+        'passport expiration',
+        'passport expiry',
+        'срок действия паспорта',
+      ])
+    ) {
+      return 'personal.passportExpiry';
+    }
+
+    if (this.hasAny(normalizedKey, ['consulate', 'консульство'])) {
+      return 'personal.consulate';
+    }
+
+    if (this.hasAny(normalizedKey, ['marital status', 'семейное положение'])) {
+      return 'personal.maritalStatus';
+    }
+
+    if (this.hasAny(normalizedKey, ['e mail', 'email', 'электронная почта'])) {
+      return 'personal.email';
+    }
+
+    if (this.hasAny(normalizedKey, ['phone number', 'phone', 'номер телефона'])) {
+      return 'personal.phone';
+    }
+
+    if (this.hasAny(normalizedKey, ['hobby', 'хобби'])) {
+      return 'personal.hobby';
+    }
+
+    if (this.hasAny(normalizedKey, ['permanent address', 'постоянный адрес'])) {
+      return 'personal.permanentAddress';
+    }
+
+    if (this.hasAny(normalizedKey, ['post code', 'почтовый индекс'])) {
+      return 'personal.postCode';
+    }
+
+    if (
+      this.hasAny(normalizedKey, [
+        'current employer',
+        'current institution',
+        'текущее место работы',
+        'текущее место учебы',
+        'текущее место учёбы',
+      ])
+    ) {
+      return 'personal.currentInstitution';
+    }
+
+    if (this.hasAny(normalizedKey, ['ever been to china', 'бывали ли вы в китае'])) {
+      return 'personal.beenToChina';
+    }
+
+    if (
+      this.hasAny(normalizedKey, [
+        'ever studied or worked in china',
+        'учились или работали ли вы в китае',
+      ])
+    ) {
+      return 'personal.studiedInChina';
+    }
+
+    if (this.hasAny(normalizedKey, ['highest degree', 'высшее образование'])) {
+      return 'education.0.degree';
+    }
+
+    if (
+      this.hasAny(normalizedKey, [
+        'school of graduation',
+        'учебное заведение окончания',
+      ])
+    ) {
+      return 'education.0.institution';
+    }
+
+    if (this.hasAny(normalizedKey, ['major', 'специальность заявки'])) {
+      return this.hasAny(normalizedKey, ['application', 'заявки'])
+        ? 'applicationMajor'
+        : 'education.0.major';
+    }
+
+    if (this.hasAny(normalizedKey, ['chinese language', 'китайского языка'])) {
+      return 'languages.chinese';
+    }
+
+    if (this.hasAny(normalizedKey, ['english language', 'английского языка'])) {
+      return 'languages.english';
+    }
+
+    if (
+      this.hasAny(normalizedKey, [
+        'application school',
+        'application university',
+        'куда подается заявка',
+        'куда подаётся заявка',
+      ])
+    ) {
+      return 'applicationTargets';
+    }
+
+    if (this.hasAny(normalizedKey, ['degree', 'степень'])) {
+      return 'applicationDegree';
+    }
+
+    if (this.hasAny(normalizedKey, ['duration of study', 'срок обучения'])) {
+      return 'applicationDuration';
+    }
+
+    if (
+      this.hasAny(normalizedKey, [
+        'financial resources',
+        'funding',
+        'источник финансирования',
+      ])
+    ) {
+      return 'applicationFunding';
+    }
+
+    return undefined;
+  }
+
+  private normalizeKey(key: string) {
+    return key
+      .toLowerCase()
+      .replace(/ё/g, 'е')
+      .replace(/[^a-zа-я0-9]+/g, ' ')
+      .trim()
+      .replace(/\s+/g, ' ');
+  }
+
+  private hasAny(value: string, needles: string[]) {
+    return needles.some((needle) => value.includes(this.normalizeKey(needle)));
   }
 
   private isRecord(value: unknown): value is Record<string, unknown> {

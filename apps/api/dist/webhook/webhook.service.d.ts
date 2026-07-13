@@ -3,6 +3,7 @@ import { StudentsService } from '../students/students.service.js';
 export declare class WebhookService {
     private readonly studentsService;
     private readonly notificationsService;
+    private readonly logger;
     constructor(studentsService: StudentsService, notificationsService: NotificationsService);
     processFormSubmission(raw: unknown): Promise<{
         email: string;
@@ -31,5 +32,8 @@ export declare class WebhookService {
     private extractPayload;
     private parseRawBody;
     private normalizeValue;
+    private resolveFieldPath;
+    private normalizeKey;
+    private hasAny;
     private isRecord;
 }
