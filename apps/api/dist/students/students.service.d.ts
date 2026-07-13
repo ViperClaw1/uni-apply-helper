@@ -4,7 +4,6 @@ export declare class StudentsService {
     private readonly prisma;
     constructor(prisma: PrismaService);
     createFromNormalized(data: Record<string, any>): Promise<{
-        email: string;
         id: string;
         surname: string;
         givenName: string;
@@ -18,6 +17,7 @@ export declare class StudentsService {
         passportExpiry: Date | null;
         consulate: string | null;
         maritalStatus: string | null;
+        email: string;
         phone: string | null;
         hobby: string | null;
         permanentAddress: string | null;
@@ -30,17 +30,16 @@ export declare class StudentsService {
     getFullProfile(studentId: string): Promise<StudentProfile>;
     findAll(): Promise<({
         applicationTargets: {
-            id: string;
             universityRaw: string;
             universityId: string | null;
             degree: string | null;
             major: string | null;
             duration: string | null;
             fundingSource: string | null;
+            id: string;
             studentId: string;
         }[];
     } & {
-        email: string;
         id: string;
         surname: string;
         givenName: string;
@@ -54,6 +53,7 @@ export declare class StudentsService {
         passportExpiry: Date | null;
         consulate: string | null;
         maritalStatus: string | null;
+        email: string;
         phone: string | null;
         hobby: string | null;
         permanentAddress: string | null;
@@ -64,7 +64,6 @@ export declare class StudentsService {
         createdAt: Date;
     })[]>;
     findOne(id: string): Promise<{
-        email: string;
         id: string;
         surname: string;
         givenName: string;
@@ -78,6 +77,7 @@ export declare class StudentsService {
         passportExpiry: Date | null;
         consulate: string | null;
         maritalStatus: string | null;
+        email: string;
         phone: string | null;
         hobby: string | null;
         permanentAddress: string | null;

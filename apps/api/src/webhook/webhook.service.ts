@@ -44,6 +44,40 @@ const FIELD_MAP: Record<string, string> = {
     'applicationFunding',
 };
 
+const FORM_VALUES_PATHS = [
+  undefined,
+  'personal.surname',
+  'personal.givenName',
+  'personal.sex',
+  'personal.nationality',
+  'personal.cityOfBirth',
+  'personal.dateOfBirth',
+  'personal.chineseName',
+  'personal.religion',
+  'personal.passportNo',
+  'personal.passportExpiry',
+  'personal.consulate',
+  'personal.maritalStatus',
+  'personal.email',
+  'personal.phone',
+  'personal.hobby',
+  'personal.permanentAddress',
+  'personal.postCode',
+  'personal.currentInstitution',
+  'personal.beenToChina',
+  'personal.studiedInChina',
+  'education.0.degree',
+  'education.0.institution',
+  'education.0.major',
+  'languages.chinese',
+  'languages.english',
+  'applicationTargets',
+  'applicationMajor',
+  'applicationDegree',
+  'applicationDuration',
+  'applicationFunding',
+] as const;
+
 @Injectable()
 export class WebhookService {
   private readonly logger = new Logger(WebhookService.name);
@@ -54,8 +88,14 @@ export class WebhookService {
   ) {}
 
   async processFormSubmission(raw: unknown) {
-    const payload = this.extractPayload(raw);
+    const parsedRaw = this.parseRawBody(raw);
+    const payload = this.extractPayload(parsedRaw);
+    const values = this.extractValues(parsedRaw, payload);
     const normalized: Record<string, unknown> = {};
+
+    this.logger.log(
+      `Google Form payload keys: ${Object.keys(payload).join(', ') || '(none)'}`,
+    );
 
     for (const [key, value] of Object.entries(payload)) {
       const path = FIELD_MAP[key] ?? this.resolveFieldPath(key);
@@ -67,6 +107,14 @@ export class WebhookService {
       }
     }
 
+    if (this.isEmptyNormalized(normalized) && values.length > 0) {
+      this.applyValuesFallback(normalized, values);
+    }
+
+    this.logger.log(
+      `Google Form normalized preview: ${JSON.stringify(this.toNormalizedPreview(normalized))}`,
+    );
+
     const student = await this.studentsService.createFromNormalized(normalized);
 
     await this.notificationsService.notifyNewStudent(student);
@@ -74,15 +122,14 @@ export class WebhookService {
     return student;
   }
 
-  private extractPayload(raw: unknown): Record<string, unknown> {
-    const parsedRaw = this.parseRawBody(raw);
-
+  private extractPayload(parsedRaw: unknown): Record<string, unknown> {
     if (!this.isRecord(parsedRaw)) {
       throw new BadRequestException('Expected a JSON object body.');
     }
 
+    const candidates = [parsedRaw.namedValues, parsedRaw.data, parsedRaw.payload];
     const candidate =
-      parsedRaw.namedValues ?? parsedRaw.data ?? parsedRaw.payload ?? parsedRaw;
+      candidates.find((value) => this.isNonEmptyRecord(value)) ?? parsedRaw;
 
     if (!this.isRecord(candidate)) {
       throw new BadRequestException(
@@ -91,6 +138,27 @@ export class WebhookService {
     }
 
     return candidate;
+  }
+
+  private extractValues(
+    parsedRaw: unknown,
+    payload: Record<string, unknown>,
+  ): unknown[] {
+    const candidates = this.isRecord(parsedRaw)
+      ? [parsedRaw.values, parsedRaw.data, parsedRaw.payload, payload.values]
+      : [payload.values];
+
+    for (const candidate of candidates) {
+      if (Array.isArray(candidate)) {
+        return candidate;
+      }
+
+      if (this.isRecord(candidate) && Array.isArray(candidate.values)) {
+        return candidate.values;
+      }
+    }
+
+    return [];
   }
 
   private parseRawBody(raw: unknown): unknown {
@@ -123,6 +191,49 @@ export class WebhookService {
     }
 
     return value;
+  }
+
+  private applyValuesFallback(
+    normalized: Record<string, unknown>,
+    values: unknown[],
+  ) {
+    const pathOffset = this.looksLikeTimestamp(values[0]) ? 0 : 1;
+
+    for (const [index, value] of values.entries()) {
+      const path = FORM_VALUES_PATHS[index + pathOffset];
+      const normalizedValue = this.normalizeValue(value);
+
+      if (path && normalizedValue !== '') {
+        set(normalized, path, normalizedValue);
+      }
+    }
+  }
+
+  private isEmptyNormalized(normalized: Record<string, unknown>) {
+    return Object.keys(normalized).length === 0;
+  }
+
+  private toNormalizedPreview(normalized: Record<string, unknown>) {
+    const personal = this.isRecord(normalized.personal) ? normalized.personal : {};
+
+    return {
+      surname: personal.surname,
+      givenName: personal.givenName,
+      email: personal.email,
+      applicationTargets: normalized.applicationTargets,
+    };
+  }
+
+  private looksLikeTimestamp(value: unknown) {
+    if (value instanceof Date) {
+      return true;
+    }
+
+    if (typeof value !== 'string') {
+      return false;
+    }
+
+    return !Number.isNaN(new Date(value).getTime());
   }
 
   private resolveFieldPath(key: string): string | undefined {
@@ -301,5 +412,9 @@ export class WebhookService {
 
   private isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
+  }
+
+  private isNonEmptyRecord(value: unknown): value is Record<string, unknown> {
+    return this.isRecord(value) && Object.keys(value).length > 0;
   }
 }
