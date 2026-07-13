@@ -73,10 +73,10 @@ export function StudentList() {
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <div className="text-base font-semibold text-slate-950">
-                    {student.givenName} {student.surname}
+                    {formatStudentName(student)}
                   </div>
                   <div className="mt-1 text-sm text-slate-500">
-                    {student.email}
+                    {student.email || "Email не указан"}
                   </div>
                   <div className="mt-3 text-sm text-slate-600">
                     {formatTargets(student)}
@@ -92,6 +92,12 @@ export function StudentList() {
       )}
     </div>
   );
+}
+
+function formatStudentName(student: Pick<StudentListItem, "givenName" | "surname">) {
+  const name = [student.givenName, student.surname].filter(Boolean).join(" ");
+
+  return name || "Имя не указано";
 }
 
 function formatTargets(student: StudentListItem) {

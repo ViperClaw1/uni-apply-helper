@@ -108,6 +108,8 @@ export function StudentProfilePage() {
     return <PageShell title="Ошибка" description={error ?? "Студент не найден."} />;
   }
 
+  const studentName = formatStudentName(student.personal);
+
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-6 py-8">
       <Link
@@ -122,10 +124,10 @@ export function StudentProfilePage() {
           <div>
             <p className="text-sm font-medium text-slate-500">Карточка студента</p>
             <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-950">
-              {student.personal.givenName} {student.personal.surname}
+              {studentName}
             </h1>
             <div className="mt-3 flex flex-wrap gap-2 text-sm text-slate-600">
-              <span>{student.personal.email}</span>
+              <span>{student.personal.email || "Email не указан"}</span>
               {student.personal.phone ? <span>{student.personal.phone}</span> : null}
               {student.personal.passportNo ? (
                 <span>Паспорт: {student.personal.passportNo}</span>
@@ -202,6 +204,12 @@ export function StudentProfilePage() {
       </div>
     </main>
   );
+}
+
+function formatStudentName(student: { givenName?: string; surname?: string }) {
+  const name = [student.givenName, student.surname].filter(Boolean).join(" ");
+
+  return name || "Имя не указано";
 }
 
 function PageShell({
