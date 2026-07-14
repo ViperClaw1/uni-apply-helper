@@ -18,9 +18,12 @@ export async function uploadStudentDocument(
   form.append("type", type);
   form.append("file", file);
 
+  return response.data;
+}
+
+export async function retryDocumentParse(documentId: string) {
   const response = await apiClient.post<StudentDocument>(
-    `/students/${studentId}/documents/upload`,
-    form,
+    `/documents/${documentId}/parse`,
   );
 
   return response.data;

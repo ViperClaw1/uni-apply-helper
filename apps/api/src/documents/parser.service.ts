@@ -177,14 +177,19 @@ export class ParserService {
             break;
           }
 
-          if (
-            attempt === GEMINI_MAX_RETRIES ||
-            !this.isGeminiOverloadedError(error)
-          ) {
-            throw error;
+          if (this.isGeminiOverloadedError(error)) {
+            if (attempt < GEMINI_MAX_RETRIES) {
+              await this.delay(GEMINI_RETRY_BASE_DELAY_MS * attempt);
+              continue;
+            }
+
+            this.logger.warn(
+              `Gemini model "${model}" is overloaded after ${GEMINI_MAX_RETRIES} attempts, trying fallback.`,
+            );
+            break;
           }
 
-          await this.delay(GEMINI_RETRY_BASE_DELAY_MS * attempt);
+          throw error;
         }
       }
     }
@@ -193,12 +198,15 @@ export class ParserService {
   }
 
   private getModelCandidates(): string[] {
-    return [
-      this.model,
-      ...GEMINI_DOCUMENT_MODEL_FALLBACKS.filter(
-        (model) => model !== this.model,
-      ),
-    ];
+    const configured = this.model;
+    const fallbacks = GEMINI_DOCUMENT_MODEL_FALLBACKS.filter(
+      (model) => model !== configured,
+    );
+    const isLegacyModel = /gemini-2\.[05]|gemini-1\.5/.test(configured);
+
+    return isLegacyModel
+      ? [...fallbacks, configured]
+      : [configured, ...fallbacks];
   }
 
   private isGeminiModelNotFoundError(error: unknown): boolean {

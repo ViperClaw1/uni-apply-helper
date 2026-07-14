@@ -245,6 +245,8 @@ export class DocumentsService {
 
     await this.queueService.addJob(QUEUES.DOCUMENT_PARSE, data, {
       jobId: documentId,
+      removeOnComplete: true,
+      removeOnFail: true,
     });
   }
 

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
-import { uploadStudentDocument } from "../api/documents.api";
+import { uploadStudentDocument, retryDocumentParse } from "../api/documents.api";
 import type { StudentDocument } from "../types/document.types";
 
 type UploadStatus = "idle" | "uploading" | "done" | "error";
@@ -29,6 +29,7 @@ export function DocumentUploader({
   onUploaded,
 }: DocumentUploaderProps) {
   const [status, setStatus] = useState<UploadStatus>("idle");
+  const [isRetryingParse, setIsRetryingParse] = useState(false);
   const existingDocument = existingDocuments[0];
   const hasDocuments = existingDocuments.length > 0;
 
@@ -76,7 +77,22 @@ export function DocumentUploader({
     }, 3000);
 
     return () => window.clearInterval(intervalId);
-  }, [existingDocument, onUploaded, parse]);
+  }, [existingDocument?.id, existingDocument?.parseStatus, onUploaded, parse]);
+
+  async function handleRetryParse() {
+    if (!existingDocument) {
+      return;
+    }
+
+    setIsRetryingParse(true);
+
+    try {
+      await retryDocumentParse(existingDocument.id);
+      await onUploaded();
+    } finally {
+      setIsRetryingParse(false);
+    }
+  }
 
   if (hasDocuments) {
     return (
@@ -111,6 +127,16 @@ export function DocumentUploader({
               <div className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-xs text-rose-700 ring-1 ring-rose-100">
                 {formatParseError(existingDocument.parsedData)}
               </div>
+            ) : null}
+            {parse && existingDocument?.parseStatus === "failed" ? (
+              <button
+                type="button"
+                onClick={handleRetryParse}
+                disabled={isRetryingParse}
+                className="mt-2 inline-flex h-8 items-center rounded-lg px-3 text-xs font-semibold text-rose-700 ring-1 ring-rose-200 transition-colors hover:bg-rose-100 disabled:opacity-60"
+              >
+                {isRetryingParse ? "Повторяем..." : "Повторить парсинг"}
+              </button>
             ) : null}
             {parse && existingDocument?.parseStatus === "parsed" ? (
               <div className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600 ring-1 ring-slate-100">
@@ -286,7 +312,25 @@ function formatParseError(parsedData: unknown) {
   if (parsedData && typeof parsedData === "object" && "error" in parsedData) {
     const error = (parsedData as { error?: unknown }).error;
 
-    return typeof error === "string" ? error : "Не удалось распознать документ.";
+    if (typeof error !== "string") {
+      return "Не удалось распознать документ.";
+    }
+
+    const unavailableMatch = error.match(
+      /"message":"([^"]+)"[^}]*"status":"UNAVAILABLE"/,
+    );
+
+    if (unavailableMatch?.[1]) {
+      return unavailableMatch[1];
+    }
+
+    const notFoundMatch = error.match(/"message":"([^"]+)"/);
+
+    if (notFoundMatch?.[1]) {
+      return notFoundMatch[1];
+    }
+
+    return error.length > 240 ? `${error.slice(0, 240)}…` : error;
   }
 
   return "Не удалось распознать документ.";
