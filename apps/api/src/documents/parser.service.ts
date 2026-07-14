@@ -20,6 +20,9 @@ type StudentDocumentRecord = {
   uploadedAt: Date;
 };
 
+const GEMINI_MAX_RETRIES = 3;
+const GEMINI_RETRY_BASE_DELAY_MS = 5000;
+
 const DOCUMENT_PARSE_PROMPTS: Record<string, string> = {
   passport: [
     'Extract from this passport scan: surname, givenName, dateOfBirth,',
@@ -117,33 +120,87 @@ export class ParserService {
     document: StudentDocumentRecord,
   ): Promise<Record<string, unknown>> {
     const source = await this.fetchDocumentSource(document.fileUrl);
+
     try {
-      const response = await this.gemini!.models.generateContent({
-        model: this.model,
-        contents: [
-          {
-            role: 'user',
-            parts: [
-              {
-                text: [
-                  this.getParsePrompt(document.type),
-                  `Document type: ${document.type}`,
-                  'Return only valid JSON. Do not wrap it in markdown.',
-                ].join('\n'),
-              },
-              source,
-            ],
-          },
-        ],
-        config: {
-          responseMimeType: 'application/json',
+      const response = await this.generateGeminiContent([
+        {
+          role: 'user',
+          parts: [
+            {
+              text: [
+                this.getParsePrompt(document.type),
+                `Document type: ${document.type}`,
+                'Return only valid JSON. Do not wrap it in markdown.',
+              ].join('\n'),
+            },
+            source,
+          ],
         },
-      });
+      ]);
 
       return this.parseJsonObject(response.text ?? '');
     } catch (error) {
       throw this.toGeminiUnavailableException(error);
     }
+  }
+
+  private async generateGeminiContent(
+    contents: Parameters<
+      NonNullable<typeof this.gemini>['models']['generateContent']
+    >[0]['contents'],
+  ) {
+    let lastError: unknown;
+
+    for (let attempt = 1; attempt <= GEMINI_MAX_RETRIES; attempt++) {
+      try {
+        return await this.gemini!.models.generateContent({
+          model: this.model,
+          contents,
+          config: {
+            responseMimeType: 'application/json',
+          },
+        });
+      } catch (error) {
+        lastError = error;
+
+        if (
+          attempt === GEMINI_MAX_RETRIES ||
+          !this.isGeminiOverloadedError(error)
+        ) {
+          throw error;
+        }
+
+        await this.delay(GEMINI_RETRY_BASE_DELAY_MS * attempt);
+      }
+    }
+
+    throw lastError;
+  }
+
+  private isGeminiOverloadedError(error: unknown): boolean {
+    if (typeof error !== 'object' || error === null) {
+      return false;
+    }
+
+    const err = error as {
+      status?: number;
+      statusCode?: number;
+      message?: string;
+    };
+    const status = err.status ?? err.statusCode;
+
+    if (status === 503) {
+      return true;
+    }
+
+    const message =
+      err.message ?? (error instanceof Error ? error.message : '');
+
+    return message.includes('503') || message.includes('UNAVAILABLE');
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   private toGeminiUnavailableException(
