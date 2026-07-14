@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@uni-apply/database';
 import { QUEUES } from '@uni-apply/shared';
 import { randomUUID } from 'node:crypto';
 import { extname } from 'node:path';

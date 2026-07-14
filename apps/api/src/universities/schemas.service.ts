@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@uni-apply/database';
 import type { FieldConfig } from '@uni-apply/shared';
 import { createHash } from 'node:crypto';
 import { readdir, readFile } from 'node:fs/promises';

@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenAI } from '@google/genai';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@uni-apply/database';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { StudentDocumentResponse } from './types/document-api.types.js';
 

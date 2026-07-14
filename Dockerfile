@@ -34,7 +34,8 @@ RUN pnpm --filter @uni-apply/shared build \
   && pnpm --filter "$APP" build \
   && pnpm prune --prod --config.confirmModulesPurge=false \
   && pnpm install --prod --frozen-lockfile \
-  && DATABASE_URL="postgresql://postgres:postgres@localhost:5432/uni_apply" pnpm --filter @uni-apply/database exec prisma generate
+  && DATABASE_URL="postgresql://postgres:postgres@localhost:5432/uni_apply" pnpm --filter @uni-apply/database exec prisma generate \
+  && pnpm --filter @uni-apply/database build
 
 FROM base AS runner
 

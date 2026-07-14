@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma } from '@uni-apply/database';
 import { QUEUES } from '@uni-apply/shared';
 import type { StudentProfile } from '@uni-apply/shared';
 import { NotificationsService } from '../notifications/notifications.service.js';

@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PrismaClient = void 0;
-var client_1 = require("@prisma/client");
-Object.defineProperty(exports, "PrismaClient", { enumerable: true, get: function () { return client_1.PrismaClient; } });
+exports.PrismaClient = exports.Prisma = void 0;
+var client_js_1 = require("./generated/prisma/client.js");
+Object.defineProperty(exports, "Prisma", { enumerable: true, get: function () { return client_js_1.Prisma; } });
+Object.defineProperty(exports, "PrismaClient", { enumerable: true, get: function () { return client_js_1.PrismaClient; } });

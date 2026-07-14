@@ -28,6 +28,7 @@ export class DocumentParseWorker implements OnModuleInit, OnModuleDestroy {
     this.worker.on('failed', (job, error) => {
       this.logger.error(
         `Document parse job ${job?.id ?? 'unknown'} failed: ${error.message}`,
+        error.stack,
       );
     });
   }
@@ -37,7 +38,12 @@ export class DocumentParseWorker implements OnModuleInit, OnModuleDestroy {
   }
 
   private async process(job: Job<DocumentParseJobData>) {
-    return this.parserService.parseDocument(job.data.documentId);
+    try {
+      return await this.parserService.parseDocument(job.data.documentId);
+    } catch (error) {
+      this.logger.error('Full parse error:', error);
+      throw error;
+    }
   }
 
   private getRedisConnection(): QueueOptions['connection'] {

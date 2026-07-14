@@ -4,7 +4,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node -e \"require('node:fs').cpSync('src/generated','dist/generated',{recursive:true})\"",
     "migrate": "prisma migrate dev",
     "generate": "pnpm exec prisma generate",
     "studio": "prisma studio"
