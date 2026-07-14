@@ -30,7 +30,8 @@ RUN pnpm --filter @uni-apply/shared build \
   && DATABASE_URL="postgresql://postgres:postgres@localhost:5432/uni_apply" pnpm --filter @uni-apply/database generate \
   && pnpm --filter @uni-apply/database build \
   && pnpm --filter api build \
-  && pnpm prune --prod --config.confirmModulesPurge=false
+  && pnpm prune --prod --config.confirmModulesPurge=false \
+  && DATABASE_URL="postgresql://postgres:postgres@localhost:5432/uni_apply" pnpm --filter @uni-apply/database generate
 
 FROM base AS runner
 
