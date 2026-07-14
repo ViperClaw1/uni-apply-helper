@@ -33,8 +33,8 @@ RUN pnpm --filter @uni-apply/shared build \
   && pnpm --filter @uni-apply/database build \
   && pnpm --filter "$APP" build \
   && pnpm prune --prod --config.confirmModulesPurge=false \
-  && cd packages/database \
-  && DATABASE_URL="postgresql://postgres:postgres@localhost:5432/uni_apply" pnpm dlx prisma@7.8.0 generate
+  && pnpm install --prod --frozen-lockfile \
+  && DATABASE_URL="postgresql://postgres:postgres@localhost:5432/uni_apply" pnpm --filter @uni-apply/database exec prisma generate
 
 FROM base AS runner
 
