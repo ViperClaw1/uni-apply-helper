@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { uploadStudentDocument } from "../api/documents.api";
 import type { StudentDocument } from "../types/document.types";
@@ -62,6 +62,22 @@ export function DocumentUploader({
     onDrop,
   });
 
+  useEffect(() => {
+    if (!parse || !existingDocument) {
+      return;
+    }
+
+    if (!["pending", "processing"].includes(existingDocument.parseStatus)) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      onUploaded().catch(() => undefined);
+    }, 3000);
+
+    return () => window.clearInterval(intervalId);
+  }, [existingDocument, onUploaded, parse]);
+
   if (hasDocuments) {
     return (
       <div className="rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.08)] ring-1 ring-black/5">
@@ -69,12 +85,21 @@ export function DocumentUploader({
           <div className="min-w-0">
             <div className="text-sm font-semibold text-slate-950">{label}</div>
             {existingDocument ? (
-              <div className="mt-1 text-xs font-medium text-emerald-700">
+              <div
+                className={[
+                  "mt-1 text-xs font-medium",
+                  getParseStatusTone(existingDocument.parseStatus, parse),
+                ].join(" ")}
+              >
                 {status === "uploading"
                   ? multiple
                     ? "Добавляем файлы..."
                     : "Загружаем новую версию..."
-                  : getUploadedStatusText(existingDocument, parse, existingDocuments.length)}
+                  : getUploadedStatusText(
+                      existingDocument,
+                      parse,
+                      existingDocuments.length,
+                    )}
               </div>
             ) : null}
             {status === "error" ? (
@@ -82,9 +107,14 @@ export function DocumentUploader({
                 Ошибка повторной загрузки
               </div>
             ) : null}
-            {parse && existingDocument?.parsedData ? (
+            {parse && existingDocument?.parseStatus === "failed" ? (
+              <div className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-xs text-rose-700 ring-1 ring-rose-100">
+                {formatParseError(existingDocument.parsedData)}
+              </div>
+            ) : null}
+            {parse && existingDocument?.parseStatus === "parsed" ? (
               <div className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600 ring-1 ring-slate-100">
-                {formatParsedPreview(existingDocument.parsedData)}
+                {formatParsedPreview(type, existingDocument.parsedData)}
               </div>
             ) : null}
             {multiple ? (
@@ -176,20 +206,90 @@ function getUploadedStatusText(
     return documentCount > 1 ? `Загружено файлов: ${documentCount}` : "Загружен";
   }
 
-  return `Загружен · Парсинг: ${document.parseStatus}`;
+  return `Загружен · Парсинг: ${formatParseStatus(document.parseStatus)}`;
 }
 
-function formatParsedPreview(parsedData: unknown) {
+function formatParseStatus(status: string) {
+  const labels: Record<string, string> = {
+    failed: "ошибка",
+    parsed: "готово",
+    pending: "в очереди",
+    processing: "обработка",
+    uploaded: "не требуется",
+  };
+
+  return labels[status] ?? status;
+}
+
+function getParseStatusTone(parseStatus: string, parse: boolean) {
+  if (!parse) {
+    return "text-emerald-700";
+  }
+
+  if (parseStatus === "parsed") {
+    return "text-emerald-700";
+  }
+
+  if (parseStatus === "failed") {
+    return "text-rose-700";
+  }
+
+  if (parseStatus === "pending" || parseStatus === "processing") {
+    return "text-amber-700";
+  }
+
+  return "text-slate-600";
+}
+
+const PASSPORT_FIELD_LABELS: Record<string, string> = {
+  surname: "Фамилия",
+  givenName: "Имя",
+  dateOfBirth: "Дата рождения",
+  nationality: "Гражданство",
+  passportNo: "Номер паспорта",
+  passportExpiry: "Срок действия",
+  cityOfBirth: "Город рождения",
+};
+
+function formatParsedPreview(documentType: string, parsedData: unknown) {
   if (!parsedData || typeof parsedData !== "object") {
     return "Данные извлечены.";
   }
 
-  const entries = Object.entries(parsedData)
+  const record = parsedData as Record<string, unknown>;
+
+  if (documentType === "passport") {
+    const lines = Object.entries(PASSPORT_FIELD_LABELS)
+      .map(([key, label]) => {
+        const value = record[key];
+
+        if (value === null || value === undefined || value === "") {
+          return null;
+        }
+
+        return `${label}: ${formatPreviewValue(value)}`;
+      })
+      .filter((line): line is string => line !== null);
+
+    return lines.length > 0 ? lines.join(" · ") : "Данные извлечены.";
+  }
+
+  const entries = Object.entries(record)
     .filter(([, value]) => value !== null && value !== undefined && value !== "")
     .slice(0, 5)
     .map(([key, value]) => `${key}: ${formatPreviewValue(value)}`);
 
   return entries.length > 0 ? entries.join(" · ") : "Данные извлечены.";
+}
+
+function formatParseError(parsedData: unknown) {
+  if (parsedData && typeof parsedData === "object" && "error" in parsedData) {
+    const error = (parsedData as { error?: unknown }).error;
+
+    return typeof error === "string" ? error : "Не удалось распознать документ.";
+  }
+
+  return "Не удалось распознать документ.";
 }
 
 function formatPreviewValue(value: unknown) {

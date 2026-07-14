@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
@@ -22,6 +23,10 @@ type StudentDocumentRecord = {
 
 const GEMINI_MAX_RETRIES = 3;
 const GEMINI_RETRY_BASE_DELAY_MS = 5000;
+const GEMINI_DOCUMENT_MODEL_FALLBACKS = [
+  'gemini-3.5-flash',
+  'gemini-3.1-flash-lite',
+] as const;
 
 const DOCUMENT_PARSE_PROMPTS: Record<string, string> = {
   passport: [
@@ -33,6 +38,7 @@ const DOCUMENT_PARSE_PROMPTS: Record<string, string> = {
 
 @Injectable()
 export class ParserService {
+  private readonly logger = new Logger(ParserService.name);
   private readonly gemini?: GoogleGenAI;
   private readonly model: string;
 
@@ -146,30 +152,79 @@ export class ParserService {
   ) {
     let lastError: unknown;
 
-    for (let attempt = 1; attempt <= GEMINI_MAX_RETRIES; attempt++) {
-      try {
-        return await this.gemini!.models.generateContent({
-          model: this.model,
-          contents,
-          config: {
-            responseMimeType: 'application/json',
-          },
-        });
-      } catch (error) {
-        lastError = error;
+    for (const model of this.getModelCandidates()) {
+      for (let attempt = 1; attempt <= GEMINI_MAX_RETRIES; attempt++) {
+        try {
+          const response = await this.gemini!.models.generateContent({
+            model,
+            contents,
+            config: {
+              responseMimeType: 'application/json',
+            },
+          });
 
-        if (
-          attempt === GEMINI_MAX_RETRIES ||
-          !this.isGeminiOverloadedError(error)
-        ) {
-          throw error;
+          if (model !== this.model) {
+            this.logger.warn(
+              `Gemini model "${this.model}" is unavailable, used fallback "${model}". Update GEMINI_DOCUMENT_MODEL.`,
+            );
+          }
+
+          return response;
+        } catch (error) {
+          lastError = error;
+
+          if (this.isGeminiModelNotFoundError(error)) {
+            break;
+          }
+
+          if (
+            attempt === GEMINI_MAX_RETRIES ||
+            !this.isGeminiOverloadedError(error)
+          ) {
+            throw error;
+          }
+
+          await this.delay(GEMINI_RETRY_BASE_DELAY_MS * attempt);
         }
-
-        await this.delay(GEMINI_RETRY_BASE_DELAY_MS * attempt);
       }
     }
 
     throw lastError;
+  }
+
+  private getModelCandidates(): string[] {
+    return [
+      this.model,
+      ...GEMINI_DOCUMENT_MODEL_FALLBACKS.filter(
+        (model) => model !== this.model,
+      ),
+    ];
+  }
+
+  private isGeminiModelNotFoundError(error: unknown): boolean {
+    if (typeof error !== 'object' || error === null) {
+      return false;
+    }
+
+    const err = error as {
+      status?: number;
+      statusCode?: number;
+      message?: string;
+    };
+    const status = err.status ?? err.statusCode;
+
+    if (status === 404) {
+      return true;
+    }
+
+    const message =
+      err.message ?? (error instanceof Error ? error.message : '');
+
+    return (
+      message.includes('NOT_FOUND') ||
+      message.includes('no longer available') ||
+      message.includes('is not found for API version')
+    );
   }
 
   private isGeminiOverloadedError(error: unknown): boolean {

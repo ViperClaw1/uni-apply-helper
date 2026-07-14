@@ -11,7 +11,7 @@ export const DEFAULT_DOCUMENT_TYPES: DocumentTypeOption[] = [
     key: "passport",
     label: "Загранпаспорт",
     accept: { "application/pdf": [".pdf"], "image/*": [] },
-    parse: false,
+    parse: true,
   },
   {
     key: "transcript",
