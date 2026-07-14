@@ -83,7 +83,15 @@ export function StudentProfilePage() {
   }, [latestBatch, loadBatches]);
 
   const documentMap = useMemo(() => {
-    return new Map(documents.map((document) => [document.type, document]));
+    const latestByType = new Map<string, StudentDocument>();
+
+    for (const document of documents) {
+      if (!latestByType.has(document.type)) {
+        latestByType.set(document.type, document);
+      }
+    }
+
+    return latestByType;
   }, [documents]);
 
   async function handleCreateBatch() {

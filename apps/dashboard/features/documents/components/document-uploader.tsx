@@ -63,17 +63,38 @@ export function DocumentUploader({
           <div>
             <div className="text-sm font-semibold text-slate-950">{label}</div>
             <div className="mt-1 text-xs font-medium text-emerald-700">
-              Загружен · Парсинг: {existingDocument.parseStatus}
+              {status === "uploading"
+                ? "Загружаем новую версию..."
+                : `Загружен · Парсинг: ${existingDocument.parseStatus}`}
+            </div>
+            {status === "error" ? (
+              <div className="mt-1 text-xs font-medium text-rose-700">
+                Ошибка повторной загрузки
+              </div>
+            ) : null}
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <a
+              href={existingDocument.fileUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-10 items-center justify-center rounded-xl px-3 text-xs font-semibold text-sky-700 ring-1 ring-sky-200 transition-colors hover:bg-sky-50"
+            >
+              Открыть
+            </a>
+            <div
+              {...getRootProps()}
+              className={[
+                "inline-flex h-10 cursor-pointer items-center justify-center rounded-xl px-3 text-xs font-semibold ring-1 transition-colors",
+                status === "uploading"
+                  ? "pointer-events-none bg-slate-50 text-slate-400 ring-slate-200"
+                  : "text-slate-700 ring-slate-200 hover:bg-slate-50",
+              ].join(" ")}
+            >
+              <input {...getInputProps()} />
+              {status === "uploading" ? "Загрузка..." : "Загрузить заново"}
             </div>
           </div>
-          <a
-            href={existingDocument.fileUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex h-10 items-center justify-center rounded-xl px-3 text-xs font-semibold text-sky-700 ring-1 ring-sky-200 transition-colors hover:bg-sky-50"
-          >
-            Открыть
-          </a>
         </div>
       </div>
     );

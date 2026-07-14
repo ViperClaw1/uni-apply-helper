@@ -6,6 +6,7 @@ export declare class WebhookService {
     private readonly logger;
     constructor(studentsService: StudentsService, notificationsService: NotificationsService);
     processFormSubmission(raw: unknown): Promise<{
+        email: string;
         id: string;
         surname: string;
         givenName: string;
@@ -19,7 +20,6 @@ export declare class WebhookService {
         passportExpiry: Date | null;
         consulate: string | null;
         maritalStatus: string | null;
-        email: string;
         phone: string | null;
         hobby: string | null;
         permanentAddress: string | null;
