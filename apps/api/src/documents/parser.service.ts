@@ -29,11 +29,6 @@ const DOCUMENT_PARSE_PROMPTS: Record<string, string> = {
     'nationality, passportNo, passportExpiry, cityOfBirth.',
     'Return JSON only.',
   ].join(' '),
-  transcript: [
-    'Extract from this academic transcript: institution name, degree, major/specialty,',
-    'study period start and end dates, GPA or average grade, list of subjects with grades.',
-    'Return JSON only.',
-  ].join(' '),
 };
 
 @Injectable()

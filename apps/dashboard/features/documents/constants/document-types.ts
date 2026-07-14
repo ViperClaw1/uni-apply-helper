@@ -11,13 +11,13 @@ export const DEFAULT_DOCUMENT_TYPES: DocumentTypeOption[] = [
     key: "passport",
     label: "Загранпаспорт",
     accept: { "application/pdf": [".pdf"], "image/*": [] },
-    parse: true,
+    parse: false,
   },
   {
     key: "transcript",
     label: "Аттестат с оценками + перевод",
     accept: { "application/pdf": [".pdf"] },
-    parse: true,
+    parse: false,
   },
   {
     key: "medical",

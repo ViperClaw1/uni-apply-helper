@@ -30,7 +30,7 @@ type StudentDocumentRecord = {
   uploadedAt: Date;
 };
 
-const PARSEABLE_DOCUMENT_TYPES = new Set(['passport', 'transcript']);
+const PARSEABLE_DOCUMENT_TYPES = new Set(['passport']);
 
 @Injectable()
 export class DocumentsService {
