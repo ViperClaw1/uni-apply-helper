@@ -11,7 +11,10 @@ type DocumentUploaderProps = {
   studentId: string;
   type: string;
   label: string;
-  existingDocument?: StudentDocument;
+  accept: Record<string, string[]>;
+  parse: boolean;
+  multiple?: boolean;
+  existingDocuments?: StudentDocument[];
   onUploaded: () => Promise<void>;
 };
 
@@ -19,69 +22,98 @@ export function DocumentUploader({
   studentId,
   type,
   label,
-  existingDocument,
+  accept,
+  parse,
+  multiple = false,
+  existingDocuments = [],
   onUploaded,
 }: DocumentUploaderProps) {
   const [status, setStatus] = useState<UploadStatus>("idle");
+  const existingDocument = existingDocuments[0];
+  const hasDocuments = existingDocuments.length > 0;
 
   const onDrop = useCallback(
     async (files: File[]) => {
-      const file = files[0];
+      const filesToUpload = multiple ? files : files.slice(0, 1);
 
-      if (!file) {
+      if (filesToUpload.length === 0) {
         return;
       }
 
       setStatus("uploading");
 
       try {
-        await uploadStudentDocument(studentId, type, file);
+        await Promise.all(
+          filesToUpload.map((file) => uploadStudentDocument(studentId, type, file)),
+        );
         await onUploaded();
         setStatus("done");
       } catch {
         setStatus("error");
       }
     },
-    [onUploaded, studentId, type],
+    [multiple, onUploaded, studentId, type],
   );
 
   const { getInputProps, getRootProps, isDragActive } = useDropzone({
-    accept: {
-      "application/pdf": [".pdf"],
-      "image/jpeg": [".jpg", ".jpeg"],
-      "image/png": [".png"],
-    },
-    maxFiles: 1,
-    multiple: false,
+    accept,
+    maxFiles: multiple ? 0 : 1,
+    multiple,
     onDrop,
   });
 
-  if (existingDocument) {
+  if (hasDocuments) {
     return (
       <div className="rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.08)] ring-1 ring-black/5">
-        <div className="flex items-center justify-between gap-4">
-          <div>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
             <div className="text-sm font-semibold text-slate-950">{label}</div>
-            <div className="mt-1 text-xs font-medium text-emerald-700">
-              {status === "uploading"
-                ? "Загружаем новую версию..."
-                : `Загружен · Парсинг: ${existingDocument.parseStatus}`}
-            </div>
+            {existingDocument ? (
+              <div className="mt-1 text-xs font-medium text-emerald-700">
+                {status === "uploading"
+                  ? multiple
+                    ? "Добавляем файлы..."
+                    : "Загружаем новую версию..."
+                  : getUploadedStatusText(existingDocument, parse, existingDocuments.length)}
+              </div>
+            ) : null}
             {status === "error" ? (
               <div className="mt-1 text-xs font-medium text-rose-700">
                 Ошибка повторной загрузки
               </div>
             ) : null}
+            {parse && existingDocument?.parsedData ? (
+              <div className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600 ring-1 ring-slate-100">
+                {formatParsedPreview(existingDocument.parsedData)}
+              </div>
+            ) : null}
+            {multiple ? (
+              <div className="mt-3 grid gap-2">
+                {existingDocuments.map((document, index) => (
+                  <a
+                    key={document.id}
+                    href={document.fileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="truncate rounded-xl bg-slate-50 px-3 py-2 text-xs font-medium text-sky-700 ring-1 ring-slate-200 transition-colors hover:bg-sky-50"
+                  >
+                    Файл {existingDocuments.length - index}
+                  </a>
+                ))}
+              </div>
+            ) : null}
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <a
-              href={existingDocument.fileUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex h-10 items-center justify-center rounded-xl px-3 text-xs font-semibold text-sky-700 ring-1 ring-sky-200 transition-colors hover:bg-sky-50"
-            >
-              Открыть
-            </a>
+            {existingDocument && !multiple ? (
+              <a
+                href={existingDocument.fileUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-10 items-center justify-center rounded-xl px-3 text-xs font-semibold text-sky-700 ring-1 ring-sky-200 transition-colors hover:bg-sky-50"
+              >
+                Открыть
+              </a>
+            ) : null}
             <div
               {...getRootProps()}
               className={[
@@ -92,7 +124,11 @@ export function DocumentUploader({
               ].join(" ")}
             >
               <input {...getInputProps()} />
-              {status === "uploading" ? "Загрузка..." : "Загрузить заново"}
+              {status === "uploading"
+                ? "Загрузка..."
+                : multiple
+                  ? "Добавить ещё"
+                  : "Загрузить заново"}
             </div>
           </div>
         </div>
@@ -129,4 +165,41 @@ function getStatusText(status: UploadStatus) {
   };
 
   return labels[status];
+}
+
+function getUploadedStatusText(
+  document: StudentDocument,
+  parse: boolean,
+  documentCount: number,
+) {
+  if (!parse) {
+    return documentCount > 1 ? `Загружено файлов: ${documentCount}` : "Загружен";
+  }
+
+  return `Загружен · Парсинг: ${document.parseStatus}`;
+}
+
+function formatParsedPreview(parsedData: unknown) {
+  if (!parsedData || typeof parsedData !== "object") {
+    return "Данные извлечены.";
+  }
+
+  const entries = Object.entries(parsedData)
+    .filter(([, value]) => value !== null && value !== undefined && value !== "")
+    .slice(0, 5)
+    .map(([key, value]) => `${key}: ${formatPreviewValue(value)}`);
+
+  return entries.length > 0 ? entries.join(" · ") : "Данные извлечены.";
+}
+
+function formatPreviewValue(value: unknown) {
+  if (Array.isArray(value)) {
+    return `${value.length} записей`;
+  }
+
+  if (typeof value === "object" && value !== null) {
+    return JSON.stringify(value);
+  }
+
+  return String(value);
 }

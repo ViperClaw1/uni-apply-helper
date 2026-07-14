@@ -82,16 +82,16 @@ export function StudentProfilePage() {
     return () => window.clearInterval(intervalId);
   }, [latestBatch, loadBatches]);
 
-  const documentMap = useMemo(() => {
-    const latestByType = new Map<string, StudentDocument>();
+  const documentsByType = useMemo(() => {
+    const groupedDocuments = new Map<string, StudentDocument[]>();
 
     for (const document of documents) {
-      if (!latestByType.has(document.type)) {
-        latestByType.set(document.type, document);
-      }
+      const documentsForType = groupedDocuments.get(document.type) ?? [];
+      documentsForType.push(document);
+      groupedDocuments.set(document.type, documentsForType);
     }
 
-    return latestByType;
+    return groupedDocuments;
   }, [documents]);
 
   async function handleCreateBatch() {
@@ -175,7 +175,10 @@ export function StudentProfilePage() {
                 studentId={studentId}
                 type={documentType.key}
                 label={documentType.label}
-                existingDocument={documentMap.get(documentType.key)}
+                accept={documentType.accept}
+                parse={documentType.parse}
+                multiple={documentType.multiple}
+                existingDocuments={documentsByType.get(documentType.key)}
                 onUploaded={loadDocuments}
               />
             ))}

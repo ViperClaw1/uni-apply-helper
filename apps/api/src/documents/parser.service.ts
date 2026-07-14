@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
   ServiceUnavailableException,
@@ -19,6 +20,19 @@ type StudentDocumentRecord = {
   uploadedAt: Date;
 };
 
+const DOCUMENT_PARSE_PROMPTS: Record<string, string> = {
+  passport: [
+    'Extract from this passport scan: surname, givenName, dateOfBirth,',
+    'nationality, passportNo, passportExpiry, cityOfBirth.',
+    'Return JSON only.',
+  ].join(' '),
+  transcript: [
+    'Extract from this academic transcript: institution name, degree, major/specialty,',
+    'study period start and end dates, GPA or average grade, list of subjects with grades.',
+    'Return JSON only.',
+  ].join(' '),
+};
+
 @Injectable()
 export class ParserService {
   private readonly gemini?: GoogleGenAI;
@@ -35,7 +49,8 @@ export class ParserService {
     }
 
     this.model =
-      this.configService.get<string>('GEMINI_DOCUMENT_MODEL') || 'gemini-3.5-flash';
+      this.configService.get<string>('GEMINI_DOCUMENT_MODEL') ||
+      'gemini-3.5-flash';
   }
 
   async parseDocument(documentId: string): Promise<StudentDocumentResponse> {
@@ -47,8 +62,16 @@ export class ParserService {
       throw new NotFoundException(`Document "${documentId}" was not found.`);
     }
 
+    if (!this.isParseableDocument(document.type)) {
+      throw new BadRequestException(
+        `Document type "${document.type}" does not support parsing.`,
+      );
+    }
+
     if (!this.gemini) {
-      throw new ServiceUnavailableException('GEMINI_API_KEY is not configured.');
+      throw new ServiceUnavailableException(
+        'GEMINI_API_KEY is not configured.',
+      );
     }
 
     await this.prisma.studentDocument.update({
@@ -66,6 +89,13 @@ export class ParserService {
         },
       });
 
+      if (document.type === 'passport') {
+        await this.updateEmptyStudentPassportFields(
+          document.studentId,
+          parsedData,
+        );
+      }
+
       return this.toResponse(updatedDocument);
     } catch (error) {
       await this.prisma.studentDocument.update({
@@ -73,7 +103,8 @@ export class ParserService {
         data: {
           parseStatus: 'failed',
           parsedData: {
-            error: error instanceof Error ? error.message : 'Unknown parse error',
+            error:
+              error instanceof Error ? error.message : 'Unknown parse error',
           },
         },
       });
@@ -95,7 +126,7 @@ export class ParserService {
             parts: [
               {
                 text: [
-                  'Extract structured data from this student application document.',
+                  this.getParsePrompt(document.type),
                   `Document type: ${document.type}`,
                   'Return only valid JSON. Do not wrap it in markdown.',
                 ].join('\n'),
@@ -115,12 +146,123 @@ export class ParserService {
     }
   }
 
-  private toGeminiUnavailableException(error: unknown): ServiceUnavailableException {
-    const message = error instanceof Error ? error.message : 'Unknown Gemini error';
+  private toGeminiUnavailableException(
+    error: unknown,
+  ): ServiceUnavailableException {
+    const message =
+      error instanceof Error ? error.message : 'Unknown Gemini error';
 
     return new ServiceUnavailableException(
       `Gemini document parsing failed for model "${this.model}": ${message}`,
     );
+  }
+
+  private isParseableDocument(documentType: string): boolean {
+    return DOCUMENT_PARSE_PROMPTS[documentType] !== undefined;
+  }
+
+  private getParsePrompt(documentType: string): string {
+    const prompt = DOCUMENT_PARSE_PROMPTS[documentType];
+
+    if (!prompt) {
+      throw new BadRequestException(
+        `Document type "${documentType}" does not support parsing.`,
+      );
+    }
+
+    return prompt;
+  }
+
+  private async updateEmptyStudentPassportFields(
+    studentId: string,
+    parsedData: Record<string, unknown>,
+  ): Promise<void> {
+    const student = await this.prisma.student.findUnique({
+      where: { id: studentId },
+      select: {
+        surname: true,
+        givenName: true,
+        nationality: true,
+        cityOfBirth: true,
+        dateOfBirth: true,
+        passportNo: true,
+        passportExpiry: true,
+      },
+    });
+
+    if (!student) {
+      return;
+    }
+
+    const data: Prisma.StudentUpdateInput = {};
+    const surname = this.readString(parsedData, 'surname');
+    const givenName = this.readString(parsedData, 'givenName');
+    const nationality = this.readString(parsedData, 'nationality');
+    const cityOfBirth = this.readString(parsedData, 'cityOfBirth');
+    const passportNo = this.readString(parsedData, 'passportNo');
+    const dateOfBirth = this.readDate(parsedData, 'dateOfBirth');
+    const passportExpiry = this.readDate(parsedData, 'passportExpiry');
+
+    if (!student.surname && surname) {
+      data.surname = surname;
+    }
+
+    if (!student.givenName && givenName) {
+      data.givenName = givenName;
+    }
+
+    if (!student.nationality && nationality) {
+      data.nationality = nationality;
+    }
+
+    if (!student.cityOfBirth && cityOfBirth) {
+      data.cityOfBirth = cityOfBirth;
+    }
+
+    if (!student.passportNo && passportNo) {
+      data.passportNo = passportNo;
+    }
+
+    if (!student.dateOfBirth && dateOfBirth) {
+      data.dateOfBirth = dateOfBirth;
+    }
+
+    if (!student.passportExpiry && passportExpiry) {
+      data.passportExpiry = passportExpiry;
+    }
+
+    if (Object.keys(data).length === 0) {
+      return;
+    }
+
+    await this.prisma.student.update({
+      where: { id: studentId },
+      data,
+    });
+  }
+
+  private readString(
+    data: Record<string, unknown>,
+    key: string,
+  ): string | undefined {
+    const value = data[key];
+
+    return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+  }
+
+  private readDate(
+    data: Record<string, unknown>,
+    key: string,
+  ): Date | undefined {
+    const value = this.readString(data, key);
+
+    if (!value) {
+      return undefined;
+    }
+
+    const date = new Date(value);
+
+    return Number.isNaN(date.getTime()) ? undefined : date;
   }
 
   private async fetchDocumentSource(fileUrl: string) {
@@ -172,4 +314,3 @@ export class ParserService {
     };
   }
 }
-

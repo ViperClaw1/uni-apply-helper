@@ -3,7 +3,7 @@
   "displayName": "Test University",
   "formUrl": "https://example.com/apply",
   "aliases": ["Test University", "Test Uni", "Тестовый университет"],
-  "requiredDocuments": ["passport", "diploma", "transcript"],
+  "requiredDocuments": ["photo", "passport", "transcript", "medical", "financial"],
   "fields": [
     {
       "selector": "input[name='surname']",
@@ -36,6 +36,20 @@
       "type": "file",
       "required": true,
       "documentType": "passport"
+    },
+    {
+      "selector": "input[name='photo']",
+      "mapsTo": null,
+      "type": "file",
+      "required": true,
+      "documentType": "photo"
+    },
+    {
+      "selector": "input[name='transcript']",
+      "mapsTo": null,
+      "type": "file",
+      "required": true,
+      "documentType": "transcript"
     }
   ],
   "requiresEssay": true,

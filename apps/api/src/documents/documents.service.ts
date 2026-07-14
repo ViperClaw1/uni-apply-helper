@@ -30,6 +30,8 @@ type StudentDocumentRecord = {
   uploadedAt: Date;
 };
 
+const PARSEABLE_DOCUMENT_TYPES = new Set(['passport', 'transcript']);
+
 @Injectable()
 export class DocumentsService {
   private readonly s3?: S3Client;
@@ -46,7 +48,9 @@ export class DocumentsService {
 
     const endpoint = this.configService.get<string>('R2_ENDPOINT');
     const accessKeyId = this.configService.get<string>('R2_ACCESS_KEY_ID');
-    const secretAccessKey = this.configService.get<string>('R2_SECRET_ACCESS_KEY');
+    const secretAccessKey = this.configService.get<string>(
+      'R2_SECRET_ACCESS_KEY',
+    );
 
     if (endpoint && accessKeyId && secretAccessKey) {
       this.s3 = new S3Client({
@@ -90,13 +94,19 @@ export class DocumentsService {
     await this.ensureStudentExists(studentId);
     this.assertDocumentInput(input);
 
+    const documentType = input.type.trim();
+    const parseStatus = this.getInitialParseStatus(
+      documentType,
+      input.parseStatus,
+    );
+
     const document = await this.prisma.studentDocument.create({
       data: {
         studentId,
-        type: input.type.trim(),
+        type: documentType,
         fileUrl: input.fileUrl.trim(),
         parsedData: this.toJsonInput(input.parsedData),
-        parseStatus: input.parseStatus ?? 'pending',
+        parseStatus,
       },
     });
 
@@ -127,7 +137,6 @@ export class DocumentsService {
     return this.create(studentId, {
       type,
       fileUrl,
-      parseStatus: 'pending',
     });
   }
 
@@ -239,6 +248,17 @@ export class DocumentsService {
     });
   }
 
+  private getInitialParseStatus(
+    documentType: string,
+    requestedStatus: CreateDocumentInput['parseStatus'],
+  ): string {
+    if (!PARSEABLE_DOCUMENT_TYPES.has(documentType)) {
+      return 'uploaded';
+    }
+
+    return requestedStatus ?? 'pending';
+  }
+
   private toJsonInput(value: unknown): Prisma.InputJsonValue | undefined {
     if (value === undefined) {
       return undefined;
@@ -267,4 +287,3 @@ export class DocumentsService {
       .replace(/^-|-$/g, '');
   }
 }
-
