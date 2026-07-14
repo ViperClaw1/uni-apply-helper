@@ -1,4 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  matchUniversityName,
+  normalizeUniversityName,
+} from './lib/university-name-matcher.js';
 import { Prisma } from '@uni-apply/database';
 import type { FieldConfig } from '@uni-apply/shared';
 import { createHash } from 'node:crypto';
@@ -34,22 +38,47 @@ export class SchemasService {
   }
 
   async resolveFromFiles(rawName: string): Promise<UniversitySchemaResponse | null> {
-    const normalizedName = rawName.trim().toLowerCase();
+    const normalizedName = rawName.trim();
 
     if (!normalizedName) {
       return null;
     }
 
     const schemas = await this.readSchemaFiles();
-    const schema = schemas.find((item) => {
+    const exactSchema = schemas.find((item) => {
       const aliases = item.aliases ?? [];
 
       return (
-        item.id.toLowerCase() === normalizedName ||
-        item.displayName.toLowerCase() === normalizedName ||
-        aliases.some((alias) => alias.toLowerCase() === normalizedName)
+        normalizeUniversityName(item.id.replace(/-/g, ' ')) ===
+          normalizeUniversityName(normalizedName) ||
+        normalizeUniversityName(item.displayName) ===
+          normalizeUniversityName(normalizedName) ||
+        aliases.some(
+          (alias) =>
+            normalizeUniversityName(alias) ===
+            normalizeUniversityName(normalizedName),
+        )
       );
     });
+
+    if (exactSchema) {
+      return this.toResponse(exactSchema);
+    }
+
+    const { universityId } = matchUniversityName(
+      normalizedName,
+      schemas.map((schema) => ({
+        id: schema.id,
+        displayName: schema.displayName,
+        aliases: schema.aliases ?? [],
+      })),
+    );
+
+    if (!universityId) {
+      return null;
+    }
+
+    const schema = schemas.find((item) => item.id === universityId);
 
     return schema ? this.toResponse(schema) : null;
   }

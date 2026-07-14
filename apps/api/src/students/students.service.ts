@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { StudentProfile } from '@uni-apply/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import { UniversitiesService } from '../universities/universities.service.js';
 
 type ApplicationTargetInput = {
   universityRaw: string;
@@ -21,7 +22,10 @@ type EducationInput = {
 
 @Injectable()
 export class StudentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly universitiesService: UniversitiesService,
+  ) {}
 
   async createFromNormalized(data: Record<string, any>) {
     const targets = this.parseTargets(data.applicationTargets, {
@@ -209,6 +213,48 @@ export class StudentsService {
 
   async findOne(id: string) {
     return this.prisma.student.findUniqueOrThrow({ where: { id } });
+  }
+
+  async resolveApplicationTarget(
+    studentId: string,
+    input: { universityRaw: string; universityId: string },
+  ) {
+    const universityRaw = input.universityRaw.trim();
+    const universityId = input.universityId.trim();
+
+    if (!universityRaw) {
+      throw new BadRequestException('universityRaw is required.');
+    }
+
+    if (!universityId) {
+      throw new BadRequestException('universityId is required.');
+    }
+
+    await this.findOne(studentId);
+    await this.universitiesService.findOne(universityId);
+
+    await this.universitiesService.createAlias({
+      alias: universityRaw,
+      universityId,
+    });
+
+    const result = await this.prisma.applicationTarget.updateMany({
+      where: {
+        studentId,
+        universityRaw,
+      },
+      data: {
+        universityId,
+      },
+    });
+
+    if (result.count === 0) {
+      throw new BadRequestException(
+        `Application target "${universityRaw}" was not found for this student.`,
+      );
+    }
+
+    return this.getFullProfile(studentId);
   }
 
   private parseTargets(

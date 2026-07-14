@@ -7,6 +7,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { QueueService } from '../queue/queue.service.js';
 import { StudentsService } from '../students/students.service.js';
 import { UniversitiesService } from '../universities/universities.service.js';
+import type { UniversityMatchCandidate } from '../universities/types/university-api.types.js';
 import type {
   ApplicationBatchResponse,
   ApplicationProcessJobData,
@@ -63,9 +64,14 @@ type PreparedApplication = {
   motivationLetterId?: string;
 };
 
+type UnresolvedTarget = {
+  rawName: string;
+  candidates: UniversityMatchCandidate[];
+};
+
 type PreparedBatch = {
   applications: PreparedApplication[];
-  unresolvedTargets: string[];
+  unresolvedTargets: UnresolvedTarget[];
 };
 
 @Injectable()
@@ -239,17 +245,20 @@ export class ApplicationsService {
     profile: StudentProfile,
   ): Promise<PreparedBatch> {
     const applications: PreparedApplication[] = [];
-    const unresolvedTargets: string[] = [];
+    const unresolvedTargets: UnresolvedTarget[] = [];
 
     for (const target of profile.applicationTargets) {
-      const resolvedUniversityId = await this.resolveUniversityId(target);
+      const resolved = await this.resolveTarget(target);
 
-      if (!resolvedUniversityId) {
-        unresolvedTargets.push(target.universityRaw);
+      if (!resolved.university) {
+        unresolvedTargets.push({
+          rawName: target.universityRaw,
+          candidates: resolved.candidates ?? [],
+        });
         continue;
       }
 
-      const university = await this.universitiesService.findOne(resolvedUniversityId);
+      const university = resolved.university;
       const missingDocuments = university.requiredDocuments.filter(
         (documentType) => !profile.documents[documentType],
       );
@@ -282,20 +291,16 @@ export class ApplicationsService {
     return { applications, unresolvedTargets };
   }
 
-  private async resolveUniversityId(
-    target: ApplicationTarget,
-  ): Promise<string | null> {
+  private async resolveTarget(target: ApplicationTarget) {
     if (target.universityId) {
-      return target.universityId;
+      return {
+        rawName: target.universityRaw,
+        university: await this.universitiesService.findOne(target.universityId),
+        candidates: [],
+      };
     }
 
-    const resolved = await this.universitiesService.resolve(target.universityRaw);
-
-    if (!resolved.university) {
-      return null;
-    }
-
-    return resolved.university.id;
+    return this.universitiesService.resolve(target.universityRaw);
   }
 
   private async findApprovedLetter(studentId: string, universityId: string) {
@@ -336,7 +341,7 @@ export class ApplicationsService {
 
   private async notifyUnresolvedTargets(
     profile: StudentProfile,
-    unresolvedTargets: string[],
+    unresolvedTargets: UnresolvedTarget[],
   ): Promise<void> {
     if (unresolvedTargets.length > 0) {
       await this.notificationsService.notifyUnresolved(

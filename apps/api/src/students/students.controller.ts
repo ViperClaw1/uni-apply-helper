@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { StudentsService } from './students.service';
 
 @Controller('students')
@@ -18,5 +18,13 @@ export class StudentsController {
   @Get(':id/profile')
   getFullProfile(@Param('id') id: string) {
     return this.studentsService.getFullProfile(id);
+  }
+
+  @Post(':id/application-targets/resolve')
+  resolveApplicationTarget(
+    @Param('id') id: string,
+    @Body() body: { universityRaw: string; universityId: string },
+  ) {
+    return this.studentsService.resolveApplicationTarget(id, body);
   }
 }

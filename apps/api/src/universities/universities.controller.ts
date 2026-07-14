@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Body,
   Controller,
   Get,
   Param,
@@ -8,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { SchemasService } from './schemas.service.js';
 import { UniversitiesService } from './universities.service.js';
+import type { CreateUniversityAliasInput } from './types/university-api.types.js';
 
 @Controller('universities')
 export class UniversitiesController {
@@ -28,6 +30,19 @@ export class UniversitiesController {
     }
 
     return this.universitiesService.resolve(name);
+  }
+
+  @Post('aliases')
+  createAlias(@Body() body: CreateUniversityAliasInput) {
+    if (!body.alias?.trim()) {
+      throw new BadRequestException('alias is required.');
+    }
+
+    if (!body.universityId?.trim()) {
+      throw new BadRequestException('universityId is required.');
+    }
+
+    return this.universitiesService.createAlias(body);
   }
 
   @Post('schemas/seed')

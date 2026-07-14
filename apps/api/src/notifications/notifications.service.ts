@@ -93,14 +93,34 @@ export class NotificationsService {
     );
   }
 
-  async notifyUnresolved(studentName: string, rawNames: string[]) {
-    await this.send(
-      [
-        '<b>Не удалось определить вуз</b>',
-        `Студент: ${this.escapeHtml(studentName)}`,
-        `Названия: ${this.escapeHtml(rawNames.join(', '))}`,
-      ].join('\n'),
-    );
+  async notifyUnresolved(
+    studentName: string,
+    unresolved: Array<{
+      rawName: string;
+      candidates: Array<{ id: string; displayName: string; score: number }>;
+    }>,
+  ) {
+    const lines = [
+      '<b>Не удалось определить вуз</b>',
+      `Студент: ${this.escapeHtml(studentName)}`,
+    ];
+
+    for (const item of unresolved) {
+      lines.push(`Название: ${this.escapeHtml(item.rawName)}`);
+
+      if (item.candidates.length > 0) {
+        const candidates = item.candidates
+          .map(
+            (candidate) =>
+              `${this.escapeHtml(candidate.displayName)} (${candidate.id}, ${Math.round(candidate.score * 100)}%)`,
+          )
+          .join(', ');
+
+        lines.push(`Возможно: ${candidates}`);
+      }
+    }
+
+    await this.send(lines.join('\n'));
   }
 
   private async send(text: string) {

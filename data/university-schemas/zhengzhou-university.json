@@ -1,0 +1,66 @@
+{
+  "id": "zhengzhou-university",
+  "displayName": "Zhengzhou University",
+  "formUrl": "https://example.com/zzu/apply",
+  "aliases": [
+    "Zhengzhou University",
+    "Zhengzhou Univ",
+    "Zhengzhou Univ.",
+    "University of Zhengzhou",
+    "ZZU",
+    "郑州大学",
+    "Zhengzhou State University"
+  ],
+  "requiredDocuments": ["photo", "passport", "transcript", "medical", "financial"],
+  "fields": [
+    {
+      "selector": "input[name='surname']",
+      "mapsTo": "personal.surname",
+      "type": "text",
+      "required": true
+    },
+    {
+      "selector": "input[name='givenName']",
+      "mapsTo": "personal.givenName",
+      "type": "text",
+      "required": true
+    },
+    {
+      "selector": "input[name='email']",
+      "mapsTo": "personal.email",
+      "type": "text",
+      "required": true
+    },
+    {
+      "selector": "textarea[name='motivation']",
+      "mapsTo": null,
+      "type": "essay",
+      "required": false,
+      "essayPrompt": "Explain why you want to study at Zhengzhou University."
+    },
+    {
+      "selector": "input[name='passport']",
+      "mapsTo": null,
+      "type": "file",
+      "required": true,
+      "documentType": "passport"
+    },
+    {
+      "selector": "input[name='photo']",
+      "mapsTo": null,
+      "type": "file",
+      "required": true,
+      "documentType": "photo"
+    },
+    {
+      "selector": "input[name='transcript']",
+      "mapsTo": null,
+      "type": "file",
+      "required": true,
+      "documentType": "transcript"
+    }
+  ],
+  "requiresEssay": true,
+  "essayPrompt": "Explain why you want to study at Zhengzhou University.",
+  "notes": "Zhengzhou University (China) application schema."
+}

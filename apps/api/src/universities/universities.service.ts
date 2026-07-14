@@ -1,8 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { FieldConfig } from '@uni-apply/shared';
 import { PrismaService } from '../prisma/prisma.service.js';
+import {
+  matchUniversityName,
+  normalizeUniversityName,
+  type UniversityMatchEntry,
+} from './lib/university-name-matcher.js';
 import { SchemasService } from './schemas.service.js';
 import type {
+  CreateUniversityAliasInput,
   ResolvedUniversity,
   UniversitySchemaResponse,
   UniversitySummary,
@@ -90,36 +96,110 @@ export class UniversitiesService {
     return university.aliases;
   }
 
+  async createAlias(input: CreateUniversityAliasInput) {
+    await this.findOne(input.universityId);
+
+    const alias = input.alias.trim();
+
+    if (!alias) {
+      throw new BadRequestException('Alias cannot be empty.');
+    }
+
+    return this.prisma.universityAlias.upsert({
+      where: { alias },
+      update: { universityId: input.universityId },
+      create: {
+        alias,
+        universityId: input.universityId,
+      },
+    });
+  }
+
   async resolve(rawName: string): Promise<ResolvedUniversity> {
     const normalizedName = rawName.trim();
 
     if (!normalizedName) {
-      return { rawName, university: null };
+      return { rawName, university: null, candidates: [] };
     }
+
+    const exactMatch = await this.findExactMatch(normalizedName);
+
+    if (exactMatch) {
+      return {
+        rawName,
+        university: exactMatch,
+        candidates: [],
+      };
+    }
+
+    const entries = await this.getMatchEntries();
+    const { universityId, candidates } = matchUniversityName(
+      normalizedName,
+      entries,
+    );
+
+    if (universityId) {
+      return {
+        rawName,
+        university: await this.findOne(universityId),
+        candidates,
+      };
+    }
+
+    const fileMatch = await this.schemasService.resolveFromFiles(normalizedName);
+
+    return {
+      rawName,
+      university: fileMatch,
+      candidates,
+    };
+  }
+
+  private async findExactMatch(
+    rawName: string,
+  ): Promise<UniversitySchemaResponse | null> {
+    const normalized = normalizeUniversityName(rawName);
 
     const alias = await this.prisma.universityAlias.findFirst({
       where: {
         alias: {
-          equals: normalizedName,
+          equals: rawName,
           mode: 'insensitive',
         },
       },
     });
 
     if (alias) {
-      return {
-        rawName,
-        university: await this.findOne(alias.universityId),
-      };
+      return this.findOne(alias.universityId);
     }
 
-    const university = await this.prisma.universitySchema.findFirst({
+    const universities = await this.prisma.universitySchema.findMany();
+
+    for (const university of universities) {
+      const aliases = await this.getAliases(university.id);
+      const variants = new Set([
+        normalizeUniversityName(university.id.replace(/-/g, ' ')),
+        normalizeUniversityName(university.displayName),
+        ...aliases.map((item) => normalizeUniversityName(item)),
+      ]);
+
+      if (variants.has(normalized)) {
+        return this.toResponse(university);
+      }
+    }
+
+    const containsMatch = await this.prisma.universitySchema.findFirst({
       where: {
         OR: [
-          { id: normalizedName },
           {
             displayName: {
-              equals: normalizedName,
+              contains: rawName,
+              mode: 'insensitive',
+            },
+          },
+          {
+            id: {
+              contains: rawName.replace(/\s+/g, '-').toLowerCase(),
               mode: 'insensitive',
             },
           },
@@ -127,12 +207,17 @@ export class UniversitiesService {
       },
     });
 
-    return {
-      rawName,
-      university: university
-        ? await this.toResponse(university)
-        : await this.schemasService.resolveFromFiles(rawName),
-    };
+    return containsMatch ? this.toResponse(containsMatch) : null;
+  }
+
+  private async getMatchEntries(): Promise<UniversityMatchEntry[]> {
+    const summaries = await this.findAll();
+
+    return summaries.map((university) => ({
+      id: university.id,
+      displayName: university.displayName,
+      aliases: university.aliases,
+    }));
   }
 
   private async toResponse(
@@ -220,4 +305,3 @@ export class UniversitiesService {
     );
   }
 }
-
