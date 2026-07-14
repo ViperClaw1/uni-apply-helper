@@ -27,11 +27,12 @@ ENV CI=true
 COPY . .
 
 RUN pnpm --filter @uni-apply/shared build \
-  && DATABASE_URL="postgresql://postgres:postgres@localhost:5432/uni_apply" pnpm --filter @uni-apply/database generate \
+  && DATABASE_URL="postgresql://postgres:postgres@localhost:5432/uni_apply" pnpm --filter @uni-apply/database exec prisma generate \
   && pnpm --filter @uni-apply/database build \
   && pnpm --filter worker build \
   && pnpm prune --prod --config.confirmModulesPurge=false \
-  && DATABASE_URL="postgresql://postgres:postgres@localhost:5432/uni_apply" pnpm --filter @uni-apply/database generate
+  && cd packages/database \
+  && DATABASE_URL="postgresql://postgres:postgres@localhost:5432/uni_apply" pnpm dlx prisma@7.8.0 generate
 
 FROM base AS runner
 
