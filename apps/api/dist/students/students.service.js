@@ -12,10 +12,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.StudentsService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
+const universities_service_js_1 = require("../universities/universities.service.js");
 let StudentsService = class StudentsService {
     prisma;
-    constructor(prisma) {
+    universitiesService;
+    constructor(prisma, universitiesService) {
         this.prisma = prisma;
+        this.universitiesService = universitiesService;
     }
     async createFromNormalized(data) {
         const targets = this.parseTargets(data.applicationTargets, {
@@ -194,6 +197,35 @@ let StudentsService = class StudentsService {
     async findOne(id) {
         return this.prisma.student.findUniqueOrThrow({ where: { id } });
     }
+    async resolveApplicationTarget(studentId, input) {
+        const universityRaw = input.universityRaw.trim();
+        const universityId = input.universityId.trim();
+        if (!universityRaw) {
+            throw new common_1.BadRequestException('universityRaw is required.');
+        }
+        if (!universityId) {
+            throw new common_1.BadRequestException('universityId is required.');
+        }
+        await this.findOne(studentId);
+        await this.universitiesService.findOne(universityId);
+        await this.universitiesService.createAlias({
+            alias: universityRaw,
+            universityId,
+        });
+        const result = await this.prisma.applicationTarget.updateMany({
+            where: {
+                studentId,
+                universityRaw,
+            },
+            data: {
+                universityId,
+            },
+        });
+        if (result.count === 0) {
+            throw new common_1.BadRequestException(`Application target "${universityRaw}" was not found for this student.`);
+        }
+        return this.getFullProfile(studentId);
+    }
     parseTargets(raw, shared) {
         if (!raw) {
             return [];
@@ -227,6 +259,7 @@ let StudentsService = class StudentsService {
 exports.StudentsService = StudentsService;
 exports.StudentsService = StudentsService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        universities_service_js_1.UniversitiesService])
 ], StudentsService);
 //# sourceMappingURL=students.service.js.map

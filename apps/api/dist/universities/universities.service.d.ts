@@ -1,6 +1,6 @@
 import { PrismaService } from '../prisma/prisma.service.js';
 import { SchemasService } from './schemas.service.js';
-import type { ResolvedUniversity, UniversitySchemaResponse, UniversitySummary } from './types/university-api.types.js';
+import type { CreateUniversityAliasInput, ResolvedUniversity, UniversitySchemaResponse, UniversitySummary } from './types/university-api.types.js';
 export declare class UniversitiesService {
     private readonly prisma;
     private readonly schemasService;
@@ -8,7 +8,13 @@ export declare class UniversitiesService {
     findAll(): Promise<UniversitySummary[]>;
     findOne(id: string): Promise<UniversitySchemaResponse>;
     findAliases(universityId: string): Promise<string[]>;
+    createAlias(input: CreateUniversityAliasInput): Promise<{
+        universityId: string;
+        alias: string;
+    }>;
     resolve(rawName: string): Promise<ResolvedUniversity>;
+    private findExactMatch;
+    private getMatchEntries;
     private toResponse;
     private getAliases;
     private getAliasesByUniversityId;

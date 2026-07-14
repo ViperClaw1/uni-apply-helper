@@ -18,6 +18,7 @@ const node_crypto_1 = require("node:crypto");
 const node_path_1 = require("node:path");
 const prisma_service_js_1 = require("../prisma/prisma.service.js");
 const queue_service_js_1 = require("../queue/queue.service.js");
+const PARSEABLE_DOCUMENT_TYPES = new Set(['passport']);
 let DocumentsService = class DocumentsService {
     prisma;
     configService;
@@ -65,13 +66,15 @@ let DocumentsService = class DocumentsService {
     async create(studentId, input) {
         await this.ensureStudentExists(studentId);
         this.assertDocumentInput(input);
+        const documentType = input.type.trim();
+        const parseStatus = this.getInitialParseStatus(documentType, input.parseStatus);
         const document = await this.prisma.studentDocument.create({
             data: {
                 studentId,
-                type: input.type.trim(),
+                type: documentType,
                 fileUrl: input.fileUrl.trim(),
                 parsedData: this.toJsonInput(input.parsedData),
-                parseStatus: input.parseStatus ?? 'pending',
+                parseStatus,
             },
         });
         if (document.parseStatus === 'pending') {
@@ -91,7 +94,6 @@ let DocumentsService = class DocumentsService {
         return this.create(studentId, {
             type,
             fileUrl,
-            parseStatus: 'pending',
         });
     }
     async update(id, input) {
@@ -168,7 +170,15 @@ let DocumentsService = class DocumentsService {
         const data = { documentId };
         await this.queueService.addJob(shared_1.QUEUES.DOCUMENT_PARSE, data, {
             jobId: documentId,
+            removeOnComplete: true,
+            removeOnFail: true,
         });
+    }
+    getInitialParseStatus(documentType, requestedStatus) {
+        if (!PARSEABLE_DOCUMENT_TYPES.has(documentType)) {
+            return 'uploaded';
+        }
+        return requestedStatus ?? 'pending';
     }
     toJsonInput(value) {
         if (value === undefined) {

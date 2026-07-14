@@ -149,12 +149,15 @@ let ApplicationsService = class ApplicationsService {
         const applications = [];
         const unresolvedTargets = [];
         for (const target of profile.applicationTargets) {
-            const resolvedUniversityId = await this.resolveUniversityId(target);
-            if (!resolvedUniversityId) {
-                unresolvedTargets.push(target.universityRaw);
+            const resolved = await this.resolveTarget(target);
+            if (!resolved.university) {
+                unresolvedTargets.push({
+                    rawName: target.universityRaw,
+                    candidates: resolved.candidates ?? [],
+                });
                 continue;
             }
-            const university = await this.universitiesService.findOne(resolvedUniversityId);
+            const university = resolved.university;
             const missingDocuments = university.requiredDocuments.filter((documentType) => !profile.documents[documentType]);
             const approvedLetter = university.requiresEssay
                 ? await this.findApprovedLetter(profile.id, university.id)
@@ -176,15 +179,15 @@ let ApplicationsService = class ApplicationsService {
         }
         return { applications, unresolvedTargets };
     }
-    async resolveUniversityId(target) {
+    async resolveTarget(target) {
         if (target.universityId) {
-            return target.universityId;
+            return {
+                rawName: target.universityRaw,
+                university: await this.universitiesService.findOne(target.universityId),
+                candidates: [],
+            };
         }
-        const resolved = await this.universitiesService.resolve(target.universityRaw);
-        if (!resolved.university) {
-            return null;
-        }
-        return resolved.university.id;
+        return this.universitiesService.resolve(target.universityRaw);
     }
     async findApprovedLetter(studentId, universityId) {
         return this.prisma.generatedDocument.findFirst({

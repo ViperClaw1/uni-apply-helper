@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BatchPanel } from "@/features/applications/components/batch-panel";
+import { MotivationLettersPanel } from "@/features/letters/components/motivation-letters-panel";
 import {
   createApplicationBatch,
   getApplicationBatches,
@@ -27,6 +28,7 @@ export function StudentProfilePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [highlightUniversityId, setHighlightUniversityId] = useState<string>();
 
   const loadDocuments = useCallback(async () => {
     setDocuments(await getStudentDocuments(studentId));
@@ -69,6 +71,19 @@ export function StudentProfilePage() {
   }, [studentId]);
 
   const latestBatch = batches[0];
+
+  useEffect(() => {
+    function syncHashHighlight() {
+      const match = window.location.hash.match(/^#motivation-letter-(.+)$/);
+
+      setHighlightUniversityId(match?.[1]);
+    }
+
+    syncHashHighlight();
+    window.addEventListener("hashchange", syncHashHighlight);
+
+    return () => window.removeEventListener("hashchange", syncHashHighlight);
+  }, []);
 
   useEffect(() => {
     if (!latestBatch || !isActiveBatch(latestBatch.status)) {
@@ -194,33 +209,40 @@ export function StudentProfilePage() {
           </div>
         </section>
 
-        <section>
-          <div className="mb-3">
-            <h2 className="text-xl font-semibold tracking-tight text-slate-950">
-              Подача заявок
-            </h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Backend сам валидирует требования, ставит jobs и шлет Telegram.
-            </p>
-          </div>
+        <div className="grid gap-8">
+          <MotivationLettersPanel
+            student={student}
+            highlightUniversityId={highlightUniversityId}
+          />
 
-          <BatchPanel batch={latestBatch} />
-
-          {submitError ? (
-            <div className="mt-3 rounded-xl bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 ring-1 ring-rose-100">
-              {submitError}
+          <section>
+            <div className="mb-3">
+              <h2 className="text-xl font-semibold tracking-tight text-slate-950">
+                Подача заявок
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Backend сам валидирует требования, ставит jobs и шлет Telegram.
+              </p>
             </div>
-          ) : null}
 
-          <button
-            type="button"
-            onClick={handleCreateBatch}
-            disabled={isSubmitting}
-            className="mt-4 inline-flex h-12 w-full items-center justify-center rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm transition-transform hover:bg-slate-800 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-60"
-          >
-            {isSubmitting ? "Запускаем..." : "Отправить заявки во все вузы"}
-          </button>
-        </section>
+            <BatchPanel batch={latestBatch} />
+
+            {submitError ? (
+              <div className="mt-3 rounded-xl bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 ring-1 ring-rose-100">
+                {submitError}
+              </div>
+            ) : null}
+
+            <button
+              type="button"
+              onClick={handleCreateBatch}
+              disabled={isSubmitting}
+              className="mt-4 inline-flex h-12 w-full items-center justify-center rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm transition-transform hover:bg-slate-800 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-60"
+            >
+              {isSubmitting ? "Запускаем..." : "Отправить заявки во все вузы"}
+            </button>
+          </section>
+        </div>
       </div>
     </main>
   );

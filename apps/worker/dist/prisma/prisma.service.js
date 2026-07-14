@@ -13,11 +13,20 @@ exports.PrismaService = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const adapter_pg_1 = require("@prisma/adapter-pg");
-const client_1 = require("@prisma/client");
-let PrismaService = class PrismaService extends client_1.PrismaClient {
+const database_1 = require("@uni-apply/database");
+function assertProductionDatabaseUrl(connectionString) {
+    if (process.env.NODE_ENV !== 'production') {
+        return;
+    }
+    if (/(localhost|127\.0\.0\.1)/.test(connectionString)) {
+        throw new Error('DATABASE_URL points to localhost in production. Attach Railway Postgres and reference its DATABASE_URL on this service.');
+    }
+}
+let PrismaService = class PrismaService extends database_1.PrismaClient {
     configService;
     constructor(configService) {
         const connectionString = configService.getOrThrow('DATABASE_URL');
+        assertProductionDatabaseUrl(connectionString);
         super({
             adapter: new adapter_pg_1.PrismaPg({ connectionString }),
         });

@@ -72,12 +72,21 @@ let NotificationsService = NotificationsService_1 = class NotificationsService {
             `Отсутствует: ${this.escapeHtml(missing.join(', '))}`,
         ].join('\n'));
     }
-    async notifyUnresolved(studentName, rawNames) {
-        await this.send([
+    async notifyUnresolved(studentName, unresolved) {
+        const lines = [
             '<b>Не удалось определить вуз</b>',
             `Студент: ${this.escapeHtml(studentName)}`,
-            `Названия: ${this.escapeHtml(rawNames.join(', '))}`,
-        ].join('\n'));
+        ];
+        for (const item of unresolved) {
+            lines.push(`Название: ${this.escapeHtml(item.rawName)}`);
+            if (item.candidates.length > 0) {
+                const candidates = item.candidates
+                    .map((candidate) => `${this.escapeHtml(candidate.displayName)} (${candidate.id}, ${Math.round(candidate.score * 100)}%)`)
+                    .join(', ');
+                lines.push(`Возможно: ${candidates}`);
+            }
+        }
+        await this.send(lines.join('\n'));
     }
     async send(text) {
         if (!this.bot || !this.chatId) {

@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SchemasService = void 0;
 const common_1 = require("@nestjs/common");
+const university_name_matcher_js_1 = require("./lib/university-name-matcher.js");
 const node_crypto_1 = require("node:crypto");
 const promises_1 = require("node:fs/promises");
 const node_path_1 = require("node:path");
@@ -32,17 +33,32 @@ let SchemasService = class SchemasService {
         return schemas.map((schema) => this.toResponse(schema));
     }
     async resolveFromFiles(rawName) {
-        const normalizedName = rawName.trim().toLowerCase();
+        const normalizedName = rawName.trim();
         if (!normalizedName) {
             return null;
         }
         const schemas = await this.readSchemaFiles();
-        const schema = schemas.find((item) => {
+        const exactSchema = schemas.find((item) => {
             const aliases = item.aliases ?? [];
-            return (item.id.toLowerCase() === normalizedName ||
-                item.displayName.toLowerCase() === normalizedName ||
-                aliases.some((alias) => alias.toLowerCase() === normalizedName));
+            return ((0, university_name_matcher_js_1.normalizeUniversityName)(item.id.replace(/-/g, ' ')) ===
+                (0, university_name_matcher_js_1.normalizeUniversityName)(normalizedName) ||
+                (0, university_name_matcher_js_1.normalizeUniversityName)(item.displayName) ===
+                    (0, university_name_matcher_js_1.normalizeUniversityName)(normalizedName) ||
+                aliases.some((alias) => (0, university_name_matcher_js_1.normalizeUniversityName)(alias) ===
+                    (0, university_name_matcher_js_1.normalizeUniversityName)(normalizedName)));
         });
+        if (exactSchema) {
+            return this.toResponse(exactSchema);
+        }
+        const { universityId } = (0, university_name_matcher_js_1.matchUniversityName)(normalizedName, schemas.map((schema) => ({
+            id: schema.id,
+            displayName: schema.displayName,
+            aliases: schema.aliases ?? [],
+        })));
+        if (!universityId) {
+            return null;
+        }
+        const schema = schemas.find((item) => item.id === universityId);
         return schema ? this.toResponse(schema) : null;
     }
     async seedFromFiles() {

@@ -26,15 +26,31 @@ let DocumentParseWorker = DocumentParseWorker_1 = class DocumentParseWorker {
         this.worker = new bullmq_1.Worker(shared_1.QUEUES.DOCUMENT_PARSE, (job) => this.process(job), {
             connection: this.getRedisConnection(),
         });
+        this.logger.log(`Listening on queue "${shared_1.QUEUES.DOCUMENT_PARSE}"`);
         this.worker.on('failed', (job, error) => {
-            this.logger.error(`Document parse job ${job?.id ?? 'unknown'} failed: ${error.message}`);
+            this.logger.error(`Document parse job ${job?.id ?? 'unknown'} failed: ${error.message}`, error.stack);
         });
     }
     async onModuleDestroy() {
         await this.worker?.close();
     }
     async process(job) {
-        return this.parserService.parseDocument(job.data.documentId);
+        try {
+            return await this.parserService.parseDocument(job.data.documentId);
+        }
+        catch (error) {
+            if (this.isDatabaseConnectionError(error)) {
+                this.logger.error('Cannot reach Postgres (ECONNREFUSED). Check DATABASE_URL on this Railway service — it must use the Railway Postgres internal URL, not localhost.');
+            }
+            this.logger.error('Full parse error:', error);
+            throw error;
+        }
+    }
+    isDatabaseConnectionError(error) {
+        return (typeof error === 'object' &&
+            error !== null &&
+            'code' in error &&
+            error.code === 'ECONNREFUSED');
     }
     getRedisConnection() {
         const redisUrl = process.env.REDIS_URL;

@@ -17,7 +17,14 @@ export declare class NotificationsService {
     notifySubmitted(universityName: string, studentName: string, screenshotUrl?: string): Promise<void>;
     notifyFailed(universityName: string, studentName: string, error: string): Promise<void>;
     notifyBlocked(studentName: string, universityName: string, missing: string[]): Promise<void>;
-    notifyUnresolved(studentName: string, rawNames: string[]): Promise<void>;
+    notifyUnresolved(studentName: string, unresolved: Array<{
+        rawName: string;
+        candidates: Array<{
+            id: string;
+            displayName: string;
+            score: number;
+        }>;
+    }>): Promise<void>;
     private send;
     private escapeHtml;
 }

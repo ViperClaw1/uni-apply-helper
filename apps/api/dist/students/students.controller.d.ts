@@ -5,8 +5,8 @@ export declare class StudentsController {
     findAll(): Promise<({
         applicationTargets: {
             id: string;
-            universityRaw: string;
             universityId: string | null;
+            universityRaw: string;
             degree: string | null;
             major: string | null;
             duration: string | null;
@@ -62,4 +62,8 @@ export declare class StudentsController {
         createdAt: Date;
     }>;
     getFullProfile(id: string): Promise<import("@uni-apply/shared").StudentProfile>;
+    resolveApplicationTarget(id: string, body: {
+        universityRaw: string;
+        universityId: string;
+    }): Promise<import("@uni-apply/shared").StudentProfile>;
 }

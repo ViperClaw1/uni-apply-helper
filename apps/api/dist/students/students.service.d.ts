@@ -1,8 +1,10 @@
 import { StudentProfile } from '@uni-apply/shared';
 import { PrismaService } from '../prisma/prisma.service';
+import { UniversitiesService } from '../universities/universities.service.js';
 export declare class StudentsService {
     private readonly prisma;
-    constructor(prisma: PrismaService);
+    private readonly universitiesService;
+    constructor(prisma: PrismaService, universitiesService: UniversitiesService);
     createFromNormalized(data: Record<string, any>): Promise<{
         email: string;
         id: string;
@@ -31,8 +33,8 @@ export declare class StudentsService {
     findAll(): Promise<({
         applicationTargets: {
             id: string;
-            universityRaw: string;
             universityId: string | null;
+            universityRaw: string;
             degree: string | null;
             major: string | null;
             duration: string | null;
@@ -87,6 +89,10 @@ export declare class StudentsService {
         studiedInChina: boolean;
         createdAt: Date;
     }>;
+    resolveApplicationTarget(studentId: string, input: {
+        universityRaw: string;
+        universityId: string;
+    }): Promise<StudentProfile>;
     private parseTargets;
     private toArray;
     private toBoolean;

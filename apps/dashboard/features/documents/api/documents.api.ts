@@ -18,6 +18,11 @@ export async function uploadStudentDocument(
   form.append("type", type);
   form.append("file", file);
 
+  const response = await apiClient.post<StudentDocument>(
+    `/students/${studentId}/documents/upload`,
+    form,
+  );
+
   return response.data;
 }
 

@@ -20,6 +20,7 @@ export declare class DocumentsService {
     private assertDocumentInput;
     private uploadToStorage;
     private enqueueParse;
+    private getInitialParseStatus;
     private toJsonInput;
     private toResponse;
     private slugify;

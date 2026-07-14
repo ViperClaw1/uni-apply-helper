@@ -1,3 +1,4 @@
+import { isMissingApprovedMotivationLetter } from "@/features/letters/lib/letter-utils";
 import {
   getApplicationStatusLabel,
   getBatchStatusLabel,
@@ -54,6 +55,14 @@ export function BatchPanel({ batch }: BatchPanelProps) {
                   {application.blockedReason ? (
                     <div className="mt-1 text-xs text-amber-700">
                       {application.blockedReason}
+                      {isMissingApprovedMotivationLetter(application.blockedReason) ? (
+                        <a
+                          href={`#motivation-letter-${application.universityId}`}
+                          className="mt-1 block font-semibold text-sky-700 underline-offset-2 hover:underline"
+                        >
+                          Перейти к мотивационному письму →
+                        </a>
+                      ) : null}
                     </div>
                   ) : null}
                   {application.errorMessage ? (

@@ -65,6 +65,7 @@ let Processor = Processor_1 = class Processor {
         this.worker = new bullmq_1.Worker(shared_1.QUEUES.APPLICATION_PROCESS, (job) => this.process(job), {
             connection: (0, redis_config_js_1.getRedisConnection)(),
         });
+        this.logger.log(`Listening on queue "${shared_1.QUEUES.APPLICATION_PROCESS}"`);
         this.worker.on('failed', (job, error) => {
             this.logger.error(`Application job ${job?.id ?? 'unknown'} failed: ${error.message}`);
         });

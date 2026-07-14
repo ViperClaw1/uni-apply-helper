@@ -29,6 +29,9 @@ let StudentsController = class StudentsController {
     getFullProfile(id) {
         return this.studentsService.getFullProfile(id);
     }
+    resolveApplicationTarget(id, body) {
+        return this.studentsService.resolveApplicationTarget(id, body);
+    }
 };
 exports.StudentsController = StudentsController;
 __decorate([
@@ -51,6 +54,14 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], StudentsController.prototype, "getFullProfile", null);
+__decorate([
+    (0, common_1.Post)(':id/application-targets/resolve'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], StudentsController.prototype, "resolveApplicationTarget", null);
 exports.StudentsController = StudentsController = __decorate([
     (0, common_1.Controller)('students'),
     __metadata("design:paramtypes", [students_service_1.StudentsService])

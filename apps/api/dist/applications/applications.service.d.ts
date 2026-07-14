@@ -23,7 +23,7 @@ export declare class ApplicationsService {
     }): Promise<ApplicationStepResponse>;
     private readonly batchInclude;
     private prepareApplications;
-    private resolveUniversityId;
+    private resolveTarget;
     private findApprovedLetter;
     private enqueueQueuedApplications;
     private notifyUnresolvedTargets;

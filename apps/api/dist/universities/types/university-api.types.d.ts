@@ -7,9 +7,19 @@ export type UniversitySchemaResponse = UniversitySchema & {
     versionHash?: string;
     lastValidatedAt?: string;
 };
+export type UniversityMatchCandidate = {
+    id: string;
+    displayName: string;
+    score: number;
+};
 export type ResolvedUniversity = {
     rawName: string;
     university: UniversitySchemaResponse | null;
+    candidates?: UniversityMatchCandidate[];
+};
+export type CreateUniversityAliasInput = {
+    alias: string;
+    universityId: string;
 };
 export type UniversitySchemaFile = UniversitySchema & {
     aliases?: string[];

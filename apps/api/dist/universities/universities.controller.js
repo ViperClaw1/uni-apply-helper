@@ -32,6 +32,15 @@ let UniversitiesController = class UniversitiesController {
         }
         return this.universitiesService.resolve(name);
     }
+    createAlias(body) {
+        if (!body.alias?.trim()) {
+            throw new common_1.BadRequestException('alias is required.');
+        }
+        if (!body.universityId?.trim()) {
+            throw new common_1.BadRequestException('universityId is required.');
+        }
+        return this.universitiesService.createAlias(body);
+    }
     seedSchemas() {
         return this.schemasService.seedFromFiles();
     }
@@ -56,6 +65,13 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], UniversitiesController.prototype, "resolve", null);
+__decorate([
+    (0, common_1.Post)('aliases'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], UniversitiesController.prototype, "createAlias", null);
 __decorate([
     (0, common_1.Post)('schemas/seed'),
     __metadata("design:type", Function),
