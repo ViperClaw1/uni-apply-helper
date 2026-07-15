@@ -1,5 +1,6 @@
 export type ApplicationStatus =
   | "queued"
+  | "ready_for_submission"
   | "blocked"
   | "submitted"
   | "failed"
@@ -26,6 +27,8 @@ export type ApplicationItem = {
   id: string;
   batchId: string;
   universityId: string;
+  universityDisplayName?: string;
+  formUrl?: string;
   status: ApplicationStatus;
   blockedReason?: string;
   errorMessage?: string;

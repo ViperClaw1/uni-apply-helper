@@ -5,10 +5,14 @@ import {
   Param,
   Patch,
   Post,
+  Query,
+  UseGuards,
 } from '@nestjs/common';
+import { ApiKeyGuard } from '../auth/api-key.guard.js';
 import { ApplicationsService } from './applications.service.js';
 import type {
   CreateApplicationBatchInput,
+  SubmitApplicationInput,
   UpdateApplicationInput,
 } from './types/application-api.types.js';
 
@@ -36,9 +40,27 @@ export class ApplicationsController {
     return this.applicationsService.findBatch(id);
   }
 
+  @Get('applications/active')
+  @UseGuards(ApiKeyGuard)
+  findActive(
+    @Query('url') url: string,
+    @Query('studentId') studentId: string,
+  ) {
+    return this.applicationsService.findActiveByUrl(url, studentId);
+  }
+
   @Get('applications/:id')
   findApplication(@Param('id') id: string) {
     return this.applicationsService.findApplication(id);
+  }
+
+  @Post('applications/:id/submit')
+  @UseGuards(ApiKeyGuard)
+  submitApplication(
+    @Param('id') id: string,
+    @Body() body: SubmitApplicationInput,
+  ) {
+    return this.applicationsService.submitApplication(id, body);
   }
 
   @Patch('applications/:id')
@@ -62,4 +84,3 @@ export class ApplicationsController {
     return this.applicationsService.addStep(id, body);
   }
 }
-

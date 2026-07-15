@@ -221,11 +221,12 @@ export function StudentProfilePage() {
                 Подача заявок
               </h2>
               <p className="mt-1 text-sm text-slate-500">
-                Backend сам валидирует требования, ставит jobs и шлет Telegram.
+                Создайте батч, откройте форму вуза — Extension заполнит поля,
+                вы проверите и отправите вручную.
               </p>
             </div>
 
-            <BatchPanel batch={latestBatch} />
+            <BatchPanel batch={latestBatch} studentId={studentId} />
 
             {submitError ? (
               <div className="mt-3 rounded-xl bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 ring-1 ring-rose-100">

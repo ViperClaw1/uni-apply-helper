@@ -1,4 +1,9 @@
-export type ApplicationStatus = 'queued' | 'blocked' | 'submitted' | 'failed';
+export type ApplicationStatus =
+  | 'queued'
+  | 'ready_for_submission'
+  | 'blocked'
+  | 'submitted'
+  | 'failed';
 
 export type ApplicationBatchStatus = 'queued' | 'processing' | 'completed' | 'failed';
 
@@ -37,6 +42,8 @@ export type ApplicationResponse = {
   id: string;
   batchId: string;
   universityId: string;
+  universityDisplayName?: string;
+  formUrl?: string;
   status: string;
   blockedReason?: string;
   motivationLetterId?: string;
@@ -46,6 +53,23 @@ export type ApplicationResponse = {
   errorMessage?: string;
   createdAt: string;
   steps: ApplicationStepResponse[];
+};
+
+export type ActiveApplicationResponse = {
+  applicationId: string;
+  studentId: string;
+  university: {
+    id: string;
+    displayName: string;
+    formUrl: string;
+  };
+  profile: import('@uni-apply/shared').StudentProfile;
+  schema: import('@uni-apply/shared').UniversitySchema;
+  motivationLetter?: string;
+};
+
+export type SubmitApplicationInput = {
+  submittedAt?: string;
 };
 
 export type ApplicationBatchResponse = {

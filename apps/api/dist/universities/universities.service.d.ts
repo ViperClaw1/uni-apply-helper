@@ -7,6 +7,10 @@ export declare class UniversitiesService {
     constructor(prisma: PrismaService, schemasService: SchemasService);
     findAll(): Promise<UniversitySummary[]>;
     findOne(id: string): Promise<UniversitySchemaResponse>;
+    getFullSchemaForExtension(universityId: string): Promise<UniversitySchemaResponse>;
+    findByFormUrl(pageUrl: string): Promise<UniversitySchemaResponse | null>;
+    private normalizePageUrl;
+    private formUrlsMatch;
     findAliases(universityId: string): Promise<string[]>;
     createAlias(input: CreateUniversityAliasInput): Promise<{
         universityId: string;

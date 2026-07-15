@@ -11,23 +11,19 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ApplicationsService = void 0;
 const common_1 = require("@nestjs/common");
-const shared_1 = require("@uni-apply/shared");
 const notifications_service_js_1 = require("../notifications/notifications.service.js");
 const prisma_service_js_1 = require("../prisma/prisma.service.js");
-const queue_service_js_1 = require("../queue/queue.service.js");
 const students_service_js_1 = require("../students/students.service.js");
 const universities_service_js_1 = require("../universities/universities.service.js");
 let ApplicationsService = class ApplicationsService {
     prisma;
     studentsService;
     universitiesService;
-    queueService;
     notificationsService;
-    constructor(prisma, studentsService, universitiesService, queueService, notificationsService) {
+    constructor(prisma, studentsService, universitiesService, notificationsService) {
         this.prisma = prisma;
         this.studentsService = studentsService;
         this.universitiesService = universitiesService;
-        this.queueService = queueService;
         this.notificationsService = notificationsService;
     }
     async createBatch(input) {
@@ -47,8 +43,8 @@ let ApplicationsService = class ApplicationsService {
                 studentId: input.studentId,
                 total: profile.applicationTargets.length,
                 blocked: blockedCount,
-                status: prepared.applications.some((application) => application.status === 'queued')
-                    ? 'queued'
+                status: prepared.applications.some((application) => application.status === 'ready_for_submission')
+                    ? 'processing'
                     : 'completed',
                 applications: {
                     create: prepared.applications.map((application) => ({
@@ -72,7 +68,6 @@ let ApplicationsService = class ApplicationsService {
             },
             include: this.batchInclude,
         });
-        await this.enqueueQueuedApplications(batch);
         await this.notifyUnresolvedTargets(profile, prepared.unresolvedTargets);
         await this.notificationsService.notifyBatchCreated(batch, profile);
         return this.toBatchResponse(batch);
@@ -84,7 +79,7 @@ let ApplicationsService = class ApplicationsService {
             orderBy: { createdAt: 'desc' },
             include: this.batchInclude,
         });
-        return batches.map((batch) => this.toBatchResponse(batch));
+        return Promise.all(batches.map((batch) => this.toBatchResponse(batch)));
     }
     async findBatch(id) {
         const batch = await this.prisma.applicationBatch.findUnique({
@@ -104,7 +99,96 @@ let ApplicationsService = class ApplicationsService {
         if (!application) {
             throw new common_1.NotFoundException(`Application "${id}" was not found.`);
         }
-        return this.toApplicationResponse(application);
+        return this.enrichApplicationResponse(application);
+    }
+    async findActiveByUrl(url, studentId) {
+        if (!url?.trim()) {
+            throw new common_1.BadRequestException('url is required.');
+        }
+        if (!studentId?.trim()) {
+            throw new common_1.BadRequestException('studentId is required.');
+        }
+        await this.studentsService.findOne(studentId);
+        const university = await this.universitiesService.findByFormUrl(url);
+        if (!university) {
+            throw new common_1.NotFoundException('No university matches this URL.');
+        }
+        const application = await this.prisma.application.findFirst({
+            where: {
+                status: 'ready_for_submission',
+                universityId: university.id,
+                batch: { studentId },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+        if (!application) {
+            throw new common_1.NotFoundException('No active application found for this URL.');
+        }
+        const profile = await this.studentsService.getFullProfile(studentId);
+        const schema = await this.universitiesService.getFullSchemaForExtension(university.id);
+        let motivationLetter;
+        if (application.motivationLetterId) {
+            const letter = await this.prisma.generatedDocument.findUnique({
+                where: { id: application.motivationLetterId },
+                select: { content: true },
+            });
+            motivationLetter = letter?.content;
+        }
+        return {
+            applicationId: application.id,
+            studentId,
+            university: {
+                id: university.id,
+                displayName: university.displayName,
+                formUrl: university.formUrl,
+            },
+            profile,
+            schema,
+            motivationLetter,
+        };
+    }
+    async submitApplication(id, input = {}) {
+        const application = await this.prisma.application.findUnique({
+            where: { id },
+            include: {
+                steps: true,
+                batch: { select: { studentId: true } },
+            },
+        });
+        if (!application) {
+            throw new common_1.NotFoundException(`Application "${id}" was not found.`);
+        }
+        if (application.status !== 'ready_for_submission') {
+            throw new common_1.BadRequestException(`Application must be in ready_for_submission status. Current: ${application.status}`);
+        }
+        const submittedAt = input.submittedAt
+            ? new Date(input.submittedAt)
+            : new Date();
+        await this.prisma.application.update({
+            where: { id },
+            data: {
+                status: 'submitted',
+                submittedAt,
+            },
+        });
+        await this.prisma.applicationStep.create({
+            data: {
+                applicationId: id,
+                stepName: 'consultant_submit',
+                status: 'completed',
+                startedAt: submittedAt,
+                completedAt: submittedAt,
+            },
+        });
+        await this.recalculateBatchCounters(application.batchId);
+        const profile = await this.studentsService.getFullProfile(application.batch.studentId);
+        const university = await this.universitiesService.findOne(application.universityId);
+        await this.notificationsService.notifySubmitted(university.displayName, this.getStudentName(profile));
+        const withSteps = await this.prisma.application.findUnique({
+            where: { id },
+            include: { steps: true },
+        });
+        return this.enrichApplicationResponse(withSteps);
     }
     async updateApplication(id, input) {
         await this.findApplication(id);
@@ -115,7 +199,7 @@ let ApplicationsService = class ApplicationsService {
             include: { steps: true },
         });
         await this.recalculateBatchCounters(application.batchId);
-        return this.toApplicationResponse(application);
+        return this.enrichApplicationResponse(application);
     }
     async addStep(applicationId, input) {
         await this.findApplication(applicationId);
@@ -164,11 +248,13 @@ let ApplicationsService = class ApplicationsService {
                 : null;
             const missing = [
                 ...missingDocuments,
-                university.requiresEssay && !approvedLetter ? 'approved motivation letter' : null,
+                university.requiresEssay && !approvedLetter
+                    ? 'approved motivation letter'
+                    : null,
             ].filter((item) => item !== null);
             applications.push({
                 universityId: university.id,
-                status: missing.length > 0 ? 'blocked' : 'queued',
+                status: missing.length > 0 ? 'blocked' : 'ready_for_submission',
                 blockedReason: missing.length > 0 ? `Missing requirements: ${missing.join(', ')}` : undefined,
                 motivationLetterId: approvedLetter?.id,
             });
@@ -200,20 +286,6 @@ let ApplicationsService = class ApplicationsService {
             orderBy: { approvedAt: 'desc' },
             select: { id: true },
         });
-    }
-    async enqueueQueuedApplications(batch) {
-        const queuedApplications = batch.applications.filter((application) => application.status === 'queued');
-        await Promise.all(queuedApplications.map((application) => {
-            const data = {
-                applicationId: application.id,
-                batchId: batch.id,
-                studentId: batch.studentId,
-                universityId: application.universityId,
-            };
-            return this.queueService.addJob(shared_1.QUEUES.APPLICATION_PROCESS, data, {
-                jobId: application.id,
-            });
-        }));
     }
     async notifyUnresolvedTargets(profile, unresolvedTargets) {
         if (unresolvedTargets.length > 0) {
@@ -257,7 +329,8 @@ let ApplicationsService = class ApplicationsService {
             errorMessage: input.errorMessage,
         };
     }
-    toBatchResponse(batch) {
+    async toBatchResponse(batch) {
+        const applications = await Promise.all(batch.applications.map((application) => this.enrichApplicationResponse(application)));
         return {
             id: batch.id,
             studentId: batch.studentId,
@@ -267,7 +340,7 @@ let ApplicationsService = class ApplicationsService {
             blocked: batch.blocked,
             failed: batch.failed,
             createdAt: batch.createdAt.toISOString(),
-            applications: batch.applications.map((application) => this.toApplicationResponse(application)),
+            applications,
         };
     }
     toApplicationResponse(application) {
@@ -285,6 +358,20 @@ let ApplicationsService = class ApplicationsService {
             createdAt: application.createdAt.toISOString(),
             steps: application.steps.map((step) => this.toStepResponse(step)),
         };
+    }
+    async enrichApplicationResponse(application) {
+        const base = this.toApplicationResponse(application);
+        try {
+            const university = await this.universitiesService.findOne(application.universityId);
+            return {
+                ...base,
+                universityDisplayName: university.displayName,
+                formUrl: university.formUrl,
+            };
+        }
+        catch {
+            return base;
+        }
     }
     toStepResponse(step) {
         return {
@@ -309,7 +396,6 @@ exports.ApplicationsService = ApplicationsService = __decorate([
     __metadata("design:paramtypes", [prisma_service_js_1.PrismaService,
         students_service_js_1.StudentsService,
         universities_service_js_1.UniversitiesService,
-        queue_service_js_1.QueueService,
         notifications_service_js_1.NotificationsService])
 ], ApplicationsService);
 //# sourceMappingURL=applications.service.js.map

@@ -4,8 +4,8 @@
   "formUrl": "https://zzu.17gz.org/apply/index.do",
   "wizard": {
     "totalSteps": 7,
-    "nextButtonSelector": "button:has-text('Save and Next'), input[value='Save and Next']",
-    "submitButtonSelector": "button:has-text('Submit'), input[value='Submit'], button:has-text('Preview and Submit')"
+    "nextButtonSelector": "input[value='Save and Next'], input[value='Next']",
+    "submitButtonSelector": "input[value='Submit'], button[type='submit']"
   },
   "aliases": [
     "Zhengzhou University",
@@ -19,49 +19,63 @@
   "requiredDocuments": ["photo", "passport", "transcript", "medical", "financial"],
   "fields": [
     {
-      "selector": "input[name='surname']",
+      "selector": "input[name='apply.lastName']",
       "mapsTo": "personal.surname",
       "type": "text",
       "required": true,
       "wizardStep": 1
     },
     {
-      "selector": "input[name='givenName']",
+      "selector": "input[name='apply.givenName']",
       "mapsTo": "personal.givenName",
       "type": "text",
       "required": true,
       "wizardStep": 1
     },
     {
-      "selector": "select[name='sex']",
+      "selector": "input[name='apply.name']",
+      "mapsTo": "personal.chineseName",
+      "type": "text",
+      "required": false,
+      "wizardStep": 1
+    },
+    {
+      "selector": "input[type='radio'][name='apply.sex']",
       "mapsTo": "personal.sex",
-      "type": "select",
+      "type": "radio",
       "required": true,
       "wizardStep": 1
     },
     {
-      "selector": "input[name='dateOfBirth']",
+      "selector": "input[name='apply.bornedDate']",
       "mapsTo": "personal.dateOfBirth",
       "type": "text",
       "required": true,
       "wizardStep": 1
     },
     {
-      "selector": "input[name='nationality']",
+      "selector": "select[name='apply.countryId']",
       "mapsTo": "personal.nationality",
-      "type": "text",
+      "type": "select",
       "required": true,
       "wizardStep": 1
     },
     {
-      "selector": "input[name='passportNo']",
+      "selector": "input[name='apply.passportNo']",
       "mapsTo": "personal.passportNo",
       "type": "text",
       "required": true,
       "wizardStep": 1
     },
     {
-      "selector": "input[name='email']",
+      "selector": "input[name='apply.passportExpire']",
+      "mapsTo": "personal.passportExpiry",
+      "type": "text",
+      "required": false,
+      "wizardStep": 1
+    },
+    {
+      "selector": "input[name*='email']",
       "mapsTo": "personal.email",
       "type": "text",
       "required": true,
@@ -76,7 +90,7 @@
       "essayPrompt": "Explain your study plan and motivation."
     },
     {
-      "selector": "input[name='phone']",
+      "selector": "input[name*='mobile'], input[name*='phone']",
       "mapsTo": "personal.phone",
       "type": "text",
       "required": true,
@@ -90,7 +104,7 @@
       "wizardStep": 5
     },
     {
-      "selector": "input[name='passport']",
+      "selector": "input[name='passport'], input[type='file'][name*='passport']",
       "mapsTo": null,
       "type": "file",
       "required": true,
@@ -106,7 +120,7 @@
       "documentType": "photo"
     },
     {
-      "selector": "input[name='transcript']",
+      "selector": "input[name='transcript'], input[type='file'][name*='transcript']",
       "mapsTo": null,
       "type": "file",
       "required": true,
@@ -114,7 +128,7 @@
       "documentType": "transcript"
     },
     {
-      "selector": "input[name='medical']",
+      "selector": "input[name='medical'], input[type='file'][name*='medical']",
       "mapsTo": null,
       "type": "file",
       "required": true,
@@ -122,7 +136,7 @@
       "documentType": "medical"
     },
     {
-      "selector": "input[name='financial']",
+      "selector": "input[name='financial'], input[type='file'][name*='financial']",
       "mapsTo": null,
       "type": "file",
       "required": true,
@@ -132,5 +146,5 @@
   ],
   "requiresEssay": true,
   "essayPrompt": "Explain why you want to study at Zhengzhou University.",
-  "notes": "17gz 7-step wizard. Selectors are initial guesses — run pnpm recon:zzu-wizard after session capture to refine."
+  "notes": "17gz 7-step wizard. Pre-wizard screens (Agree, program selection) require manual navigation. Selectors synced from zzu-recon-fill.mjs."
 }

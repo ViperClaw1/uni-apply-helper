@@ -1,4 +1,7 @@
+"use client";
+
 import { isMissingApprovedMotivationLetter } from "@/features/letters/lib/letter-utils";
+import { openUniversityForm } from "../lib/extension-bridge";
 import {
   getApplicationStatusLabel,
   getBatchStatusLabel,
@@ -8,9 +11,10 @@ import type { ApplicationBatch } from "../types/application.types";
 
 type BatchPanelProps = {
   batch?: ApplicationBatch;
+  studentId: string;
 };
 
-export function BatchPanel({ batch }: BatchPanelProps) {
+export function BatchPanel({ batch, studentId }: BatchPanelProps) {
   if (!batch) {
     return (
       <div className="rounded-2xl bg-white p-5 text-sm text-slate-500 shadow-[0_1px_2px_rgba(15,23,42,0.08)] ring-1 ring-black/5">
@@ -48,9 +52,9 @@ export function BatchPanel({ batch }: BatchPanelProps) {
           {batch.applications.map((application) => (
             <div key={application.id} className="py-3">
               <div className="flex items-start justify-between gap-4">
-                <div>
+                <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium text-slate-900">
-                    {application.universityId}
+                    {application.universityDisplayName ?? application.universityId}
                   </div>
                   {application.blockedReason ? (
                     <div className="mt-1 text-xs text-amber-700">
@@ -69,6 +73,23 @@ export function BatchPanel({ batch }: BatchPanelProps) {
                     <div className="mt-1 text-xs text-rose-700">
                       {application.errorMessage}
                     </div>
+                  ) : null}
+                  {application.formUrl &&
+                  application.status === "ready_for_submission" ? (
+                    <button
+                      type="button"
+                      title="Откроет форму вуза. Extension заполнит поля автоматически, если установлен."
+                      onClick={() =>
+                        void openUniversityForm({
+                          studentId,
+                          applicationId: application.id,
+                          formUrl: application.formUrl!,
+                        })
+                      }
+                      className="mt-2 inline-flex h-8 items-center rounded-lg bg-violet-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-violet-700"
+                    >
+                      Открыть форму →
+                    </button>
                   ) : null}
                 </div>
                 <StatusBadge

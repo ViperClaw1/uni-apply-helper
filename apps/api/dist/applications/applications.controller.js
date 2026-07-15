@@ -14,6 +14,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ApplicationsController = void 0;
 const common_1 = require("@nestjs/common");
+const api_key_guard_js_1 = require("../auth/api-key.guard.js");
 const applications_service_js_1 = require("./applications.service.js");
 let ApplicationsController = class ApplicationsController {
     applicationsService;
@@ -32,8 +33,14 @@ let ApplicationsController = class ApplicationsController {
     findBatch(id) {
         return this.applicationsService.findBatch(id);
     }
+    findActive(url, studentId) {
+        return this.applicationsService.findActiveByUrl(url, studentId);
+    }
     findApplication(id) {
         return this.applicationsService.findApplication(id);
+    }
+    submitApplication(id, body) {
+        return this.applicationsService.submitApplication(id, body);
     }
     updateApplication(id, body) {
         return this.applicationsService.updateApplication(id, body);
@@ -72,12 +79,30 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], ApplicationsController.prototype, "findBatch", null);
 __decorate([
+    (0, common_1.Get)('applications/active'),
+    (0, common_1.UseGuards)(api_key_guard_js_1.ApiKeyGuard),
+    __param(0, (0, common_1.Query)('url')),
+    __param(1, (0, common_1.Query)('studentId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", void 0)
+], ApplicationsController.prototype, "findActive", null);
+__decorate([
     (0, common_1.Get)('applications/:id'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], ApplicationsController.prototype, "findApplication", null);
+__decorate([
+    (0, common_1.Post)('applications/:id/submit'),
+    (0, common_1.UseGuards)(api_key_guard_js_1.ApiKeyGuard),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], ApplicationsController.prototype, "submitApplication", null);
 __decorate([
     (0, common_1.Patch)('applications/:id'),
     __param(0, (0, common_1.Param)('id')),

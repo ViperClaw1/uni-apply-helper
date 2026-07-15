@@ -12,6 +12,7 @@ export function getBatchStatusLabel(status: string) {
 export function getApplicationStatusLabel(status: string) {
   const labels: Record<string, string> = {
     queued: "В очереди",
+    ready_for_submission: "Готова к подаче",
     blocked: "Заблокирована",
     submitted: "Отправлена",
     failed: "Ошибка",
@@ -27,6 +28,7 @@ export function getStatusClassName(status: string) {
     failed: "bg-rose-100 text-rose-800 ring-rose-200",
     processing: "bg-sky-100 text-sky-800 ring-sky-200",
     queued: "bg-yellow-100 text-yellow-800 ring-yellow-200",
+    ready_for_submission: "bg-violet-100 text-violet-800 ring-violet-200",
     submitted: "bg-emerald-100 text-emerald-800 ring-emerald-200",
   };
 

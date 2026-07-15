@@ -23,6 +23,8 @@
 
 ## Description
 
+Playwright worker for automated form filling. **Deprecated for production flow** — applications now use `ready_for_submission` status and the Chrome Extension (`apps/extension`) for semi-automatic consultant-driven submission. This worker remains for local recon scripts and legacy testing.
+
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
 ## Project setup

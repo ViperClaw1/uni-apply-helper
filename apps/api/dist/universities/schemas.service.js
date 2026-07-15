@@ -156,6 +156,7 @@ let SchemasService = class SchemasService {
             aliases: this.toStringArray(parsed.aliases),
             requiredDocuments: this.toStringArray(parsed.requiredDocuments),
             fields: parsed.fields.filter((field) => this.isFieldConfig(field)),
+            wizard: this.parseWizard(parsed.wizard),
             requiresEssay: parsed.requiresEssay ?? false,
             essayPrompt: parsed.essayPrompt,
             notes: parsed.notes,
@@ -170,12 +171,29 @@ let SchemasService = class SchemasService {
             formUrl: schema.formUrl,
             requiredDocuments: schema.requiredDocuments,
             fields: schema.fields,
+            wizard: schema.wizard,
             requiresEssay: schema.requiresEssay,
             essayPrompt: schema.essayPrompt,
             notes: schema.notes,
             versionHash: schema.versionHash ?? this.hashSchema(schema),
             lastValidatedAt: schema.lastValidatedAt,
             aliases: schema.aliases ?? [],
+        };
+    }
+    parseWizard(value) {
+        if (!value || typeof value !== 'object') {
+            return undefined;
+        }
+        const wizard = value;
+        if (typeof wizard.totalSteps !== 'number' ||
+            typeof wizard.nextButtonSelector !== 'string' ||
+            typeof wizard.submitButtonSelector !== 'string') {
+            return undefined;
+        }
+        return {
+            totalSteps: wizard.totalSteps,
+            nextButtonSelector: wizard.nextButtonSelector,
+            submitButtonSelector: wizard.submitButtonSelector,
         };
     }
     hashSchema(schema) {

@@ -90,6 +90,69 @@ export class UniversitiesService {
     }
   }
 
+  async getFullSchemaForExtension(
+    universityId: string,
+  ): Promise<UniversitySchemaResponse> {
+    const base = await this.findOne(universityId);
+
+    try {
+      const fileSchema = await this.schemasService.findByUniversityId(universityId);
+
+      return {
+        ...base,
+        fields: fileSchema.fields.length > 0 ? fileSchema.fields : base.fields,
+        wizard: fileSchema.wizard ?? base.wizard,
+        notes: fileSchema.notes ?? base.notes,
+      };
+    } catch {
+      return base;
+    }
+  }
+
+  async findByFormUrl(pageUrl: string): Promise<UniversitySchemaResponse | null> {
+    const normalizedPageUrl = this.normalizePageUrl(pageUrl);
+    const universities = await this.findAll();
+
+    for (const summary of universities) {
+      const university = await this.findOne(summary.id);
+
+      if (this.formUrlsMatch(normalizedPageUrl, university.formUrl)) {
+        return university;
+      }
+    }
+
+    return null;
+  }
+
+  private normalizePageUrl(url: string): { originPath: string; hostname: string } {
+    const parsed = new URL(url);
+
+    return {
+      originPath: `${parsed.origin}${parsed.pathname}`.replace(/\/$/, ''),
+      hostname: parsed.hostname,
+    };
+  }
+
+  private formUrlsMatch(
+    page: { originPath: string; hostname: string },
+    formUrl: string,
+  ): boolean {
+    const form = this.normalizePageUrl(formUrl);
+
+    if (page.originPath === form.originPath) {
+      return true;
+    }
+
+    if (page.hostname === form.hostname) {
+      return true;
+    }
+
+    return (
+      page.originPath.startsWith(form.originPath) ||
+      form.originPath.startsWith(page.originPath)
+    );
+  }
+
   async findAliases(universityId: string): Promise<string[]> {
     const university = await this.findOne(universityId);
 

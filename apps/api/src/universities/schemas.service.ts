@@ -4,7 +4,7 @@ import {
   normalizeUniversityName,
 } from './lib/university-name-matcher.js';
 import { Prisma } from '@uni-apply/database';
-import type { FieldConfig } from '@uni-apply/shared';
+import type { FieldConfig, WizardConfig } from '@uni-apply/shared';
 import { createHash } from 'node:crypto';
 import { readdir, readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
@@ -210,6 +210,7 @@ export class SchemasService {
       fields: parsed.fields.filter((field): field is FieldConfig =>
         this.isFieldConfig(field),
       ),
+      wizard: this.parseWizard(parsed.wizard),
       requiresEssay: parsed.requiresEssay ?? false,
       essayPrompt: parsed.essayPrompt,
       notes: parsed.notes,
@@ -225,12 +226,35 @@ export class SchemasService {
       formUrl: schema.formUrl,
       requiredDocuments: schema.requiredDocuments,
       fields: schema.fields,
+      wizard: schema.wizard,
       requiresEssay: schema.requiresEssay,
       essayPrompt: schema.essayPrompt,
       notes: schema.notes,
       versionHash: schema.versionHash ?? this.hashSchema(schema),
       lastValidatedAt: schema.lastValidatedAt,
       aliases: schema.aliases ?? [],
+    };
+  }
+
+  private parseWizard(value: unknown): WizardConfig | undefined {
+    if (!value || typeof value !== 'object') {
+      return undefined;
+    }
+
+    const wizard = value as Partial<WizardConfig>;
+
+    if (
+      typeof wizard.totalSteps !== 'number' ||
+      typeof wizard.nextButtonSelector !== 'string' ||
+      typeof wizard.submitButtonSelector !== 'string'
+    ) {
+      return undefined;
+    }
+
+    return {
+      totalSteps: wizard.totalSteps,
+      nextButtonSelector: wizard.nextButtonSelector,
+      submitButtonSelector: wizard.submitButtonSelector,
     };
   }
 
