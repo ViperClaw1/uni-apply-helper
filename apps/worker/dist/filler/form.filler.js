@@ -13,19 +13,69 @@ exports.FormFiller = void 0;
 const common_1 = require("@nestjs/common");
 const field_mapper_js_1 = require("./field.mapper.js");
 const file_attacher_js_1 = require("./file.attacher.js");
-const submit_handler_js_1 = require("./submit.handler.js");
+const wizard_field_groups_js_1 = require("./wizard-field-groups.js");
+const wizard_navigator_js_1 = require("./wizard.navigator.js");
 let FormFiller = class FormFiller {
     fieldMapper;
     fileAttacher;
-    submitHandler;
-    constructor(fieldMapper, fileAttacher, submitHandler) {
+    wizardNavigator;
+    wizardFieldGroups;
+    constructor(fieldMapper, fileAttacher, wizardNavigator, wizardFieldGroups) {
         this.fieldMapper = fieldMapper;
         this.fileAttacher = fileAttacher;
-        this.submitHandler = submitHandler;
+        this.wizardNavigator = wizardNavigator;
+        this.wizardFieldGroups = wizardFieldGroups;
     }
     async fillFields(page, profile, fields, motivationLetterContent) {
-        const inputFields = fields.filter((field) => field.type !== 'file');
-        for (const field of inputFields) {
+        await this.fillFieldBatch(page, profile, fields, motivationLetterContent);
+    }
+    async attachFiles(page, profile, fields) {
+        await this.fileAttacher.attachFiles(page, profile, fields);
+    }
+    async submit(page) {
+        const submit = page
+            .locator([
+            "button[type='submit']",
+            "input[type='submit']",
+            'button:has-text("Submit")',
+            'button:has-text("Отправить")',
+        ].join(', '))
+            .first();
+        await Promise.all([
+            page.waitForLoadState('networkidle', { timeout: 30_000 }).catch(() => undefined),
+            submit.click(),
+        ]);
+    }
+    async processWizard(page, profile, university, motivationLetterContent) {
+        const wizard = university.wizard;
+        if (!wizard) {
+            throw new Error(`University "${university.id}" has no wizard config`);
+        }
+        await this.wizardNavigator.forEachStep(page, wizard, async (step) => {
+            const fields = this.wizardFieldGroups.fieldsForStep(university, step);
+            await this.validateFields(page, fields);
+            await this.fillFieldBatch(page, profile, fields.filter((field) => field.type !== 'file'), motivationLetterContent);
+            const fileFields = fields.filter((field) => field.type === 'file');
+            if (fileFields.length > 0) {
+                await this.fileAttacher.attachFiles(page, profile, fileFields);
+            }
+        });
+        await this.wizardNavigator.clickSubmit(page, wizard.submitButtonSelector);
+    }
+    async validateFields(page, fields) {
+        const missingSelectors = [];
+        for (const field of fields) {
+            const count = await page.locator(field.selector).count();
+            if (count === 0) {
+                missingSelectors.push(field.selector);
+            }
+        }
+        if (missingSelectors.length > 0) {
+            throw new Error(`Missing selectors: ${missingSelectors.join(', ')}`);
+        }
+    }
+    async fillFieldBatch(page, profile, fields, motivationLetterContent) {
+        for (const field of fields) {
             const value = this.fieldMapper.getValue(profile, field, motivationLetterContent);
             if (value === undefined || value === null || value === '') {
                 if (field.required) {
@@ -35,12 +85,6 @@ let FormFiller = class FormFiller {
             }
             await this.fillField(page, field, value);
         }
-    }
-    async attachFiles(page, profile, fields) {
-        await this.fileAttacher.attachFiles(page, profile, fields);
-    }
-    async submit(page) {
-        await this.submitHandler.submit(page);
     }
     async fillField(page, field, value) {
         const locator = page.locator(field.selector);
@@ -83,6 +127,7 @@ exports.FormFiller = FormFiller = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [field_mapper_js_1.FieldMapper,
         file_attacher_js_1.FileAttacher,
-        submit_handler_js_1.SubmitHandler])
+        wizard_navigator_js_1.WizardNavigator,
+        wizard_field_groups_js_1.WizardFieldGroups])
 ], FormFiller);
 //# sourceMappingURL=form.filler.js.map

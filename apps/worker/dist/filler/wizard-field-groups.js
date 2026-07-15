@@ -6,26 +6,18 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SubmitHandler = void 0;
+exports.WizardFieldGroups = void 0;
 const common_1 = require("@nestjs/common");
-let SubmitHandler = class SubmitHandler {
-    async submit(page) {
-        const submit = page
-            .locator([
-            "button[type='submit']",
-            "input[type='submit']",
-            'button:has-text("Submit")',
-            'button:has-text("Отправить")',
-        ].join(', '))
-            .first();
-        await Promise.all([
-            page.waitForLoadState('networkidle', { timeout: 30_000 }).catch(() => undefined),
-            submit.click(),
-        ]);
+let WizardFieldGroups = class WizardFieldGroups {
+    fieldsForStep(university, step) {
+        return university.fields.filter((field) => (field.wizardStep ?? 1) === step);
+    }
+    isWizard(university) {
+        return Boolean(university.wizard);
     }
 };
-exports.SubmitHandler = SubmitHandler;
-exports.SubmitHandler = SubmitHandler = __decorate([
+exports.WizardFieldGroups = WizardFieldGroups;
+exports.WizardFieldGroups = WizardFieldGroups = __decorate([
     (0, common_1.Injectable)()
-], SubmitHandler);
-//# sourceMappingURL=submit.handler.js.map
+], WizardFieldGroups);
+//# sourceMappingURL=wizard-field-groups.js.map

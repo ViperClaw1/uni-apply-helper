@@ -22,11 +22,14 @@ RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
 
-ARG APP=api
+ARG APP
 ENV APP=$APP
 ENV CI=true
 
 COPY . .
+
+RUN if [ -z "$APP" ]; then echo "Build arg APP is required (api or worker)" && exit 1; fi \
+  && case "$APP" in api|worker) ;; *) echo "APP must be api or worker, got: $APP" && exit 1 ;; esac
 
 RUN pnpm --filter @uni-apply/shared build \
   && DATABASE_URL="postgresql://postgres:postgres@localhost:5432/uni_apply" pnpm --filter @uni-apply/database exec prisma generate \
@@ -37,8 +40,9 @@ RUN pnpm --filter @uni-apply/shared build \
 
 FROM base AS runner
 
-ARG APP=api
+ARG APP
 ENV APP=$APP
+ENV UNI_APPLY_RUNTIME=$APP
 ENV NODE_ENV=production
 
 COPY --from=build /app /app

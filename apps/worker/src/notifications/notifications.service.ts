@@ -51,6 +51,17 @@ export class NotificationsService {
     );
   }
 
+  async notifySessionExpired(universityName: string) {
+    await this.send(
+      [
+        '<b>Сессия ZZU истекла</b>',
+        `Вуз: ${this.escapeHtml(universityName)}`,
+        'Нужно вручную обновить zzu-session.json и переменную ZZU_SESSION_STATE_B64 в Railway.',
+        'Запуск: pnpm --filter worker capture:zzu-session',
+      ].join('\n'),
+    );
+  }
+
   private async send(text: string) {
     if (!this.bot || !this.chatId) {
       this.logger.debug(`Skipped Telegram notification: ${text}`);

@@ -8,6 +8,5 @@ export declare class DocumentParseWorker implements OnModuleInit, OnModuleDestro
     onModuleInit(): void;
     onModuleDestroy(): Promise<void>;
     private process;
-    private isDatabaseConnectionError;
     private getRedisConnection;
 }

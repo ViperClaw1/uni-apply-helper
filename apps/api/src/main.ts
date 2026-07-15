@@ -1,8 +1,11 @@
 import { NestFactory } from '@nestjs/core';
 import { json, urlencoded } from 'express';
 import { AppModule } from './app.module';
+import { assertApiRailwayService } from './assert-railway-service';
 
 async function bootstrap() {
+  assertApiRailwayService();
+
   const app = await NestFactory.create(AppModule, { bodyParser: false });
 
   app.enableCors({

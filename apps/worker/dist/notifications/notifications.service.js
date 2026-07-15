@@ -48,6 +48,14 @@ let NotificationsService = NotificationsService_1 = class NotificationsService {
             `Причина: ${this.escapeHtml(error)}`,
         ].join('\n'));
     }
+    async notifySessionExpired(universityName) {
+        await this.send([
+            '<b>Сессия ZZU истекла</b>',
+            `Вуз: ${this.escapeHtml(universityName)}`,
+            'Нужно вручную обновить zzu-session.json и переменную ZZU_SESSION_STATE_B64 в Railway.',
+            'Запуск: pnpm --filter worker capture:zzu-session',
+        ].join('\n'));
+    }
     async send(text) {
         if (!this.bot || !this.chatId) {
             this.logger.debug(`Skipped Telegram notification: ${text}`);

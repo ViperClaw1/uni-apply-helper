@@ -1,7 +1,12 @@
 {
   "id": "zhengzhou-university",
   "displayName": "Zhengzhou University",
-  "formUrl": "https://example.com/zzu/apply",
+  "formUrl": "https://zzu.17gz.org/apply/index.do",
+  "wizard": {
+    "totalSteps": 7,
+    "nextButtonSelector": "button:has-text('Save and Next'), input[value='Save and Next']",
+    "submitButtonSelector": "button:has-text('Submit'), input[value='Submit'], button:has-text('Preview and Submit')"
+  },
   "aliases": [
     "Zhengzhou University",
     "Zhengzhou Univ",
@@ -17,32 +22,79 @@
       "selector": "input[name='surname']",
       "mapsTo": "personal.surname",
       "type": "text",
-      "required": true
+      "required": true,
+      "wizardStep": 1
     },
     {
       "selector": "input[name='givenName']",
       "mapsTo": "personal.givenName",
       "type": "text",
-      "required": true
+      "required": true,
+      "wizardStep": 1
+    },
+    {
+      "selector": "select[name='sex']",
+      "mapsTo": "personal.sex",
+      "type": "select",
+      "required": true,
+      "wizardStep": 1
+    },
+    {
+      "selector": "input[name='dateOfBirth']",
+      "mapsTo": "personal.dateOfBirth",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1
+    },
+    {
+      "selector": "input[name='nationality']",
+      "mapsTo": "personal.nationality",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1
+    },
+    {
+      "selector": "input[name='passportNo']",
+      "mapsTo": "personal.passportNo",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1
     },
     {
       "selector": "input[name='email']",
       "mapsTo": "personal.email",
       "type": "text",
-      "required": true
+      "required": true,
+      "wizardStep": 1
     },
     {
-      "selector": "textarea[name='motivation']",
+      "selector": "textarea[name='studyPlan']",
       "mapsTo": null,
       "type": "essay",
       "required": false,
-      "essayPrompt": "Explain why you want to study at Zhengzhou University."
+      "wizardStep": 2,
+      "essayPrompt": "Explain your study plan and motivation."
+    },
+    {
+      "selector": "input[name='phone']",
+      "mapsTo": "personal.phone",
+      "type": "text",
+      "required": true,
+      "wizardStep": 5
+    },
+    {
+      "selector": "textarea[name='permanentAddress']",
+      "mapsTo": "personal.permanentAddress",
+      "type": "textarea",
+      "required": false,
+      "wizardStep": 5
     },
     {
       "selector": "input[name='passport']",
       "mapsTo": null,
       "type": "file",
       "required": true,
+      "wizardStep": 6,
       "documentType": "passport"
     },
     {
@@ -50,6 +102,7 @@
       "mapsTo": null,
       "type": "file",
       "required": true,
+      "wizardStep": 6,
       "documentType": "photo"
     },
     {
@@ -57,10 +110,27 @@
       "mapsTo": null,
       "type": "file",
       "required": true,
+      "wizardStep": 6,
       "documentType": "transcript"
+    },
+    {
+      "selector": "input[name='medical']",
+      "mapsTo": null,
+      "type": "file",
+      "required": true,
+      "wizardStep": 6,
+      "documentType": "medical"
+    },
+    {
+      "selector": "input[name='financial']",
+      "mapsTo": null,
+      "type": "file",
+      "required": true,
+      "wizardStep": 6,
+      "documentType": "financial"
     }
   ],
   "requiresEssay": true,
   "essayPrompt": "Explain why you want to study at Zhengzhou University.",
-  "notes": "Zhengzhou University (China) application schema."
+  "notes": "17gz 7-step wizard. Selectors are initial guesses — run pnpm recon:zzu-wizard after session capture to refine."
 }

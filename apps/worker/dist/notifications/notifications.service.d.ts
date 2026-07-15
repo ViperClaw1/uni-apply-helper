@@ -7,6 +7,7 @@ export declare class NotificationsService {
     constructor(configService: ConfigService);
     notifySubmitted(universityName: string, studentName: string, screenshotUrl?: string): Promise<void>;
     notifyFailed(universityName: string, studentName: string, error: string): Promise<void>;
+    notifySessionExpired(universityName: string): Promise<void>;
     private send;
     private escapeHtml;
 }

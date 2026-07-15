@@ -4,13 +4,15 @@ import { BrowserService } from './browser/browser.service.js';
 import { OpenFormStep } from './steps/open-form.step.js';
 import { ValidateSchemaStep } from './steps/validate-schema.step.js';
 import { FillFieldsStep } from './steps/fill-fields.step.js';
+import { FillWizardStep } from './steps/fill-wizard.step.js';
 import { AttachFilesStep } from './steps/attach-files.step.js';
 import { SubmitFormStep } from './steps/submit-form.step.js';
 import { LogResultStep } from './steps/log-result.step.js';
 import { FieldMapper } from './filler/field.mapper.js';
 import { FileAttacher } from './filler/file.attacher.js';
 import { FormFiller } from './filler/form.filler.js';
-import { SubmitHandler } from './filler/submit.handler.js';
+import { WizardFieldGroups } from './filler/wizard-field-groups.js';
+import { WizardNavigator } from './filler/wizard.navigator.js';
 import { NotificationsService } from './notifications/notifications.service.js';
 import { Processor } from './processor.js';
 import { PrismaModule } from './prisma/prisma.module.js';
@@ -23,11 +25,13 @@ import { ScreenshotService } from './screenshot/screenshot.service.js';
     ScreenshotService,
     FieldMapper,
     FileAttacher,
+    WizardNavigator,
+    WizardFieldGroups,
     FormFiller,
-    SubmitHandler,
     OpenFormStep,
     ValidateSchemaStep,
     FillFieldsStep,
+    FillWizardStep,
     AttachFilesStep,
     SubmitFormStep,
     LogResultStep,

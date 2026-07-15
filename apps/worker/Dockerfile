@@ -36,6 +36,7 @@ RUN pnpm --filter @uni-apply/shared build \
 FROM base AS runner
 
 ENV APP=worker
+ENV UNI_APPLY_RUNTIME=worker
 ENV NODE_ENV=production
 
 COPY --from=build /app /app

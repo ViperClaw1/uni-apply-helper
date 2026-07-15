@@ -17,12 +17,14 @@ const bullmq_1 = require("bullmq");
 const node_path_1 = require("node:path");
 const promises_1 = require("node:fs/promises");
 const browser_service_js_1 = require("./browser/browser.service.js");
+const session_expired_error_js_1 = require("./errors/session-expired.error.js");
 const notifications_service_js_1 = require("./notifications/notifications.service.js");
 const prisma_service_js_1 = require("./prisma/prisma.service.js");
 const redis_config_js_1 = require("./queue/redis.config.js");
 const screenshot_service_js_1 = require("./screenshot/screenshot.service.js");
 const attach_files_step_js_1 = require("./steps/attach-files.step.js");
 const fill_fields_step_js_1 = require("./steps/fill-fields.step.js");
+const fill_wizard_step_js_1 = require("./steps/fill-wizard.step.js");
 const log_result_step_js_1 = require("./steps/log-result.step.js");
 const open_form_step_js_1 = require("./steps/open-form.step.js");
 const submit_form_step_js_1 = require("./steps/submit-form.step.js");
@@ -36,12 +38,13 @@ let Processor = Processor_1 = class Processor {
     fillFieldsStep;
     attachFilesStep;
     submitFormStep;
+    fillWizardStep;
     logResultStep;
     notificationsService;
     logger = new common_1.Logger(Processor_1.name);
     worker;
     steps;
-    constructor(prisma, browserService, screenshotService, openFormStep, validateSchemaStep, fillFieldsStep, attachFilesStep, submitFormStep, logResultStep, notificationsService) {
+    constructor(prisma, browserService, screenshotService, openFormStep, validateSchemaStep, fillFieldsStep, attachFilesStep, submitFormStep, fillWizardStep, logResultStep, notificationsService) {
         this.prisma = prisma;
         this.browserService = browserService;
         this.screenshotService = screenshotService;
@@ -50,6 +53,7 @@ let Processor = Processor_1 = class Processor {
         this.fillFieldsStep = fillFieldsStep;
         this.attachFilesStep = attachFilesStep;
         this.submitFormStep = submitFormStep;
+        this.fillWizardStep = fillWizardStep;
         this.logResultStep = logResultStep;
         this.notificationsService = notificationsService;
         this.steps = [
@@ -61,11 +65,20 @@ let Processor = Processor_1 = class Processor {
             this.logResultStep,
         ];
     }
+    getSteps(university) {
+        if (university.wizard) {
+            return [this.openFormStep, this.fillWizardStep, this.logResultStep];
+        }
+        return this.steps;
+    }
     onModuleInit() {
         this.worker = new bullmq_1.Worker(shared_1.QUEUES.APPLICATION_PROCESS, (job) => this.process(job), {
             connection: (0, redis_config_js_1.getRedisConnection)(),
         });
         this.logger.log(`Listening on queue "${shared_1.QUEUES.APPLICATION_PROCESS}"`);
+        this.worker.on('active', (job) => {
+            this.logger.log(`Picked up application job ${job.id}`);
+        });
         this.worker.on('failed', (job, error) => {
             this.logger.error(`Application job ${job?.id ?? 'unknown'} failed: ${error.message}`);
         });
@@ -117,7 +130,7 @@ let Processor = Processor_1 = class Processor {
                     motivationLetterContent,
                     page,
                 };
-                for (const step of this.steps) {
+                for (const step of this.getSteps(university)) {
                     await this.runStep(application.id, step, context);
                     if (step.name === 'open_form') {
                         context.screenshotBefore = await this.screenshotService.capture(page, application.id, 'before');
@@ -149,7 +162,12 @@ let Processor = Processor_1 = class Processor {
                 },
             });
             await this.recalculateBatchCounters(application.batchId);
-            await this.notificationsService.notifyFailed(university.displayName, studentName, message);
+            if (error instanceof session_expired_error_js_1.SessionExpiredError) {
+                await this.notificationsService.notifySessionExpired(university.displayName);
+            }
+            else {
+                await this.notificationsService.notifyFailed(university.displayName, studentName, message);
+            }
             throw error;
         }
     }
@@ -251,6 +269,7 @@ let Processor = Processor_1 = class Processor {
                     formUrl: schema.formUrl ?? '',
                     requiredDocuments: this.toStringArray(schema.requiredDocuments),
                     fields: this.toFieldConfigArray(schema.fields),
+                    wizard: schema.wizard,
                     requiresEssay: schema.requiresEssay ?? false,
                     essayPrompt: schema.essayPrompt,
                     notes: schema.notes,
@@ -407,6 +426,7 @@ exports.Processor = Processor = Processor_1 = __decorate([
         fill_fields_step_js_1.FillFieldsStep,
         attach_files_step_js_1.AttachFilesStep,
         submit_form_step_js_1.SubmitFormStep,
+        fill_wizard_step_js_1.FillWizardStep,
         log_result_step_js_1.LogResultStep,
         notifications_service_js_1.NotificationsService])
 ], Processor);

@@ -14,12 +14,14 @@ import { Job, Worker } from 'bullmq';
 import { dirname, join } from 'node:path';
 import { readdir, readFile } from 'node:fs/promises';
 import { BrowserService } from './browser/browser.service.js';
+import { SessionExpiredError } from './errors/session-expired.error.js';
 import { NotificationsService } from './notifications/notifications.service.js';
 import { PrismaService } from './prisma/prisma.service.js';
 import { getRedisConnection } from './queue/redis.config.js';
 import { ScreenshotService } from './screenshot/screenshot.service.js';
 import { AttachFilesStep } from './steps/attach-files.step.js';
 import { FillFieldsStep } from './steps/fill-fields.step.js';
+import { FillWizardStep } from './steps/fill-wizard.step.js';
 import { LogResultStep } from './steps/log-result.step.js';
 import { OpenFormStep } from './steps/open-form.step.js';
 import { SubmitFormStep } from './steps/submit-form.step.js';
@@ -51,6 +53,7 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
     private readonly fillFieldsStep: FillFieldsStep,
     private readonly attachFilesStep: AttachFilesStep,
     private readonly submitFormStep: SubmitFormStep,
+    private readonly fillWizardStep: FillWizardStep,
     private readonly logResultStep: LogResultStep,
     private readonly notificationsService: NotificationsService,
   ) {
@@ -64,6 +67,14 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
     ];
   }
 
+  private getSteps(university: UniversitySchema): ApplicationPipelineStep[] {
+    if (university.wizard) {
+      return [this.openFormStep, this.fillWizardStep, this.logResultStep];
+    }
+
+    return this.steps;
+  }
+
   onModuleInit() {
     this.worker = new Worker<ApplicationProcessJobData>(
       QUEUES.APPLICATION_PROCESS,
@@ -72,6 +83,12 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
         connection: getRedisConnection(),
       },
     );
+
+    this.logger.log(`Listening on queue "${QUEUES.APPLICATION_PROCESS}"`);
+
+    this.worker.on('active', (job) => {
+      this.logger.log(`Picked up application job ${job.id}`);
+    });
 
     this.worker.on('failed', (job, error) => {
       this.logger.error(
@@ -131,7 +148,7 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
           page,
         };
 
-        for (const step of this.steps) {
+        for (const step of this.getSteps(university)) {
           await this.runStep(application.id, step, context);
 
           if (step.name === 'open_form') {
@@ -175,11 +192,18 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
         },
       });
       await this.recalculateBatchCounters(application.batchId);
-      await this.notificationsService.notifyFailed(
-        university.displayName,
-        studentName,
-        message,
-      );
+
+      if (error instanceof SessionExpiredError) {
+        await this.notificationsService.notifySessionExpired(
+          university.displayName,
+        );
+      } else {
+        await this.notificationsService.notifyFailed(
+          university.displayName,
+          studentName,
+          message,
+        );
+      }
 
       throw error;
     }
@@ -316,6 +340,7 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
           formUrl: schema.formUrl ?? '',
           requiredDocuments: this.toStringArray(schema.requiredDocuments),
           fields: this.toFieldConfigArray(schema.fields),
+          wizard: schema.wizard,
           requiresEssay: schema.requiresEssay ?? false,
           essayPrompt: schema.essayPrompt,
           notes: schema.notes,
