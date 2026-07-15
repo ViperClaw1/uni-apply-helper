@@ -8,6 +8,24 @@ import type {
 
 let currentFillSession: FillSession | null = null;
 
+async function ensurePopupOnActionClick(): Promise<void> {
+  await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false });
+}
+
+async function openSidePanel(): Promise<void> {
+  const window = await chrome.windows.getLastFocused();
+
+  if (window.id) {
+    await chrome.sidePanel.open({ windowId: window.id });
+  }
+}
+
+void ensurePopupOnActionClick();
+
+chrome.runtime.onInstalled.addListener(() => {
+  void ensurePopupOnActionClick();
+});
+
 async function getConfig(): Promise<StorageConfig> {
   return chrome.storage.local.get([
     'apiBaseUrl',
@@ -94,6 +112,7 @@ chrome.runtime.onMessage.addListener(
               activeStudentId: message.studentId,
               activeApplicationId: message.applicationId,
             });
+            await openSidePanel();
             sendResponse({ ok: true });
             break;
           }
@@ -154,11 +173,10 @@ chrome.runtime.onMessageExternal.addListener(
         activeStudentId: message.studentId,
         activeApplicationId: message.applicationId,
       })
+      .then(() => openSidePanel())
       .then(() => sendResponse({ ok: true }))
       .catch((error: Error) => sendResponse({ ok: false, error: error.message }));
 
     return true;
   },
 );
-
-chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => undefined);
