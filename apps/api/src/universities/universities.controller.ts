@@ -8,14 +8,17 @@ import {
   Query,
 } from '@nestjs/common';
 import { SchemasService } from './schemas.service.js';
+import { SchemaGeneratorService } from './schema-generator.service.js';
 import { UniversitiesService } from './universities.service.js';
 import type { CreateUniversityAliasInput } from './types/university-api.types.js';
+import type { GenerateUniversitySchemaInput } from './types/schema-generator.types.js';
 
 @Controller('universities')
 export class UniversitiesController {
   constructor(
     private readonly universitiesService: UniversitiesService,
     private readonly schemasService: SchemasService,
+    private readonly schemaGeneratorService: SchemaGeneratorService,
   ) {}
 
   @Get()
@@ -48,6 +51,11 @@ export class UniversitiesController {
   @Post('schemas/seed')
   seedSchemas() {
     return this.schemasService.seedFromFiles();
+  }
+
+  @Post('schemas/generate-draft')
+  generateSchemaDraft(@Body() body: GenerateUniversitySchemaInput) {
+    return this.schemaGeneratorService.generateDraft(body);
   }
 
   @Get(':id')

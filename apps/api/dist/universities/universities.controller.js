@@ -15,13 +15,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UniversitiesController = void 0;
 const common_1 = require("@nestjs/common");
 const schemas_service_js_1 = require("./schemas.service.js");
+const schema_generator_service_js_1 = require("./schema-generator.service.js");
 const universities_service_js_1 = require("./universities.service.js");
 let UniversitiesController = class UniversitiesController {
     universitiesService;
     schemasService;
-    constructor(universitiesService, schemasService) {
+    schemaGeneratorService;
+    constructor(universitiesService, schemasService, schemaGeneratorService) {
         this.universitiesService = universitiesService;
         this.schemasService = schemasService;
+        this.schemaGeneratorService = schemaGeneratorService;
     }
     findAll() {
         return this.universitiesService.findAll();
@@ -43,6 +46,9 @@ let UniversitiesController = class UniversitiesController {
     }
     seedSchemas() {
         return this.schemasService.seedFromFiles();
+    }
+    generateSchemaDraft(body) {
+        return this.schemaGeneratorService.generateDraft(body);
     }
     findOne(id) {
         return this.universitiesService.findOne(id);
@@ -79,6 +85,13 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], UniversitiesController.prototype, "seedSchemas", null);
 __decorate([
+    (0, common_1.Post)('schemas/generate-draft'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], UniversitiesController.prototype, "generateSchemaDraft", null);
+__decorate([
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
@@ -95,6 +108,7 @@ __decorate([
 exports.UniversitiesController = UniversitiesController = __decorate([
     (0, common_1.Controller)('universities'),
     __metadata("design:paramtypes", [universities_service_js_1.UniversitiesService,
-        schemas_service_js_1.SchemasService])
+        schemas_service_js_1.SchemasService,
+        schema_generator_service_js_1.SchemaGeneratorService])
 ], UniversitiesController);
 //# sourceMappingURL=universities.controller.js.map

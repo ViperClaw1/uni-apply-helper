@@ -8,6 +8,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UniversitiesModule = void 0;
 const common_1 = require("@nestjs/common");
+const schema_generator_service_js_1 = require("./schema-generator.service.js");
 const schemas_service_js_1 = require("./schemas.service.js");
 const universities_controller_js_1 = require("./universities.controller.js");
 const universities_service_js_1 = require("./universities.service.js");
@@ -17,8 +18,8 @@ exports.UniversitiesModule = UniversitiesModule;
 exports.UniversitiesModule = UniversitiesModule = __decorate([
     (0, common_1.Module)({
         controllers: [universities_controller_js_1.UniversitiesController],
-        providers: [universities_service_js_1.UniversitiesService, schemas_service_js_1.SchemasService],
-        exports: [universities_service_js_1.UniversitiesService, schemas_service_js_1.SchemasService],
+        providers: [universities_service_js_1.UniversitiesService, schemas_service_js_1.SchemasService, schema_generator_service_js_1.SchemaGeneratorService],
+        exports: [universities_service_js_1.UniversitiesService, schemas_service_js_1.SchemasService, schema_generator_service_js_1.SchemaGeneratorService],
     })
 ], UniversitiesModule);
 //# sourceMappingURL=universities.module.js.map

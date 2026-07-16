@@ -22,6 +22,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "capture:zzu-session": "node scripts/capture-zzu-session.mjs",
     "dry-run:open-form": "node scripts/dry-run-open-form.mjs",
+    "schema:generate": "node ../../scripts/generate-university-schema.mjs",
     "recon:zzu-wizard": "node scripts/recon-zzu-wizard.mjs"
   },
   "dependencies": {
