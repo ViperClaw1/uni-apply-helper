@@ -24,6 +24,12 @@ pnpm dev
 - Root Directory: `apps/dashboard`
 - Environment Variables:
   - `NEXT_PUBLIC_API_URL=https://<railway-api-url>`
+  - `NEXT_PUBLIC_EXTENSION_ID=<chrome-extension-id>` (optional)
+
+`vercel.json` в этой папке запускает `turbo build --filter=@uni-apply/dashboard` из корня монорепо.
+В `turbo.json` для build указаны outputs `.next/**` — без этого Vercel не находит `routes-manifest.json`.
+
+После фикса turbo outputs: **Redeploy** с очисткой кэша (Deployments → ⋯ → Redeploy → uncheck "Use existing Build Cache" или `vercel --force`).
 
 ## Railway API
 
