@@ -6,24 +6,22 @@ type OpenFormParams = {
   formUrl: string;
 };
 
-export async function openUniversityForm({
+export function openUniversityForm({
   studentId,
   applicationId,
   formUrl,
 }: OpenFormParams) {
+  window.open(formUrl, "_blank", "noopener,noreferrer");
+
   if (EXTENSION_ID && typeof chrome !== "undefined" && chrome.runtime?.sendMessage) {
-    try {
-      await chrome.runtime.sendMessage(EXTENSION_ID, {
+    chrome.runtime
+      .sendMessage(EXTENSION_ID, {
         type: "SET_ACTIVE_CONTEXT",
         studentId,
         applicationId,
-      });
-    } catch {
-      // Extension not installed or unavailable — form still opens.
-    }
+      })
+      .catch(() => undefined);
   }
-
-  window.open(formUrl, "_blank", "noopener,noreferrer");
 }
 
 declare const chrome:

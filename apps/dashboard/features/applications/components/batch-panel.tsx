@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { isMissingApprovedMotivationLetter } from "@/features/letters/lib/letter-utils";
 import { openUniversityForm } from "../lib/extension-bridge";
 import {
@@ -15,6 +16,10 @@ type BatchPanelProps = {
 };
 
 export function BatchPanel({ batch, studentId }: BatchPanelProps) {
+  const [openingApplicationId, setOpeningApplicationId] = useState<string | null>(
+    null,
+  );
+
   if (!batch) {
     return (
       <div className="rounded-2xl bg-white p-5 text-sm text-slate-500 shadow-[0_1px_2px_rgba(15,23,42,0.08)] ring-1 ring-black/5">
@@ -79,16 +84,28 @@ export function BatchPanel({ batch, studentId }: BatchPanelProps) {
                     <button
                       type="button"
                       title="Откроет форму вуза. Extension заполнит поля автоматически, если установлен."
-                      onClick={() =>
-                        void openUniversityForm({
+                      disabled={openingApplicationId === application.id}
+                      onClick={() => {
+                        if (openingApplicationId === application.id) {
+                          return;
+                        }
+
+                        setOpeningApplicationId(application.id);
+                        openUniversityForm({
                           studentId,
                           applicationId: application.id,
                           formUrl: application.formUrl!,
-                        })
-                      }
-                      className="mt-2 inline-flex h-8 items-center rounded-lg bg-violet-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-violet-700"
+                        });
+                        window.setTimeout(
+                          () => setOpeningApplicationId(null),
+                          1500,
+                        );
+                      }}
+                      className="mt-2 inline-flex h-8 cursor-pointer items-center rounded-lg bg-violet-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-violet-700 disabled:pointer-events-none disabled:opacity-60"
                     >
-                      Открыть форму →
+                      {openingApplicationId === application.id
+                        ? "Открываем..."
+                        : "Открыть форму →"}
                     </button>
                   ) : null}
                 </div>

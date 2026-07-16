@@ -238,7 +238,7 @@ export function StudentProfilePage() {
               type="button"
               onClick={handleCreateBatch}
               disabled={isSubmitting}
-              className="mt-4 inline-flex h-12 w-full items-center justify-center rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm transition-transform hover:bg-slate-800 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-60"
+              className="mt-4 inline-flex h-12 w-full cursor-pointer items-center justify-center rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm transition-transform hover:bg-slate-800 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-60"
             >
               {isSubmitting ? "Запускаем..." : "Отправить заявки во все вузы"}
             </button>
