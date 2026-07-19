@@ -1,0 +1,323 @@
+{
+    "url": "https://zzu.17gz.org/apply/index.do?forward=edit&applyId=0645665BA4934783B90B671973EEAD42",
+    "capturedAt": "2026-07-19T07:59:19.709Z",
+    "fields": [
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.homeAddress",
+            "id": null,
+            "label": "apply.homeAddress",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.homeAddress\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.homePhone",
+            "id": null,
+            "label": "apply.homePhone",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.homePhone\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.homeCity",
+            "id": null,
+            "label": "apply.homeCity",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.homeCity\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.homeMobile",
+            "id": null,
+            "label": "apply.homeMobile",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.homeMobile\"]"
+        },
+        {
+            "tag": "select",
+            "inputType": "select",
+            "name": "apply.homeCountryId",
+            "id": null,
+            "label": "apply.homeCountryId",
+            "placeholder": null,
+            "required": false,
+            "selector": "select[name=\"apply.homeCountryId\"]",
+            "options": [
+                "Afghanistan",
+                "Albania",
+                "Algeria",
+                "American Samoa",
+                "Andorra",
+                "Angola",
+                "Anguilla",
+                "Antigua and Barbuda",
+                "Argentina",
+                "Armenia",
+                "Aruba",
+                "Australia",
+                "Austria",
+                "Azerbaijan",
+                "Bahamas",
+                "Bahrain",
+                "Bangladesh",
+                "Barbados",
+                "Belarus",
+                "Belgium"
+            ]
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.homeZip",
+            "id": null,
+            "label": "apply.homeZip",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.homeZip\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "radio",
+            "name": "apply.isSame",
+            "id": null,
+            "label": "Same as the Permanent address",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[type=\"radio\"][name=\"apply.isSame\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "radio",
+            "name": "apply.isSame",
+            "id": null,
+            "label": "Other",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[type=\"radio\"][name=\"apply.isSame\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.contactPhone",
+            "id": null,
+            "label": "apply.contactPhone",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.contactPhone\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.contactAddress",
+            "id": null,
+            "label": "apply.contactAddress",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.contactAddress\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.contactZip",
+            "id": null,
+            "label": "apply.contactZip",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.contactZip\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "applyEx.facebookNo",
+            "id": null,
+            "label": "applyEx.facebookNo",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"applyEx.facebookNo\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "applyEx.wechatNo",
+            "id": null,
+            "label": "applyEx.wechatNo",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"applyEx.wechatNo\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "applyEx.linkedInNo",
+            "id": null,
+            "label": "applyEx.linkedInNo",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"applyEx.linkedInNo\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "applyEx.twitterNo",
+            "id": null,
+            "label": "applyEx.twitterNo",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"applyEx.twitterNo\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "applyEx.qqNo",
+            "id": null,
+            "label": "applyEx.qqNo",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"applyEx.qqNo\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "applyEx.msnNo",
+            "id": null,
+            "label": "applyEx.msnNo",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"applyEx.msnNo\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "applyEx.skypeNo",
+            "id": null,
+            "label": "applyEx.skypeNo",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"applyEx.skypeNo\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "applyEx.instagram",
+            "id": null,
+            "label": "applyEx.instagram",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"applyEx.instagram\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "radio",
+            "name": "apply.receiverType",
+            "id": null,
+            "label": "Deliver to Address Provided in Application",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[type=\"radio\"][name=\"apply.receiverType\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "radio",
+            "name": "apply.receiverType",
+            "id": null,
+            "label": "Collect from Zhengzhou University in Person",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[type=\"radio\"][name=\"apply.receiverType\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.receiverName",
+            "id": null,
+            "label": "apply.receiverName",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.receiverName\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.receiverMobile",
+            "id": null,
+            "label": "apply.receiverMobile",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.receiverMobile\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.receiverCity",
+            "id": null,
+            "label": "apply.receiverCity",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.receiverCity\"]"
+        },
+        {
+            "tag": "select",
+            "inputType": "select",
+            "name": "apply.receiverCountryId",
+            "id": null,
+            "label": "apply.receiverCountryId",
+            "placeholder": null,
+            "required": false,
+            "selector": "select[name=\"apply.receiverCountryId\"]",
+            "options": [
+                "Afghanistan",
+                "Albania",
+                "Algeria",
+                "American Samoa",
+                "Andorra",
+                "Angola",
+                "Anguilla",
+                "Antigua and Barbuda",
+                "Argentina",
+                "Armenia",
+                "Aruba",
+                "Australia",
+                "Austria",
+                "Azerbaijan",
+                "Bahamas",
+                "Bahrain",
+                "Bangladesh",
+                "Barbados",
+                "Belarus",
+                "Belgium"
+            ]
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.receiverAddress",
+            "id": null,
+            "label": "apply.receiverAddress",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.receiverAddress\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.receiverZip",
+            "id": null,
+            "label": "apply.receiverZip",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.receiverZip\"]"
+        }
+    ],
+    "navigation": {
+        "nextButtonSelector": "input[value=\"Save and Next\"]"
+    }
+}
