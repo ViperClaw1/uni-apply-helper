@@ -41,6 +41,11 @@ async function fetchActiveApplication(
   const config = await getConfig();
 
   if (!config.apiBaseUrl || !config.apiKey || !config.activeStudentId) {
+    console.warn('[UniApply] Extension API not configured:', {
+      hasApiBaseUrl: Boolean(config.apiBaseUrl),
+      hasApiKey: Boolean(config.apiKey),
+      hasActiveStudentId: Boolean(config.activeStudentId),
+    });
     return null;
   }
 
@@ -50,7 +55,8 @@ async function fetchActiveApplication(
       config.apiKey,
       `/applications/active?url=${encodeURIComponent(url)}&studentId=${encodeURIComponent(config.activeStudentId)}`,
     );
-  } catch {
+  } catch (error) {
+    console.warn('[UniApply] fetchActiveApplication failed:', error);
     return null;
   }
 }

@@ -22,6 +22,11 @@ async function init() {
   })) as RuntimeResponse;
 
   if (!response.ok || !response.application) {
+    console.warn(
+      '[UniApply] No active application for this URL:',
+      window.location.href,
+      response,
+    );
     return;
   }
 
