@@ -16,7 +16,7 @@ import { DocumentUploader } from "@/features/documents/components/document-uploa
 import { getStudentDocuments } from "@/features/documents/api/documents.api";
 import type { StudentDocument } from "@/features/documents/types/document.types";
 import { getStudentProfile } from "../api/students.api";
-import type { StudentProfile } from "../types/student.types";
+import type { ContactInfo, StudentProfile } from "../types/student.types";
 
 export function StudentProfilePage() {
   const params = useParams<{ id: string }>();
@@ -179,6 +179,20 @@ export function StudentProfilePage() {
         </div>
       </section>
 
+      {student.guarantor || student.emergencyContact ? (
+        <section className="mt-8 grid gap-4 md:grid-cols-2">
+          {student.guarantor ? (
+            <ContactInfoCard title="Гарант" contact={student.guarantor} />
+          ) : null}
+          {student.emergencyContact ? (
+            <ContactInfoCard
+              title="Экстренный контакт"
+              contact={student.emergencyContact}
+            />
+          ) : null}
+        </section>
+      ) : null}
+
       <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
         <section>
           <div className="mb-3 flex items-end justify-between">
@@ -253,6 +267,38 @@ function formatStudentName(student: { givenName?: string; surname?: string }) {
   const name = [student.givenName, student.surname].filter(Boolean).join(" ");
 
   return name || "Имя не указано";
+}
+
+function ContactInfoCard({
+  title,
+  contact,
+}: {
+  title: string;
+  contact: ContactInfo;
+}) {
+  const rows = [
+    { label: "Имя", value: contact.name },
+    { label: "Телефон", value: contact.phone },
+    { label: "Email", value: contact.email },
+    { label: "Отношение", value: contact.relationship },
+    { label: "Адрес", value: contact.homeAddress },
+  ].filter((row) => row.value);
+
+  return (
+    <div className="rounded-3xl bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.08),0_12px_45px_rgba(15,23,42,0.05)] ring-1 ring-black/5">
+      <h2 className="text-lg font-semibold tracking-tight text-slate-950">
+        {title}
+      </h2>
+      <dl className="mt-4 grid gap-3 text-sm">
+        {rows.map((row) => (
+          <div key={row.label}>
+            <dt className="font-medium text-slate-500">{row.label}</dt>
+            <dd className="mt-1 text-slate-900">{row.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
 }
 
 function PageShell({

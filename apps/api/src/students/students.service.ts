@@ -20,6 +20,17 @@ type EducationInput = {
   periodEnd?: unknown;
 };
 
+type ContactInput = {
+  name?: string;
+  relationship?: string;
+  nationality?: string;
+  company?: string;
+  position?: string;
+  homeAddress?: string;
+  phone?: string;
+  email?: string;
+};
+
 @Injectable()
 export class StudentsService {
   constructor(
@@ -89,6 +100,20 @@ export class StudentsService {
         applicationTargets: {
           create: targets,
         },
+        ...(this.hasContactData(data.guarantor)
+          ? {
+              guarantor: {
+                create: this.toContactCreateData(data.guarantor),
+              },
+            }
+          : {}),
+        ...(this.hasContactData(data.emergencyContact)
+          ? {
+              emergencyContact: {
+                create: this.toContactCreateData(data.emergencyContact),
+              },
+            }
+          : {}),
       },
     });
   }
@@ -255,6 +280,23 @@ export class StudentsService {
     }
 
     return this.getFullProfile(studentId);
+  }
+
+  private hasContactData(contact?: ContactInput) {
+    return Boolean(contact?.name?.trim());
+  }
+
+  private toContactCreateData(contact: ContactInput) {
+    return {
+      name: contact.name!.trim(),
+      relationship: contact.relationship?.trim() || 'Not specified',
+      nationality: contact.nationality?.trim() || undefined,
+      company: contact.company?.trim() || undefined,
+      position: contact.position?.trim() || undefined,
+      homeAddress: contact.homeAddress?.trim() || undefined,
+      phone: contact.phone?.trim() || undefined,
+      email: contact.email?.trim() || undefined,
+    };
   }
 
   private parseTargets(

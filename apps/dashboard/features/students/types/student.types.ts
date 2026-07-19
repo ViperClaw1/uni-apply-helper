@@ -17,6 +17,14 @@ export type StudentListItem = {
   applicationTargets: ApplicationTarget[];
 };
 
+export type ContactInfo = {
+  name: string;
+  relationship: string;
+  phone?: string;
+  email?: string;
+  homeAddress?: string;
+};
+
 export type StudentProfile = {
   id: string;
   personal: {
@@ -28,6 +36,8 @@ export type StudentProfile = {
     dateOfBirth?: string;
     passportNo?: string;
   };
+  guarantor?: ContactInfo;
+  emergencyContact?: ContactInfo;
   documents: Record<string, string>;
   applicationTargets: ApplicationTarget[];
 };
