@@ -33,9 +33,9 @@ const STUDENT_PROFILE_PATHS = [
   'personal.currentInstitution',
   'personal.beenToChina',
   'personal.studiedInChina',
-  'education[0].degree',
-  'education[0].institution',
-  'education[0].major',
+  'education.0.degree',
+  'education.0.institution',
+  'education.0.major',
   'guarantor.name',
   'guarantor.phone',
   'emergencyContact.name',
@@ -50,6 +50,7 @@ const DOCUMENT_TYPES = [
   'financial',
   'diploma',
   'language_certificate',
+  'personal_statement',
 ] as const;
 
 const FIELD_TYPES = [

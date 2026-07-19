@@ -5,7 +5,14 @@ exports.fieldsForStep = fieldsForStep;
 exports.toBoolean = toBoolean;
 function getByPath(obj, path) {
     return path.split('.').reduce((acc, key) => {
-        if (acc && typeof acc === 'object' && key in acc) {
+        if (acc == null) {
+            return undefined;
+        }
+        if (Array.isArray(acc)) {
+            const index = Number(key);
+            return Number.isInteger(index) ? acc[index] : undefined;
+        }
+        if (typeof acc === 'object' && key in acc) {
             return acc[key];
         }
         return undefined;

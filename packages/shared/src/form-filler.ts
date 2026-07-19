@@ -3,7 +3,16 @@ import type { FieldConfig, UniversitySchema } from './university.types.js';
 
 function getByPath(obj: unknown, path: string): unknown {
   return path.split('.').reduce<unknown>((acc, key) => {
-    if (acc && typeof acc === 'object' && key in acc) {
+    if (acc == null) {
+      return undefined;
+    }
+
+    if (Array.isArray(acc)) {
+      const index = Number(key);
+      return Number.isInteger(index) ? acc[index] : undefined;
+    }
+
+    if (typeof acc === 'object' && key in acc) {
       return (acc as Record<string, unknown>)[key];
     }
 

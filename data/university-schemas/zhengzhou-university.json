@@ -2,109 +2,208 @@
   "id": "zhengzhou-university",
   "displayName": "Zhengzhou University",
   "formUrl": "https://zzu.17gz.org/apply/index.do",
-  "wizard": {
-    "totalSteps": 7,
-    "nextButtonSelector": "input[value='Save and Next'], input[value='Next']",
-    "submitButtonSelector": "input[value='Submit'], button[type='submit']"
-  },
   "aliases": [
     "Zhengzhou University",
     "Zhengzhou Univ",
     "Zhengzhou Univ.",
     "University of Zhengzhou",
     "ZZU",
-    "郑州大学",
-    "Zhengzhou State University"
+    "郑州大学"
   ],
-  "requiredDocuments": ["photo", "passport", "transcript", "medical", "financial"],
+  "requiredDocuments": [
+    "photo",
+    "passport",
+    "transcript",
+    "diploma",
+    "language_certificate",
+    "medical"
+  ],
   "fields": [
     {
-      "selector": "input[name='apply.lastName']",
+      "selector": "input[type=\"file\"][name=\"photo\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 1,
+      "documentType": "photo"
+    },
+    {
+      "selector": "input[name=\"apply.lastName\"]",
       "mapsTo": "personal.surname",
       "type": "text",
       "required": true,
       "wizardStep": 1
     },
     {
-      "selector": "input[name='apply.givenName']",
+      "selector": "input[name=\"apply.givenName\"]",
       "mapsTo": "personal.givenName",
       "type": "text",
       "required": true,
       "wizardStep": 1
     },
     {
-      "selector": "input[name='apply.name']",
+      "selector": "input[name=\"apply.name\"]",
       "mapsTo": "personal.chineseName",
       "type": "text",
       "required": false,
       "wizardStep": 1
     },
     {
-      "selector": "input[type='radio'][name='apply.sex']",
+      "selector": "input[type=\"radio\"][name=\"apply.sex\"]",
       "mapsTo": "personal.sex",
       "type": "radio",
       "required": true,
       "wizardStep": 1
     },
     {
-      "selector": "input[name='apply.bornedDate']",
-      "mapsTo": "personal.dateOfBirth",
-      "type": "text",
-      "required": true,
+      "selector": "input[type=\"radio\"][name=\"apply.marryStatus\"]",
+      "mapsTo": "personal.maritalStatus",
+      "type": "radio",
+      "required": false,
       "wizardStep": 1
     },
     {
-      "selector": "select[name='apply.countryId']",
+      "selector": "select[name=\"apply.countryId\"]",
       "mapsTo": "personal.nationality",
       "type": "select",
       "required": true,
       "wizardStep": 1
     },
     {
-      "selector": "input[name='apply.passportNo']",
+      "selector": "input[name=\"apply.bornedDate\"]",
+      "mapsTo": "personal.dateOfBirth",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1
+    },
+    {
+      "selector": "input[name=\"apply.passportNo\"]",
       "mapsTo": "personal.passportNo",
       "type": "text",
       "required": true,
       "wizardStep": 1
     },
     {
-      "selector": "input[name='apply.passportExpire']",
+      "selector": "input[name=\"apply.passportExpire\"]",
       "mapsTo": "personal.passportExpiry",
       "type": "text",
       "required": false,
       "wizardStep": 1
     },
     {
-      "selector": "input[name*='email']",
-      "mapsTo": "personal.email",
-      "type": "text",
-      "required": true,
-      "wizardStep": 1
-    },
-    {
-      "selector": "textarea[name='studyPlan']",
+      "selector": "select[name=\"apply.englishLanguageSkillId\"]",
       "mapsTo": null,
-      "type": "essay",
+      "type": "select",
       "required": false,
-      "wizardStep": 2,
-      "essayPrompt": "Explain your study plan and motivation."
+      "wizardStep": 2
     },
     {
-      "selector": "input[name*='mobile'], input[name*='phone']",
+      "selector": "select[name=\"apply.yydjzs\"]",
+      "mapsTo": null,
+      "type": "select",
+      "required": false,
+      "wizardStep": 2
+    },
+    {
+      "selector": "input[name=\"apply.yydjzsScore\"]",
+      "mapsTo": null,
+      "type": "text",
+      "required": false,
+      "wizardStep": 2
+    },
+    {
+      "selector": "input[name=\"apply.guarantorEnname\"]",
+      "mapsTo": "guarantor.name",
+      "type": "text",
+      "required": false,
+      "wizardStep": 2
+    },
+    {
+      "selector": "input[name=\"apply.guarPhone\"]",
+      "mapsTo": "guarantor.phone",
+      "type": "text",
+      "required": false,
+      "wizardStep": 2
+    },
+    {
+      "selector": "input[name=\"apply.guarMobile\"]",
+      "mapsTo": null,
+      "type": "text",
+      "required": false,
+      "wizardStep": 2
+    },
+    {
+      "selector": "input[name=\"sh.studyPlace\"]",
+      "mapsTo": "education.0.institution",
+      "type": "text",
+      "required": false,
+      "wizardStep": 3
+    },
+    {
+      "selector": "input[name=\"sh.stuhisMajor\"]",
+      "mapsTo": "education.0.major",
+      "type": "text",
+      "required": false,
+      "wizardStep": 3
+    },
+    {
+      "selector": "select[name=\"sh.educationId\"]",
+      "mapsTo": "education.0.degree",
+      "type": "select",
+      "required": false,
+      "wizardStep": 3
+    },
+    {
+      "selector": "input[type=\"radio\"][name=\"applyEx.haveStudiedInChina\"]",
+      "mapsTo": "personal.studiedInChina",
+      "type": "radio",
+      "required": false,
+      "wizardStep": 3
+    },
+    {
+      "selector": "input[name=\"apply.emergencyName\"]",
+      "mapsTo": "emergencyContact.name",
+      "type": "text",
+      "required": false,
+      "wizardStep": 4
+    },
+    {
+      "selector": "input[name=\"apply.emergencyPhone\"]",
+      "mapsTo": "emergencyContact.phone",
+      "type": "text",
+      "required": false,
+      "wizardStep": 4
+    },
+    {
+      "selector": "input[name=\"apply.emergencyMobile\"]",
+      "mapsTo": null,
+      "type": "text",
+      "required": false,
+      "wizardStep": 4
+    },
+    {
+      "selector": "input[name=\"apply.homeMobile\"]",
       "mapsTo": "personal.phone",
       "type": "text",
       "required": true,
       "wizardStep": 5
     },
     {
-      "selector": "textarea[name='permanentAddress']",
+      "selector": "input[name=\"apply.homeAddress\"]",
       "mapsTo": "personal.permanentAddress",
-      "type": "textarea",
+      "type": "text",
       "required": false,
       "wizardStep": 5
     },
     {
-      "selector": "input[name='passport'], input[type='file'][name*='passport']",
+      "selector": "input[name=\"apply.homeZip\"]",
+      "mapsTo": "personal.postCode",
+      "type": "text",
+      "required": false,
+      "wizardStep": 5
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_passportImage\"] input[type=\"file\"]",
       "mapsTo": null,
       "type": "file",
       "required": true,
@@ -112,39 +211,86 @@
       "documentType": "passport"
     },
     {
-      "selector": "input[name='photo']",
+      "selector": "[attachTypeId=\"ATTACH_TYPE_8135227092\"] input[type=\"file\"]",
       "mapsTo": null,
       "type": "file",
       "required": true,
-      "wizardStep": 6,
-      "documentType": "photo"
+      "wizardStep": 6
     },
     {
-      "selector": "input[name='transcript'], input[type='file'][name*='transcript']",
+      "selector": "[attachTypeId=\"ATTACH_TYPE_HighstEducationImage\"] input[type=\"file\"]",
       "mapsTo": null,
       "type": "file",
-      "required": true,
+      "required": false,
+      "wizardStep": 6,
+      "documentType": "diploma"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_scoreImage\"] input[type=\"file\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
       "wizardStep": 6,
       "documentType": "transcript"
     },
     {
-      "selector": "input[name='medical'], input[type='file'][name*='medical']",
+      "selector": "[attachTypeId=\"ATTACH_TYPE_152170289\"] input[type=\"file\"]",
       "mapsTo": null,
       "type": "file",
-      "required": true,
+      "required": false,
+      "wizardStep": 6,
+      "documentType": "personal_statement"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_158931292\"] input[type=\"file\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6,
+      "documentType": "language_certificate"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_checkBodyreport\"] input[type=\"file\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
       "wizardStep": 6,
       "documentType": "medical"
     },
     {
-      "selector": "input[name='financial'], input[type='file'][name*='financial']",
+      "selector": "[attachTypeId=\"ATTACH_TYPE_115623117\"] input[type=\"file\"]",
       "mapsTo": null,
       "type": "file",
-      "required": true,
-      "wizardStep": 6,
-      "documentType": "financial"
+      "required": false,
+      "wizardStep": 6
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_115623116\"] input[type=\"file\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_158951430\"] input[type=\"file\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_appendFile\"] input[type=\"file\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6
     }
   ],
-  "requiresEssay": true,
-  "essayPrompt": "Explain why you want to study at Zhengzhou University.",
-  "notes": "17gz 7-step wizard. Pre-wizard screens (Agree, program selection) require manual navigation. Selectors synced from zzu-recon-fill.mjs."
+  "wizard": {
+    "totalSteps": 7,
+    "nextButtonSelector": "input[value=\"Save and Next\"]",
+    "submitButtonSelector": "input[value=\"Submit\"]"
+  },
+  "requiresEssay": false,
+  "notes": "17gz 7-step wizard. Steps 1-6: fill form and attachments. Step 7: summary/preview and Submit only. Pre-wizard screens (Agree, program selection) require manual navigation. CSCA (ATTACH_TYPE_8135227092) is portal-required but has no profile documentType mapping yet."
 }

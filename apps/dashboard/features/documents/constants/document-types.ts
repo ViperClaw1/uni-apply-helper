@@ -44,4 +44,10 @@ export const DEFAULT_DOCUMENT_TYPES: DocumentTypeOption[] = [
     parse: false,
     multiple: true,
   },
+  {
+    key: "personal_statement",
+    label: "Personal Statement / Мотивационное письмо",
+    accept: { "application/pdf": [".pdf"], "application/msword": [".doc"], "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"] },
+    parse: false,
+  },
 ];
