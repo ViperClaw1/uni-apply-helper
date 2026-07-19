@@ -16,7 +16,7 @@
  */
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -140,7 +140,7 @@ async function generateViaGemini(payload) {
     ({ GoogleGenAI } = await import('@google/genai'));
   } catch {
     const geminiPath = resolve(rootDir, 'apps/api/node_modules/@google/genai/dist/index.mjs');
-    ({ GoogleGenAI } = await import(geminiPath));
+    ({ GoogleGenAI } = await import(pathToFileURL(geminiPath).href));
   }
 
   const gemini = new GoogleGenAI({ apiKey });
