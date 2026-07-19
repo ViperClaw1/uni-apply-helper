@@ -1,0 +1,342 @@
+{
+    "url": "https://zzu.17gz.org/apply/index.do?forward=edit&applyId=0645665BA4934783B90B671973EEAD42",
+    "capturedAt": "2026-07-19T07:26:55.695Z",
+    "fields": [
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "sh.startDate",
+            "id": null,
+            "label": "sh.startDate",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"sh.startDate\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "sh.endDate",
+            "id": null,
+            "label": "sh.endDate",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"sh.endDate\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "sh.studyPlace",
+            "id": null,
+            "label": "sh.studyPlace",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"sh.studyPlace\"]"
+        },
+        {
+            "tag": "select",
+            "inputType": "select",
+            "name": "sh.countryId",
+            "id": null,
+            "label": "sh.countryId",
+            "placeholder": null,
+            "required": false,
+            "selector": "select[name=\"sh.countryId\"]",
+            "options": [
+                "Afghanistan",
+                "Albania",
+                "Algeria",
+                "American Samoa",
+                "Andorra",
+                "Angola",
+                "Anguilla",
+                "Antigua and Barbuda",
+                "Argentina",
+                "Armenia",
+                "Aruba",
+                "Australia",
+                "Austria",
+                "Azerbaijan",
+                "Bahamas",
+                "Bahrain",
+                "Bangladesh",
+                "Barbados",
+                "Belarus",
+                "Belgium"
+            ]
+        },
+        {
+            "tag": "select",
+            "inputType": "select",
+            "name": "sh.educationId",
+            "id": null,
+            "label": "sh.educationId",
+            "placeholder": null,
+            "required": false,
+            "selector": "select[name=\"sh.educationId\"]",
+            "options": [
+                "-Choose-",
+                "Elementary school",
+                "Junior high",
+                "Senior high",
+                "Technical secondary",
+                "Pre-university",
+                "Visiting",
+                "Vocational College",
+                "Bachelor",
+                "Currently an Undergraduate",
+                "Master",
+                "Currently a Master's",
+                "Dr.",
+                "Currently a Ph.D."
+            ]
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "sh.stuhisMajor",
+            "id": null,
+            "label": "sh.stuhisMajor",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"sh.stuhisMajor\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "radio",
+            "name": "applyEx.haveStudiedInChina",
+            "id": null,
+            "label": "Yes",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[type=\"radio\"][name=\"applyEx.haveStudiedInChina\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "radio",
+            "name": "applyEx.haveStudiedInChina",
+            "id": null,
+            "label": "No",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[type=\"radio\"][name=\"applyEx.haveStudiedInChina\"]"
+        },
+        {
+            "tag": "select",
+            "inputType": "select",
+            "name": "applyEx.learningInstitutionType",
+            "id": null,
+            "label": "applyEx.learningInstitutionType",
+            "placeholder": null,
+            "required": false,
+            "selector": "select[name=\"applyEx.learningInstitutionType\"]",
+            "options": [
+                "-Choose-",
+                "Zhengzhou University",
+                "Other School / Institution"
+            ]
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "applyEx.learningInstitutionName",
+            "id": null,
+            "label": "applyEx.learningInstitutionName",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"applyEx.learningInstitutionName\"]"
+        },
+        {
+            "tag": "select",
+            "inputType": "select",
+            "name": "applyEx.zxxxAsBody",
+            "id": null,
+            "label": "applyEx.zxxxAsBody",
+            "placeholder": null,
+            "required": false,
+            "selector": "select[name=\"applyEx.zxxxAsBody\"]",
+            "options": [
+                "-Choose-",
+                "visiting student",
+                "winter or summer camp student",
+                "highschool students",
+                "bachelor student",
+                "master student",
+                "PhD. Student",
+                "Other"
+            ]
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "applyEx.zxxxAsOther",
+            "id": null,
+            "label": "applyEx.zxxxAsOther",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"applyEx.zxxxAsOther\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "applyEx.learningStartDate",
+            "id": null,
+            "label": "applyEx.learningStartDate",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"applyEx.learningStartDate\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "applyEx.learningEndDate",
+            "id": null,
+            "label": "applyEx.learningEndDate",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"applyEx.learningEndDate\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "applyEx.zxxxFdyName",
+            "id": null,
+            "label": "applyEx.zxxxFdyName",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"applyEx.zxxxFdyName\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "applyEx.zxxxFdyTel",
+            "id": null,
+            "label": "applyEx.zxxxFdyTel",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"applyEx.zxxxFdyTel\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "applyEx.zxxxFdyEmail",
+            "id": null,
+            "label": "applyEx.zxxxFdyEmail",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"applyEx.zxxxFdyEmail\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "radio",
+            "name": "haveWorkHistory",
+            "id": null,
+            "label": "Yes",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[type=\"radio\"][name=\"haveWorkHistory\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "radio",
+            "name": "haveWorkHistory",
+            "id": null,
+            "label": "No",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[type=\"radio\"][name=\"haveWorkHistory\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "wh.startDate",
+            "id": null,
+            "label": "wh.startDate",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"wh.startDate\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "wh.endDate",
+            "id": null,
+            "label": "wh.endDate",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"wh.endDate\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "wh.workPlace",
+            "id": null,
+            "label": "wh.workPlace",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"wh.workPlace\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "wh.career",
+            "id": null,
+            "label": "wh.career",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"wh.career\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "radio",
+            "name": "applyEx.haveWorkedInChina",
+            "id": null,
+            "label": "Yes",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[type=\"radio\"][name=\"applyEx.haveWorkedInChina\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "radio",
+            "name": "applyEx.haveWorkedInChina",
+            "id": null,
+            "label": "No",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[type=\"radio\"][name=\"applyEx.haveWorkedInChina\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "applyEx.workingInstitutionName",
+            "id": null,
+            "label": "applyEx.workingInstitutionName",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"applyEx.workingInstitutionName\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "applyEx.workingStartDate",
+            "id": null,
+            "label": "applyEx.workingStartDate",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"applyEx.workingStartDate\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "applyEx.workingEndDate",
+            "id": null,
+            "label": "applyEx.workingEndDate",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"applyEx.workingEndDate\"]"
+        }
+    ],
+    "navigation": {
+        "nextButtonSelector": "input[value=\"Save and Next\"]"
+    }
+}

@@ -1,0 +1,385 @@
+{
+    "url": "https://zzu.17gz.org/apply/index.do?forward=edit&applyId=0645665BA4934783B90B671973EEAD42",
+    "capturedAt": "2026-07-19T07:31:18.122Z",
+    "fields": [
+        {
+            "tag": "select",
+            "inputType": "select",
+            "name": "fm.relativeId",
+            "id": null,
+            "label": "fm.relativeId",
+            "placeholder": null,
+            "required": false,
+            "selector": "select[name=\"fm.relativeId\"]",
+            "options": [
+                "-Choose-",
+                "Father",
+                "Mother",
+                "Spouse",
+                "Uncle",
+                "Brother",
+                "Sister",
+                "Others",
+                "Children"
+            ]
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "fm.name",
+            "id": null,
+            "label": "fm.name",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"fm.name\"]"
+        },
+        {
+            "tag": "select",
+            "inputType": "select",
+            "name": "fm.countryId",
+            "id": null,
+            "label": "fm.countryId",
+            "placeholder": null,
+            "required": false,
+            "selector": "select[name=\"fm.countryId\"]",
+            "options": [
+                "Albania",
+                "Algeria",
+                "Afghanistan",
+                "Argentina",
+                "United Arab Emirates",
+                "Aruba",
+                "Oman",
+                "Azerbaijan",
+                "Egypt",
+                "Ethiopia",
+                "Ireland",
+                "Estonia",
+                "Andorra",
+                "Angola",
+                "Anguilla",
+                "Antigua and Barbuda",
+                "Austria",
+                "Australia",
+                "Barbados",
+                "Papua New Guinea"
+            ]
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "fm.bornedDate",
+            "id": null,
+            "label": "fm.bornedDate",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"fm.bornedDate\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "fm.phone",
+            "id": null,
+            "label": "fm.phone",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"fm.phone\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "fm.email",
+            "id": null,
+            "label": "fm.email",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"fm.email\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "fm.duty",
+            "id": null,
+            "label": "fm.duty",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"fm.duty\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "fm.workPlace",
+            "id": null,
+            "label": "fm.workPlace",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"fm.workPlace\"]"
+        },
+        {
+            "tag": "select",
+            "inputType": "select",
+            "name": "fm.relativeId",
+            "id": null,
+            "label": "fm.relativeId",
+            "placeholder": null,
+            "required": false,
+            "selector": "select[name=\"fm.relativeId\"]",
+            "options": [
+                "-Choose-",
+                "Father",
+                "Mother",
+                "Spouse",
+                "Uncle",
+                "Brother",
+                "Sister",
+                "Others",
+                "Children"
+            ]
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "fm.name",
+            "id": null,
+            "label": "fm.name",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"fm.name\"]"
+        },
+        {
+            "tag": "select",
+            "inputType": "select",
+            "name": "fm.countryId",
+            "id": null,
+            "label": "fm.countryId",
+            "placeholder": null,
+            "required": false,
+            "selector": "select[name=\"fm.countryId\"]",
+            "options": [
+                "Albania",
+                "Algeria",
+                "Afghanistan",
+                "Argentina",
+                "United Arab Emirates",
+                "Aruba",
+                "Oman",
+                "Azerbaijan",
+                "Egypt",
+                "Ethiopia",
+                "Ireland",
+                "Estonia",
+                "Andorra",
+                "Angola",
+                "Anguilla",
+                "Antigua and Barbuda",
+                "Austria",
+                "Australia",
+                "Barbados",
+                "Papua New Guinea"
+            ]
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "fm.bornedDate",
+            "id": null,
+            "label": "fm.bornedDate",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"fm.bornedDate\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "fm.phone",
+            "id": null,
+            "label": "fm.phone",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"fm.phone\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "fm.email",
+            "id": null,
+            "label": "fm.email",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"fm.email\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "fm.duty",
+            "id": null,
+            "label": "fm.duty",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"fm.duty\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "fm.workPlace",
+            "id": null,
+            "label": "fm.workPlace",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"fm.workPlace\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "radio",
+            "name": "applyEx.hasCriminalRecord",
+            "id": null,
+            "label": "Yes",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[type=\"radio\"][name=\"applyEx.hasCriminalRecord\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "radio",
+            "name": "applyEx.hasCriminalRecord",
+            "id": null,
+            "label": "No",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[type=\"radio\"][name=\"applyEx.hasCriminalRecord\"]"
+        },
+        {
+            "tag": "textarea",
+            "inputType": "textarea",
+            "name": "applyEx.criminalRecordContent",
+            "id": null,
+            "label": "applyEx.criminalRecordContent",
+            "placeholder": null,
+            "required": false,
+            "selector": "textarea[name=\"applyEx.criminalRecordContent\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.selfSupporter",
+            "id": null,
+            "label": "apply.selfSupporter",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.selfSupporter\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.selfaddress",
+            "id": null,
+            "label": "apply.selfaddress",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.selfaddress\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.selfphone",
+            "id": null,
+            "label": "apply.selfphone",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.selfphone\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.ssrelative",
+            "id": null,
+            "label": "apply.ssrelative",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.ssrelative\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.selfwork",
+            "id": null,
+            "label": "apply.selfwork",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.selfwork\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.selfemail",
+            "id": null,
+            "label": "apply.selfemail",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.selfemail\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.emergencyName",
+            "id": null,
+            "label": "apply.emergencyName",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.emergencyName\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.emergencyMobile",
+            "id": null,
+            "label": "apply.emergencyMobile",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.emergencyMobile\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.emergencyPhone",
+            "id": null,
+            "label": "apply.emergencyPhone",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.emergencyPhone\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.emergencyEmail",
+            "id": null,
+            "label": "apply.emergencyEmail",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.emergencyEmail\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.emergencyAddress",
+            "id": null,
+            "label": "apply.emergencyAddress",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.emergencyAddress\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.emergencyZip",
+            "id": null,
+            "label": "apply.emergencyZip",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.emergencyZip\"]"
+        }
+    ],
+    "navigation": {
+        "nextButtonSelector": "input[value=\"Save and Next\"]"
+    }
+}

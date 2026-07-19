@@ -1,0 +1,92 @@
+{
+    "url": "https://zzu.17gz.org/apply/index.do?forward=edit&applyId=0645665BA4934783B90B671973EEAD42",
+    "capturedAt": "2026-07-19T08:13:09.453Z",
+    "fields": [
+        {
+            "tag": "input",
+            "inputType": "file",
+            "name": "ATTACH_TYPE_8135227092",
+            "id": null,
+            "label": "ATTACH_TYPE_8135227092",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"ATTACH_TYPE_8135227092\"]"
+        }
+    ],
+    "fileInputs": [
+        {
+            "label": "Passport (Pages with photo and visa)",
+            "selector": "[attachTypeId=\"ATTACH_TYPE_passportImage\"]",
+            "attachTypeName": "Passport (Pages with photo and visa)",
+            "required": false
+        },
+        {
+            "label": "China Scholastic Competency Assessment Report",
+            "selector": "[attachTypeId=\"ATTACH_TYPE_8135227092\"]",
+            "attachTypeName": "China Scholastic Competency Assessment Report",
+            "required": false
+        },
+        {
+            "label": "The Certified Copy of High School Diploma",
+            "selector": "[attachTypeId=\"ATTACH_TYPE_HighstEducationImage\"]",
+            "attachTypeName": "The Certified Copy of High School Diploma",
+            "required": false
+        },
+        {
+            "label": "The Certified Copy of High School Transcripts",
+            "selector": "[attachTypeId=\"ATTACH_TYPE_scoreImage\"]",
+            "attachTypeName": "The Certified Copy of High School Transcripts",
+            "required": false
+        },
+        {
+            "label": "The Personal Statement",
+            "selector": "[attachTypeId=\"ATTACH_TYPE_152170289\"]",
+            "attachTypeName": "The Personal Statement",
+            "required": false
+        },
+        {
+            "label": "The Valid Report of English Language Proficiency Tests",
+            "selector": "[attachTypeId=\"ATTACH_TYPE_158931292\"]",
+            "attachTypeName": "The Valid Report of English Language Proficiency Tests",
+            "required": false
+        },
+        {
+            "label": "Physical Examination Record for Foreigner",
+            "selector": "[attachTypeId=\"ATTACH_TYPE_checkBodyreport\"]",
+            "attachTypeName": "Physical Examination Record for Foreigner",
+            "required": false
+        },
+        {
+            "label": "The Certificate of Non-criminal Record",
+            "selector": "[attachTypeId=\"ATTACH_TYPE_115623117\"]",
+            "attachTypeName": "The Certificate of Non-criminal Record",
+            "required": false
+        },
+        {
+            "label": "The Letter of Guardian’s Authorization (For applicants aged under 18)",
+            "selector": "[attachTypeId=\"ATTACH_TYPE_115623116\"]",
+            "attachTypeName": "The Letter of Guardian’s Authorization (For applicants aged under 18)",
+            "required": false
+        },
+        {
+            "label": "Application Form For Henan Provincial Government Scholarship (with photo and signature)",
+            "selector": "[attachTypeId=\"ATTACH_TYPE_158951430\"]",
+            "attachTypeName": "Application Form For Henan Provincial Government Scholarship (with photo and signature)",
+            "required": false
+        },
+        {
+            "label": "Other Documents",
+            "selector": "[attachTypeId=\"ATTACH_TYPE_appendFile\"]",
+            "attachTypeName": "Other Documents",
+            "required": false
+        },
+        {
+            "label": "ATTACH_TYPE_8135227092",
+            "selector": "input[type=\"file\"][name=\"ATTACH_TYPE_8135227092\"]",
+            "required": false
+        }
+    ],
+    "navigation": {
+        "submitButtonSelector": "input[value=\"Submit\"]"
+    }
+}

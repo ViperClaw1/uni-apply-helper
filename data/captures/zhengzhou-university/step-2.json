@@ -1,0 +1,240 @@
+{
+    "url": "https://zzu.17gz.org/apply/index.do?forward=edit&applyId=0645665BA4934783B90B671973EEAD42",
+    "capturedAt": "2026-07-19T07:13:34.240Z",
+    "fields": [
+        {
+            "tag": "select",
+            "inputType": "select",
+            "name": "apply.englishLanguageSkillId",
+            "id": null,
+            "label": "apply.englishLanguageSkillId",
+            "placeholder": null,
+            "required": false,
+            "selector": "select[name=\"apply.englishLanguageSkillId\"]",
+            "options": [
+                "-Choose-",
+                "None",
+                "Poor",
+                "Fair",
+                "Good",
+                "Excellent"
+            ]
+        },
+        {
+            "tag": "select",
+            "inputType": "select",
+            "name": "apply.yydjzs",
+            "id": null,
+            "label": "apply.yydjzs",
+            "placeholder": null,
+            "required": false,
+            "selector": "select[name=\"apply.yydjzs\"]",
+            "options": [
+                "-Choose-",
+                "None",
+                "IELTS",
+                "TOEFL",
+                "GRE",
+                "GMAT",
+                "Duolingo",
+                "TOEIC",
+                "PTE",
+                "Native Language",
+                "Other"
+            ]
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.otherYydjzs",
+            "id": null,
+            "label": "apply.otherYydjzs",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.otherYydjzs\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.yydjzsScore",
+            "id": null,
+            "label": "apply.yydjzsScore",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.yydjzsScore\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.yydjzsIssueDate",
+            "id": null,
+            "label": "apply.yydjzsIssueDate",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.yydjzsIssueDate\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.otherLanguage",
+            "id": null,
+            "label": "apply.otherLanguage",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.otherLanguage\"]"
+        },
+        {
+            "tag": "select",
+            "inputType": "select",
+            "name": "apply.guarSource",
+            "id": null,
+            "label": "apply.guarSource",
+            "placeholder": null,
+            "required": false,
+            "selector": "select[name=\"apply.guarSource\"]",
+            "options": [
+                "-Choose-",
+                "Internal students",
+                "Friends&Relatives",
+                "Website",
+                "Educational Fair/Expo.",
+                "Others"
+            ]
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.guarDefinite",
+            "id": null,
+            "label": "apply.guarDefinite",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.guarDefinite\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.guarantorEnname",
+            "id": null,
+            "label": "apply.guarantorEnname",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.guarantorEnname\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.guarRelation",
+            "id": null,
+            "label": "apply.guarRelation",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.guarRelation\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.guarWorkplace",
+            "id": null,
+            "label": "apply.guarWorkplace",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.guarWorkplace\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.guarMobile",
+            "id": null,
+            "label": "apply.guarMobile",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.guarMobile\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.guarPhone",
+            "id": null,
+            "label": "apply.guarPhone",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.guarPhone\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.guarEmail",
+            "id": null,
+            "label": "apply.guarEmail",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.guarEmail\"]"
+        },
+        {
+            "tag": "select",
+            "inputType": "select",
+            "name": "apply.guarCountryId",
+            "id": null,
+            "label": "apply.guarCountryId",
+            "placeholder": null,
+            "required": false,
+            "selector": "select[name=\"apply.guarCountryId\"]",
+            "options": [
+                "Albania",
+                "Algeria",
+                "Afghanistan",
+                "Argentina",
+                "United Arab Emirates",
+                "Aruba",
+                "Oman",
+                "Azerbaijan",
+                "Egypt",
+                "Ethiopia",
+                "Ireland",
+                "Estonia",
+                "Andorra",
+                "Angola",
+                "Anguilla",
+                "Antigua and Barbuda",
+                "Austria",
+                "Australia",
+                "Barbados",
+                "Papua New Guinea"
+            ]
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.guarCareer",
+            "id": null,
+            "label": "apply.guarCareer",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.guarCareer\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.guarAddress",
+            "id": null,
+            "label": "apply.guarAddress",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.guarAddress\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "apply.guarFax",
+            "id": null,
+            "label": "apply.guarFax",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"apply.guarFax\"]"
+        }
+    ],
+    "navigation": {
+        "nextButtonSelector": "input[value=\"Save and Next\"]"
+    }
+}
