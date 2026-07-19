@@ -1,0 +1,127 @@
+{
+  "id": "zhengzhou-university",
+  "displayName": "Zhengzhou University",
+  "formUrl": "https://zzu.17gz.org/apply/index.do",
+  "aliases": [
+    "Zhengzhou University"
+  ],
+  "requiredDocuments": [
+    "passport",
+    "diploma",
+    "transcript",
+    "language_certificate",
+    "medical"
+  ],
+  "fields": [
+    {
+      "selector": "input[name=\"photo\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "documentType": "photo"
+    },
+    {
+      "selector": "input[name=\"apply.lastName\"]",
+      "mapsTo": "personal.surname",
+      "type": "text",
+      "required": false
+    },
+    {
+      "selector": "input[name=\"apply.givenName\"]",
+      "mapsTo": "personal.givenName",
+      "type": "text",
+      "required": false
+    },
+    {
+      "selector": "input[type=\"radio\"][name=\"apply.sex\"]",
+      "mapsTo": "personal.sex",
+      "type": "radio",
+      "required": false
+    },
+    {
+      "selector": "input[name=\"apply.bornedDate\"]",
+      "mapsTo": "personal.dateOfBirth",
+      "type": "text",
+      "required": false
+    },
+    {
+      "selector": "input[name=\"apply.passportNo\"]",
+      "mapsTo": "personal.passportNo",
+      "type": "text",
+      "required": false
+    },
+    {
+      "selector": "input[name=\"apply.passportExpire\"]",
+      "mapsTo": "personal.passportExpiry",
+      "type": "text",
+      "required": false
+    },
+    {
+      "selector": "input[name=\"apply.hobby\"]",
+      "mapsTo": "personal.hobby",
+      "type": "text",
+      "required": false
+    },
+    {
+      "selector": "input[name=\"apply.emergencyName\"]",
+      "mapsTo": "emergencyContact.name",
+      "type": "text",
+      "required": false
+    },
+    {
+      "selector": "input[name=\"apply.emergencyPhone\"]",
+      "mapsTo": "emergencyContact.phone",
+      "type": "text",
+      "required": false
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_passportImage\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": true,
+      "documentType": "passport"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_HighstEducationImage\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "documentType": "diploma"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_scoreImage\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "documentType": "transcript"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_152170289\"]",
+      "mapsTo": null,
+      "type": "essay",
+      "required": false,
+      "essayPrompt": "Personal Statement"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_158931292\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "documentType": "language_certificate"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_checkBodyreport\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "documentType": "medical"
+    }
+  ],
+  "wizard": {
+    "totalSteps": 6,
+    "nextButtonSelector": "input[value=\"Save and Next\"]",
+    "submitButtonSelector": "input[value=\"Submit\"]"
+  },
+  "requiresEssay": true,
+  "notes": "User must log in, agree to terms, and select the specific program/course before initiating the application wizard."
+}
