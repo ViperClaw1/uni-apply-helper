@@ -9,25 +9,28 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.OpenFormStep = void 0;
+exports.GenericNavigator = void 0;
 const common_1 = require("@nestjs/common");
-const session_validator_js_1 = require("../browser/session.validator.js");
-const navigation_registry_service_js_1 = require("../browser/navigation/navigation-registry.service.js");
-let OpenFormStep = class OpenFormStep {
-    navigationRegistry;
-    name = 'open_form';
-    constructor(navigationRegistry) {
-        this.navigationRegistry = navigationRegistry;
+const pre_wizard_navigator_js_1 = require("../pre-wizard.navigator.js");
+let GenericNavigator = class GenericNavigator {
+    preWizardNavigator;
+    constructor(preWizardNavigator) {
+        this.preWizardNavigator = preWizardNavigator;
     }
-    async execute(context) {
-        const navigator = this.navigationRegistry.resolve(context.university.formUrl);
-        await navigator.navigate(context);
-        await (0, session_validator_js_1.assertSessionValid)(context.page, context.university);
+    matches() {
+        return true;
+    }
+    async navigate(context) {
+        await context.page.goto(context.university.formUrl, {
+            waitUntil: 'networkidle',
+            timeout: 60_000,
+        });
+        await this.preWizardNavigator.navigateToForm(context.page, context.university.fields);
     }
 };
-exports.OpenFormStep = OpenFormStep;
-exports.OpenFormStep = OpenFormStep = __decorate([
+exports.GenericNavigator = GenericNavigator;
+exports.GenericNavigator = GenericNavigator = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [navigation_registry_service_js_1.NavigationRegistry])
-], OpenFormStep);
-//# sourceMappingURL=open-form.step.js.map
+    __metadata("design:paramtypes", [pre_wizard_navigator_js_1.PreWizardNavigator])
+], GenericNavigator);
+//# sourceMappingURL=generic.navigator.js.map

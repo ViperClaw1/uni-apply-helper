@@ -10,7 +10,7 @@ export const UNIVERSITIES = {
     id: 'shandong-university',
     displayName: 'Shandong University (SDU)',
     loginUrl: 'http://www.apply.sdu.edu.cn/en/student/login',
-    formUrl: 'http://www.apply.sdu.edu.cn/en/student/index/all',
+    formUrl: 'http://www.apply.sdu.edu.cn/en/student/apply/create',
     platform: 'cucas',
   },
 };

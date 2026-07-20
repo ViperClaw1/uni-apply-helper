@@ -1,0 +1,47 @@
+{
+    "url": "http://www.apply.sdu.edu.cn/en/student/apply/step_scholarship",
+    "capturedAt": "2026-07-20T18:45:57.243Z",
+    "fields": [
+        {
+            "tag": "input",
+            "inputType": "radio",
+            "name": "item",
+            "id": "item0",
+            "label": "item",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[type=\"radio\"][name=\"item\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "radio",
+            "name": "move2",
+            "id": "move5",
+            "label": "move2",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[type=\"radio\"][name=\"move2\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "radio",
+            "name": "move2",
+            "id": "move6",
+            "label": "move2",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[type=\"radio\"][name=\"move2\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "checkbox",
+            "name": "is_read",
+            "id": null,
+            "label": "is_read",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[type=\"checkbox\"][name=\"is_read\"]"
+        }
+    ],
+    "navigation": {}
+}

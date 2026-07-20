@@ -1,8 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { navigateToZzuApplication } from '../browser/zzu-navigation.js';
-import { PreWizardNavigator } from '../browser/pre-wizard.navigator.js';
 import { assertSessionValid } from '../browser/session.validator.js';
-import { isZzuFormUrl } from '../browser/zzu-session.loader.js';
+import { NavigationRegistry } from '../browser/navigation/navigation-registry.service.js';
 import type {
   ApplicationPipelineStep,
   ApplicationStepContext,
@@ -12,27 +10,11 @@ import type {
 export class OpenFormStep implements ApplicationPipelineStep {
   readonly name = 'open_form';
 
-  constructor(private readonly preWizardNavigator: PreWizardNavigator) {}
+  constructor(private readonly navigationRegistry: NavigationRegistry) {}
 
   async execute(context: ApplicationStepContext): Promise<void> {
-    if (isZzuFormUrl(context.university.formUrl)) {
-      await navigateToZzuApplication(
-        context.page,
-        context.university.formUrl,
-        context.profile,
-        context.universityId,
-      );
-    } else {
-      await context.page.goto(context.university.formUrl, {
-        waitUntil: 'networkidle',
-        timeout: 60_000,
-      });
-      await this.preWizardNavigator.navigateToForm(
-        context.page,
-        context.university.fields,
-      );
-    }
-
+    const navigator = this.navigationRegistry.resolve(context.university.formUrl);
+    await navigator.navigate(context);
     await assertSessionValid(context.page, context.university);
   }
 }

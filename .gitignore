@@ -9,6 +9,9 @@ zzu-session.json.b64
 apps/worker/zzu-session.json
 apps/worker/zzu-session.json.b64
 apps/worker/zzu-session-meta.json
+apps/worker/sdu-session.json
+apps/worker/sdu-session.json.b64
+apps/worker/sdu-session-meta.json
 apps/worker/zzu-browser-profile/
 apps/worker/profiles/
 apps/worker/browser-sessions/

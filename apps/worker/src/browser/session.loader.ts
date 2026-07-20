@@ -28,6 +28,18 @@ export function loadUniversityStorageState(
     return JSON.parse(readFileSync(sessionFile, 'utf-8'));
   }
 
+  if (universityId === 'shandong-university') {
+    const legacyB64 = configService.get<string>('SDU_SESSION_STATE_B64');
+    if (legacyB64) {
+      return JSON.parse(Buffer.from(legacyB64, 'base64').toString('utf-8'));
+    }
+
+    const legacyFile = resolve(process.cwd(), 'sdu-session.json');
+    if (existsSync(legacyFile)) {
+      return JSON.parse(readFileSync(legacyFile, 'utf-8'));
+    }
+  }
+
   if (universityId === 'zhengzhou-university') {
     const legacyB64 = configService.get<string>('ZZU_SESSION_STATE_B64');
     if (legacyB64) {

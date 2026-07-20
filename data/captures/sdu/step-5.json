@@ -1,0 +1,349 @@
+{
+    "url": "http://www.apply.sdu.edu.cn/en/student/apply_attr/index?apply_id=NDcxNDM",
+    "capturedAt": "2026-07-20T18:49:41.313Z",
+    "fields": [
+        {
+            "tag": "input",
+            "inputType": "file",
+            "name": "files",
+            "id": "fileupload_0",
+            "label": "files",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"files\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "file",
+            "name": "files",
+            "id": "fileupload_1",
+            "label": "files",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"files\"]"
+        },
+        {
+            "tag": "textarea",
+            "inputType": "textarea",
+            "name": "text_content[1]",
+            "id": null,
+            "label": "text_content[1]",
+            "placeholder": null,
+            "required": false,
+            "selector": "textarea[name=\"text_content[1]\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "file",
+            "name": "files",
+            "id": "fileupload_2",
+            "label": "files",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"files\"]"
+        },
+        {
+            "tag": "textarea",
+            "inputType": "textarea",
+            "name": "text_content[2]",
+            "id": null,
+            "label": "text_content[2]",
+            "placeholder": null,
+            "required": false,
+            "selector": "textarea[name=\"text_content[2]\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "file",
+            "name": "files",
+            "id": "fileupload_3",
+            "label": "files",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"files\"]"
+        },
+        {
+            "tag": "textarea",
+            "inputType": "textarea",
+            "name": "text_content[3]",
+            "id": null,
+            "label": "text_content[3]",
+            "placeholder": null,
+            "required": false,
+            "selector": "textarea[name=\"text_content[3]\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "file",
+            "name": "files",
+            "id": "fileupload_15",
+            "label": "files",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"files\"]"
+        },
+        {
+            "tag": "textarea",
+            "inputType": "textarea",
+            "name": "text_content[15]",
+            "id": null,
+            "label": "text_content[15]",
+            "placeholder": null,
+            "required": false,
+            "selector": "textarea[name=\"text_content[15]\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "file",
+            "name": "files",
+            "id": "fileupload_4",
+            "label": "files",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"files\"]"
+        },
+        {
+            "tag": "textarea",
+            "inputType": "textarea",
+            "name": "text_content[4]",
+            "id": null,
+            "label": "text_content[4]",
+            "placeholder": null,
+            "required": false,
+            "selector": "textarea[name=\"text_content[4]\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "file",
+            "name": "files",
+            "id": "fileupload_5",
+            "label": "files",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"files\"]"
+        },
+        {
+            "tag": "textarea",
+            "inputType": "textarea",
+            "name": "text_content[5]",
+            "id": null,
+            "label": "text_content[5]",
+            "placeholder": null,
+            "required": false,
+            "selector": "textarea[name=\"text_content[5]\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "file",
+            "name": "files",
+            "id": "fileupload_6",
+            "label": "files",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"files\"]"
+        },
+        {
+            "tag": "textarea",
+            "inputType": "textarea",
+            "name": "text_content[6]",
+            "id": null,
+            "label": "text_content[6]",
+            "placeholder": null,
+            "required": false,
+            "selector": "textarea[name=\"text_content[6]\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "file",
+            "name": "files",
+            "id": "fileupload_7",
+            "label": "files",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"files\"]"
+        },
+        {
+            "tag": "textarea",
+            "inputType": "textarea",
+            "name": "text_content[7]",
+            "id": null,
+            "label": "text_content[7]",
+            "placeholder": null,
+            "required": false,
+            "selector": "textarea[name=\"text_content[7]\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "file",
+            "name": "files",
+            "id": "fileupload_9",
+            "label": "files",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"files\"]"
+        },
+        {
+            "tag": "textarea",
+            "inputType": "textarea",
+            "name": "text_content[9]",
+            "id": null,
+            "label": "text_content[9]",
+            "placeholder": null,
+            "required": false,
+            "selector": "textarea[name=\"text_content[9]\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "file",
+            "name": "files",
+            "id": "fileupload_11",
+            "label": "files",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"files\"]"
+        },
+        {
+            "tag": "textarea",
+            "inputType": "textarea",
+            "name": "text_content[11]",
+            "id": null,
+            "label": "text_content[11]",
+            "placeholder": null,
+            "required": false,
+            "selector": "textarea[name=\"text_content[11]\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "file",
+            "name": "files",
+            "id": "fileupload_14",
+            "label": "files",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"files\"]"
+        },
+        {
+            "tag": "textarea",
+            "inputType": "textarea",
+            "name": "text_content[14]",
+            "id": null,
+            "label": "text_content[14]",
+            "placeholder": null,
+            "required": false,
+            "selector": "textarea[name=\"text_content[14]\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "file",
+            "name": "files",
+            "id": "fileupload_12",
+            "label": "files",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"files\"]"
+        },
+        {
+            "tag": "textarea",
+            "inputType": "textarea",
+            "name": "text_content[12]",
+            "id": null,
+            "label": "text_content[12]",
+            "placeholder": null,
+            "required": false,
+            "selector": "textarea[name=\"text_content[12]\"]"
+        },
+        {
+            "tag": "input",
+            "inputType": "file",
+            "name": "files",
+            "id": "fileupload_13",
+            "label": "files",
+            "placeholder": null,
+            "required": false,
+            "selector": "input[name=\"files\"]"
+        },
+        {
+            "tag": "textarea",
+            "inputType": "textarea",
+            "name": "text_content[13]",
+            "id": null,
+            "label": "text_content[13]",
+            "placeholder": null,
+            "required": false,
+            "selector": "textarea[name=\"text_content[13]\"]"
+        }
+    ],
+    "fileInputs": [
+        {
+            "label": "files",
+            "selector": "input[type=\"file\"][name=\"files\"]",
+            "required": false
+        },
+        {
+            "label": "files",
+            "selector": "input[type=\"file\"][name=\"files\"]",
+            "required": false
+        },
+        {
+            "label": "files",
+            "selector": "input[type=\"file\"][name=\"files\"]",
+            "required": false
+        },
+        {
+            "label": "files",
+            "selector": "input[type=\"file\"][name=\"files\"]",
+            "required": false
+        },
+        {
+            "label": "files",
+            "selector": "input[type=\"file\"][name=\"files\"]",
+            "required": false
+        },
+        {
+            "label": "files",
+            "selector": "input[type=\"file\"][name=\"files\"]",
+            "required": false
+        },
+        {
+            "label": "files",
+            "selector": "input[type=\"file\"][name=\"files\"]",
+            "required": false
+        },
+        {
+            "label": "files",
+            "selector": "input[type=\"file\"][name=\"files\"]",
+            "required": false
+        },
+        {
+            "label": "files",
+            "selector": "input[type=\"file\"][name=\"files\"]",
+            "required": false
+        },
+        {
+            "label": "files",
+            "selector": "input[type=\"file\"][name=\"files\"]",
+            "required": false
+        },
+        {
+            "label": "files",
+            "selector": "input[type=\"file\"][name=\"files\"]",
+            "required": false
+        },
+        {
+            "label": "files",
+            "selector": "input[type=\"file\"][name=\"files\"]",
+            "required": false
+        },
+        {
+            "label": "files",
+            "selector": "input[type=\"file\"][name=\"files\"]",
+            "required": false
+        },
+        {
+            "label": "files",
+            "selector": "input[type=\"file\"][name=\"files\"]",
+            "required": false
+        }
+    ],
+    "navigation": {}
+}

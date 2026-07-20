@@ -16,6 +16,10 @@ const gemini_client_js_1 = require("./agent/gemini/gemini.client.js");
 const page_observer_js_1 = require("./agent/observe/page.observer.js");
 const agent_planner_js_1 = require("./agent/think/agent.planner.js");
 const browser_service_js_1 = require("./browser/browser.service.js");
+const generic_navigator_js_1 = require("./browser/navigation/generic.navigator.js");
+const navigation_registry_service_js_1 = require("./browser/navigation/navigation-registry.service.js");
+const sdu_navigator_js_1 = require("./browser/navigation/sdu.navigator.js");
+const zzu_navigator_js_1 = require("./browser/navigation/zzu.navigator.js");
 const pre_wizard_navigator_js_1 = require("./browser/pre-wizard.navigator.js");
 const open_form_step_js_1 = require("./steps/open-form.step.js");
 const fill_fields_step_js_1 = require("./steps/fill-fields.step.js");
@@ -42,6 +46,10 @@ exports.AppModule = AppModule = __decorate([
         providers: [
             browser_service_js_1.BrowserService,
             pre_wizard_navigator_js_1.PreWizardNavigator,
+            zzu_navigator_js_1.ZzuNavigator,
+            sdu_navigator_js_1.SduNavigator,
+            generic_navigator_js_1.GenericNavigator,
+            navigation_registry_service_js_1.NavigationRegistry,
             screenshot_service_js_1.ScreenshotService,
             gemini_client_js_1.GeminiClient,
             page_observer_js_1.PageObserver,

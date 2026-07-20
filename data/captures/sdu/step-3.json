@@ -1,0 +1,137 @@
+{
+    "url": "http://www.apply.sdu.edu.cn/en/student/apply/index_major",
+    "capturedAt": "2026-07-20T18:46:44.365Z",
+    "fields": [
+        {
+            "tag": "select",
+            "inputType": "select",
+            "name": "degree",
+            "id": "degree_id",
+            "label": "degree",
+            "placeholder": null,
+            "required": false,
+            "selector": "select[name=\"degree\"]",
+            "options": [
+                "...Please select...",
+                "Bachelor's Degree",
+                "Master's Degree",
+                "Doctoral Degree",
+                "Language Program",
+                "General Refresher Degree",
+                "Higher Education Degree",
+                "Research scholar",
+                "Preppy",
+                "Short-term Students",
+                "Advanced Visiting Scholar Program（Master）",
+                "Advanced Visiting Scholar Program （Ph.D.）",
+                "Intercollegiate exchange student",
+                "Medical Category",
+                "Non-medical Category",
+                "Summer School",
+                "All kinds of short-term classes",
+                "Practice",
+                "Visiting Delegation",
+                "chinese study"
+            ]
+        },
+        {
+            "tag": "select",
+            "inputType": "select",
+            "name": "major_project_id",
+            "id": "major_project_id",
+            "label": "major_project_id",
+            "placeholder": null,
+            "required": false,
+            "selector": "select[name=\"major_project_id\"]",
+            "options": [
+                "-Select-",
+                "General Visiting Scholar Program（Undergraduate）",
+                "Advanced Visiting Scholar Program（Master）",
+                "Advanced Visiting Scholar Program （Ph.D.）",
+                "Exchange student from SDU partner university",
+                "Language Students",
+                "Practice",
+                "Postdoctoral",
+                "Short-term Students",
+                "International summer school",
+                "General Visiting Scholar Program"
+            ]
+        },
+        {
+            "tag": "select",
+            "inputType": "select",
+            "name": "college",
+            "id": null,
+            "label": "college",
+            "placeholder": null,
+            "required": false,
+            "selector": "select[name=\"college\"]",
+            "options": [
+                "-Select-",
+                "test",
+                "School of Nursing and Rehabilitation",
+                "School of Materials Science and Engineering",
+                "School of Electrical Engineering",
+                "School of Law",
+                "School of Public Health",
+                "School of Management",
+                "School of Innovation and Entrepreneurship",
+                "College of International Education",
+                "School of Chemistry and Chemical Engineering",
+                "School of Environmental Science and Engineering",
+                "School of Basic Medical Sciences",
+                "School of Computer Science and Technology",
+                "Zhongtai Securities Institute for Financial Studies",
+                "School of Economics",
+                "Center for Economic Research",
+                "School of Control Science and Engineering",
+                "School of Stomatology",
+                "School of Nuclear Science, Energy and Power Engineering"
+            ]
+        },
+        {
+            "tag": "select",
+            "inputType": "select",
+            "name": "language_id",
+            "id": null,
+            "label": "language_id",
+            "placeholder": null,
+            "required": false,
+            "selector": "select[name=\"language_id\"]",
+            "options": [
+                "...Please select...",
+                "Chinese",
+                "English",
+                "Chinese and English",
+                "Other"
+            ]
+        },
+        {
+            "tag": "input",
+            "inputType": "text",
+            "name": "",
+            "id": "datepick",
+            "label": "",
+            "placeholder": "",
+            "required": false,
+            "selector": "#datepick"
+        },
+        {
+            "tag": "select",
+            "inputType": "select",
+            "name": "example_length",
+            "id": null,
+            "label": "Show 2550100200 entries",
+            "placeholder": null,
+            "required": false,
+            "selector": "select[name=\"example_length\"]",
+            "options": [
+                "25",
+                "50",
+                "100",
+                "200"
+            ]
+        }
+    ],
+    "navigation": {}
+}

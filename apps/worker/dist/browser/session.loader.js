@@ -20,6 +20,16 @@ function loadUniversityStorageState(configService, universityId) {
     if ((0, node_fs_1.existsSync)(sessionFile)) {
         return JSON.parse((0, node_fs_1.readFileSync)(sessionFile, 'utf-8'));
     }
+    if (universityId === 'shandong-university') {
+        const legacyB64 = configService.get('SDU_SESSION_STATE_B64');
+        if (legacyB64) {
+            return JSON.parse(Buffer.from(legacyB64, 'base64').toString('utf-8'));
+        }
+        const legacyFile = (0, node_path_1.resolve)(process.cwd(), 'sdu-session.json');
+        if ((0, node_fs_1.existsSync)(legacyFile)) {
+            return JSON.parse((0, node_fs_1.readFileSync)(legacyFile, 'utf-8'));
+        }
+    }
     if (universityId === 'zhengzhou-university') {
         const legacyB64 = configService.get('ZZU_SESSION_STATE_B64');
         if (legacyB64) {
