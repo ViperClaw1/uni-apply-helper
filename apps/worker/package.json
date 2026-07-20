@@ -21,6 +21,8 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "capture:zzu-session": "node scripts/capture-zzu-session.mjs",
+    "capture:sdu-session": "node scripts/capture-sdu-session.mjs",
+    "capture:session": "node scripts/capture-session.mjs",
     "dry-run:open-form": "node scripts/dry-run-open-form.mjs",
     "schema:generate": "node ../../scripts/generate-university-schema.mjs",
     "recon:zzu-wizard": "node scripts/recon-zzu-wizard.mjs"

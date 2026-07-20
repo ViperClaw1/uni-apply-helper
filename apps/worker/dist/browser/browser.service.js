@@ -16,6 +16,7 @@ const stealth_config_js_1 = require("./stealth.config.js");
 const profile_path_js_1 = require("./profile-path.js");
 const zzu_session_meta_js_1 = require("./zzu-session-meta.js");
 const zzu_session_loader_js_1 = require("./zzu-session.loader.js");
+const session_loader_js_1 = require("./session.loader.js");
 let BrowserService = class BrowserService {
     configService;
     browser;
@@ -84,7 +85,8 @@ let BrowserService = class BrowserService {
             return { browser, context, page };
         }
         const browser = await this.getBrowser(headed);
-        const storageState = (0, zzu_session_loader_js_1.loadZzuStorageState)(this.configService);
+        const storageState = (0, session_loader_js_1.loadUniversityStorageState)(this.configService, options.universityId) ??
+            (0, zzu_session_loader_js_1.loadZzuStorageState)(this.configService);
         const context = await browser.newContext({
             acceptDownloads: true,
             viewport: { width: 1440, height: 1200 },

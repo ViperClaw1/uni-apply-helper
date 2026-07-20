@@ -8,6 +8,7 @@ import {
   loadZzuSessionMeta,
 } from './zzu-session-meta.js';
 import { loadZzuStorageState } from './zzu-session.loader.js';
+import { loadUniversityStorageState } from './session.loader.js';
 
 export type BrowserSessionOptions = {
   universityId: string;
@@ -108,7 +109,9 @@ export class BrowserService implements OnModuleDestroy {
     }
 
     const browser = await this.getBrowser(headed);
-    const storageState = loadZzuStorageState(this.configService);
+    const storageState =
+      loadUniversityStorageState(this.configService, options.universityId) ??
+      loadZzuStorageState(this.configService);
     const context = await browser.newContext({
       acceptDownloads: true,
       viewport: { width: 1440, height: 1200 },
