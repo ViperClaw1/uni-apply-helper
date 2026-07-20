@@ -23,7 +23,7 @@ let OpenFormStep = class OpenFormStep {
     }
     async execute(context) {
         if ((0, zzu_session_loader_js_1.isZzuFormUrl)(context.university.formUrl)) {
-            await (0, zzu_navigation_js_1.navigateToZzuApplication)(context.page, context.university.formUrl);
+            await (0, zzu_navigation_js_1.navigateToZzuApplication)(context.page, context.university.formUrl, context.profile, context.universityId);
         }
         else {
             await context.page.goto(context.university.formUrl, {

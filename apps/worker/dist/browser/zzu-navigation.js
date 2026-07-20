@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.navigateToZzuApplication = navigateToZzuApplication;
+const program_hint_js_1 = require("./program-hint.js");
 const MEMBER_URL = 'https://zzu.17gz.org/member/index.do';
 const NAV_APPLICATION = [
     'a:has-text("Application"):not(:has-text("Status"))',
@@ -105,18 +106,45 @@ async function isWizardStep(page) {
         return true;
     }
     const formFields = await page
-        .locator('input[name="surname"], input[name="givenName"], input[name="passportNo"], select[name="sex"]')
+        .locator([
+        'input[name="apply.lastName"]',
+        'input[name="apply.givenName"]',
+        'input[name="apply.passportNo"]',
+        'select[name*="sex"]',
+        'input[name="surname"]',
+        'input[name="givenName"]',
+    ].join(', '))
         .count();
     return formFields > 0;
 }
-async function selectNextOption(page) {
+async function selectNextOption(page, programHint) {
     const bodyText = await page.locator('body').innerText();
     if (!/please choose your (program|type)/i.test(bodyText)) {
         return false;
     }
-    const option = page.locator('.el-radio, .el-radio__label, input[type="radio"]').first();
-    if ((await option.count()) > 0) {
-        await option.click({ force: true });
+    if (programHint) {
+        const labeledOption = page
+            .locator('.el-radio, .el-radio__label, label')
+            .filter({ hasText: programHint })
+            .first();
+        if ((await labeledOption.count()) > 0) {
+            await labeledOption.click({ force: true });
+        }
+        else {
+            const textMatch = page.getByText(programHint, { exact: false }).first();
+            if ((await textMatch.count()) > 0) {
+                await textMatch.click({ force: true });
+            }
+        }
+    }
+    const selectedRadio = page.locator('.el-radio.is-checked, input[type="radio"]:checked');
+    if ((await selectedRadio.count()) === 0) {
+        const fallback = page
+            .locator('.el-radio, .el-radio__label, input[type="radio"]')
+            .first();
+        if ((await fallback.count()) > 0) {
+            await fallback.click({ force: true });
+        }
     }
     await page.waitForTimeout(500);
     const nextButton = page.getByRole('button', { name: /^Next$/i }).first();
@@ -132,7 +160,7 @@ async function selectNextOption(page) {
         force: true,
     });
 }
-async function advanceIntermediateSteps(page) {
+async function advanceIntermediateSteps(page, programHint) {
     for (let step = 0; step < 8; step += 1) {
         if (await isWizardStep(page)) {
             return true;
@@ -143,7 +171,7 @@ async function advanceIntermediateSteps(page) {
             continue;
         }
         if (/please choose your (program|type)/i.test(bodyText)) {
-            await selectNextOption(page);
+            await selectNextOption(page, programHint);
             continue;
         }
         if (/application notes|application instructions/i.test(bodyText)) {
@@ -154,13 +182,13 @@ async function advanceIntermediateSteps(page) {
     }
     return isWizardStep(page);
 }
-async function advanceToWizard(page, formUrl) {
+async function advanceToWizard(page, formUrl, programHint) {
     for (let attempt = 0; attempt < 3; attempt += 1) {
-        if (await advanceIntermediateSteps(page)) {
+        if (await advanceIntermediateSteps(page, programHint)) {
             return;
         }
         await clickEditApplication(page);
-        if (await advanceIntermediateSteps(page)) {
+        if (await advanceIntermediateSteps(page, programHint)) {
             return;
         }
     }
@@ -173,11 +201,14 @@ async function advanceToWizard(page, formUrl) {
             await page
                 .waitForLoadState('networkidle', { timeout: 60_000 })
                 .catch(() => undefined);
-            await advanceIntermediateSteps(page);
+            await advanceIntermediateSteps(page, programHint);
         }
     }
 }
-async function navigateToZzuApplication(page, formUrl) {
+async function navigateToZzuApplication(page, formUrl, profile, universityId = 'zhengzhou-university') {
+    const programHint = profile
+        ? (0, program_hint_js_1.resolveProgramHint)(profile, universityId)
+        : undefined;
     await page.goto(formUrl, {
         waitUntil: 'networkidle',
         timeout: 60_000,
@@ -191,6 +222,6 @@ async function navigateToZzuApplication(page, formUrl) {
         await clickIfVisible(page, NAV_APPLICATION);
         await clickIfVisible(page, START_APPLICATION);
     }
-    await advanceToWizard(page, formUrl);
+    await advanceToWizard(page, formUrl, programHint);
 }
 //# sourceMappingURL=zzu-navigation.js.map

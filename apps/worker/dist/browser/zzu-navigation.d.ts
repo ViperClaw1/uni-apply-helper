@@ -1,2 +1,3 @@
 import type { Page } from 'playwright';
-export declare function navigateToZzuApplication(page: Page, formUrl: string): Promise<void>;
+import type { StudentProfile } from '@uni-apply/shared';
+export declare function navigateToZzuApplication(page: Page, formUrl: string, profile?: StudentProfile, universityId?: string): Promise<void>;

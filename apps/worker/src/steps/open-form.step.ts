@@ -16,7 +16,12 @@ export class OpenFormStep implements ApplicationPipelineStep {
 
   async execute(context: ApplicationStepContext): Promise<void> {
     if (isZzuFormUrl(context.university.formUrl)) {
-      await navigateToZzuApplication(context.page, context.university.formUrl);
+      await navigateToZzuApplication(
+        context.page,
+        context.university.formUrl,
+        context.profile,
+        context.universityId,
+      );
     } else {
       await context.page.goto(context.university.formUrl, {
         waitUntil: 'networkidle',
