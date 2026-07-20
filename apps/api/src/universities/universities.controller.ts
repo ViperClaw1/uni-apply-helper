@@ -4,6 +4,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Query,
 } from '@nestjs/common';
@@ -66,6 +67,11 @@ export class UniversitiesController {
   @Get(':id/aliases')
   findAliases(@Param('id') id: string) {
     return this.universitiesService.findAliases(id);
+  }
+
+  @Patch(':id/relogin')
+  relogin(@Param('id') id: string) {
+    return this.universitiesService.requestRelogin(id);
   }
 }
 

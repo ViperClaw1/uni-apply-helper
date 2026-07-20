@@ -22,7 +22,7 @@ export class WizardNavigator {
     await this.waitForUiReady(page);
     await this.dismissBlockingDialogs(page);
 
-    const next = page.locator(selector).first();
+    const next = await this.resolveNextButton(page, selector);
     await next.waitFor({ state: 'visible', timeout: 15_000 });
 
     const onclick = await next.getAttribute('onclick');
@@ -43,11 +43,34 @@ export class WizardNavigator {
     await page.waitForTimeout(500);
   }
 
+  private async resolveNextButton(page: Page, selector: string) {
+    const cssButton = page.locator(selector).first();
+    if ((await cssButton.count()) > 0) {
+      return cssButton;
+    }
+
+    const semanticButton = page
+      .getByRole('button', { name: /save and next|next/i })
+      .first();
+    if ((await semanticButton.count()) > 0) {
+      return semanticButton;
+    }
+
+    return cssButton;
+  }
+
   private async dismissBlockingDialogs(page: Page): Promise<void> {
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const okButton = page
         .locator(
-          '.messager-button .okButton, .messager-button input[value="Ok"], .messager-button input[value="OK"]',
+          [
+            '.messager-button .okButton',
+            '.messager-button input[value="Ok"]',
+            '.messager-button input[value="OK"]',
+            'button:has-text("OK")',
+            'button:has-text("Continue")',
+            'button:has-text("Accept")',
+          ].join(', '),
         )
         .first();
 

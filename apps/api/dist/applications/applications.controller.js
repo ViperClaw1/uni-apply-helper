@@ -39,6 +39,9 @@ let ApplicationsController = class ApplicationsController {
     findApplication(id) {
         return this.applicationsService.findApplication(id);
     }
+    markApplicationReady(id) {
+        return this.applicationsService.markApplicationReady(id);
+    }
     submitApplication(id, body) {
         return this.applicationsService.submitApplication(id, body);
     }
@@ -94,6 +97,13 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], ApplicationsController.prototype, "findApplication", null);
+__decorate([
+    (0, common_1.Patch)('applications/:id/ready'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], ApplicationsController.prototype, "markApplicationReady", null);
 __decorate([
     (0, common_1.Post)('applications/:id/submit'),
     (0, common_1.UseGuards)(api_key_guard_js_1.ApiKeyGuard),

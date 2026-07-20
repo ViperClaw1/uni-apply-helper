@@ -1,11 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { navigateToZzuApplication } from '../browser/zzu-navigation.js';
-import {
-  isCsrfBlocked,
-  isLoginPage,
-  isZzuFormUrl,
-} from '../browser/zzu-session.loader.js';
-import { SessionExpiredError } from '../errors/session-expired.error.js';
+import { PreWizardNavigator } from '../browser/pre-wizard.navigator.js';
+import { assertSessionValid } from '../browser/session.validator.js';
+import { isZzuFormUrl } from '../browser/zzu-session.loader.js';
 import type {
   ApplicationPipelineStep,
   ApplicationStepContext,
@@ -15,6 +12,8 @@ import type {
 export class OpenFormStep implements ApplicationPipelineStep {
   readonly name = 'open_form';
 
+  constructor(private readonly preWizardNavigator: PreWizardNavigator) {}
+
   async execute(context: ApplicationStepContext): Promise<void> {
     if (isZzuFormUrl(context.university.formUrl)) {
       await navigateToZzuApplication(context.page, context.university.formUrl);
@@ -23,19 +22,12 @@ export class OpenFormStep implements ApplicationPipelineStep {
         waitUntil: 'networkidle',
         timeout: 60_000,
       });
-    }
-
-    if (await isLoginPage(context.page)) {
-      throw new SessionExpiredError(
-        'Redirected to login page — ZZU session expired, re-run capture-zzu-session and update ZZU_SESSION_STATE_B64',
+      await this.preWizardNavigator.navigateToForm(
+        context.page,
+        context.university.fields,
       );
     }
 
-    if (await isCsrfBlocked(context.page)) {
-      throw new SessionExpiredError(
-        'CSRF protection triggered — re-capture ZZU session in headed browser and update ZZU_SESSION_STATE_B64',
-      );
-    }
+    await assertSessionValid(context.page, context.university);
   }
 }
-

@@ -17,6 +17,7 @@ export class FillFieldsStep implements ApplicationPipelineStep {
       context.profile,
       context.university.fields,
       context.motivationLetterContent,
+      context.university,
     );
   }
 }

@@ -1,6 +1,13 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { QUEUES } from '@uni-apply/shared';
 import type { FieldConfig } from '@uni-apply/shared';
+import { join } from 'node:path';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { QueueService } from '../queue/queue.service.js';
 import {
   matchUniversityName,
   normalizeUniversityName,
@@ -32,6 +39,7 @@ export class UniversitiesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly schemasService: SchemasService,
+    private readonly queueService: QueueService,
   ) {}
 
   async findAll(): Promise<UniversitySummary[]> {
@@ -157,6 +165,26 @@ export class UniversitiesService {
     const university = await this.findOne(universityId);
 
     return university.aliases;
+  }
+
+  async requestRelogin(universityId: string) {
+    await this.findOne(universityId);
+
+    const job = await this.queueService.addJob(QUEUES.BROWSER_RELOGIN, {
+      universityId,
+    });
+
+    const profilesRoot =
+      process.env.BROWSER_PROFILES_DIR ?? join(process.cwd(), 'profiles');
+
+    return {
+      jobId: job.id,
+      status: 'queued',
+      universityId,
+      profilePath: join(profilesRoot, universityId),
+      message:
+        'Headed browser will open on the worker. Log in manually — session is saved to the profile directory.',
+    };
   }
 
   async createAlias(input: CreateUniversityAliasInput) {

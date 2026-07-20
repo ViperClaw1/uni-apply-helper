@@ -51,13 +51,41 @@ export class NotificationsService {
     );
   }
 
-  async notifySessionExpired(universityName: string) {
+  async notifySessionExpired(universityName: string, universityId: string) {
     await this.send(
       [
-        '<b>Сессия ZZU истекла</b>',
+        '<b>Сессия браузера истекла</b>',
         `Вуз: ${this.escapeHtml(universityName)}`,
-        'Нужно вручную обновить zzu-session.json и переменную ZZU_SESSION_STATE_B64 в Railway.',
-        'Запуск: pnpm --filter worker capture:zzu-session',
+        `Переавторизация: PATCH /universities/${this.escapeHtml(universityId)}/relogin`,
+        'Или локально: pnpm --filter worker capture:zzu-session',
+      ].join('\n'),
+    );
+  }
+
+  async notifyReloginStarted(
+    universityName: string,
+    universityId: string,
+    profileDir?: string,
+  ) {
+    await this.send(
+      [
+        '<b>Re-login: браузер открыт</b>',
+        `Вуз: ${this.escapeHtml(universityName)}`,
+        profileDir
+          ? `Профиль: ${this.escapeHtml(profileDir)}`
+          : `Профиль: profiles/${this.escapeHtml(universityId)}`,
+        'Залогинься в открывшемся окне. Сессия сохранится автоматически.',
+      ].join('\n'),
+    );
+  }
+
+  async notifyReloginCompleted(universityName: string, universityId: string) {
+    await this.send(
+      [
+        '<b>Re-login завершён</b>',
+        `Вуз: ${this.escapeHtml(universityName)}`,
+        `ID: ${this.escapeHtml(universityId)}`,
+        'Профиль сохранён. Можно повторить подачу заявок.',
       ].join('\n'),
     );
   }

@@ -240,7 +240,11 @@ export function StudentProfilePage() {
               </p>
             </div>
 
-            <BatchPanel batch={latestBatch} studentId={studentId} />
+            <BatchPanel
+              batch={latestBatch}
+              studentId={studentId}
+              onApplicationsChange={loadBatches}
+            />
 
             {submitError ? (
               <div className="mt-3 rounded-xl bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 ring-1 ring-rose-100">

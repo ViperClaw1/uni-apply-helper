@@ -28,13 +28,11 @@ const fill_wizard_step_js_1 = require("./steps/fill-wizard.step.js");
 const log_result_step_js_1 = require("./steps/log-result.step.js");
 const open_form_step_js_1 = require("./steps/open-form.step.js");
 const submit_form_step_js_1 = require("./steps/submit-form.step.js");
-const validate_schema_step_js_1 = require("./steps/validate-schema.step.js");
 let Processor = Processor_1 = class Processor {
     prisma;
     browserService;
     screenshotService;
     openFormStep;
-    validateSchemaStep;
     fillFieldsStep;
     attachFilesStep;
     submitFormStep;
@@ -44,12 +42,11 @@ let Processor = Processor_1 = class Processor {
     logger = new common_1.Logger(Processor_1.name);
     worker;
     steps;
-    constructor(prisma, browserService, screenshotService, openFormStep, validateSchemaStep, fillFieldsStep, attachFilesStep, submitFormStep, fillWizardStep, logResultStep, notificationsService) {
+    constructor(prisma, browserService, screenshotService, openFormStep, fillFieldsStep, attachFilesStep, submitFormStep, fillWizardStep, logResultStep, notificationsService) {
         this.prisma = prisma;
         this.browserService = browserService;
         this.screenshotService = screenshotService;
         this.openFormStep = openFormStep;
-        this.validateSchemaStep = validateSchemaStep;
         this.fillFieldsStep = fillFieldsStep;
         this.attachFilesStep = attachFilesStep;
         this.submitFormStep = submitFormStep;
@@ -58,7 +55,6 @@ let Processor = Processor_1 = class Processor {
         this.notificationsService = notificationsService;
         this.steps = [
             this.openFormStep,
-            this.validateSchemaStep,
             this.fillFieldsStep,
             this.attachFilesStep,
             this.submitFormStep,
@@ -119,7 +115,7 @@ let Processor = Processor_1 = class Processor {
             data: { status: 'processing' },
         });
         try {
-            await this.browserService.withPage(async (page) => {
+            await this.browserService.withPage(university.id, async (page) => {
                 const context = {
                     applicationId: application.id,
                     batchId: application.batchId,
@@ -163,7 +159,7 @@ let Processor = Processor_1 = class Processor {
             });
             await this.recalculateBatchCounters(application.batchId);
             if (error instanceof session_expired_error_js_1.SessionExpiredError) {
-                await this.notificationsService.notifySessionExpired(university.displayName);
+                await this.notificationsService.notifySessionExpired(university.displayName, university.id);
             }
             else {
                 await this.notificationsService.notifyFailed(university.displayName, studentName, message);
@@ -236,12 +232,16 @@ let Processor = Processor_1 = class Processor {
             where: { id: universityId },
         });
         if (university) {
+            const fileSchema = await this.findFileSchema(universityId);
             return {
                 id: university.id,
                 displayName: university.displayName,
                 formUrl: university.formUrl,
                 requiredDocuments: this.toStringArray(university.requiredDocuments),
                 fields: this.toFieldConfigArray(university.fields),
+                wizard: fileSchema?.wizard,
+                session: fileSchema?.session,
+                agent: fileSchema?.agent,
                 requiresEssay: university.requiresEssay,
                 essayPrompt: university.essayPrompt ?? undefined,
                 notes: university.notes ?? undefined,
@@ -270,6 +270,8 @@ let Processor = Processor_1 = class Processor {
                     requiredDocuments: this.toStringArray(schema.requiredDocuments),
                     fields: this.toFieldConfigArray(schema.fields),
                     wizard: schema.wizard,
+                    session: schema.session,
+                    agent: schema.agent,
                     requiresEssay: schema.requiresEssay ?? false,
                     essayPrompt: schema.essayPrompt,
                     notes: schema.notes,
@@ -422,7 +424,6 @@ exports.Processor = Processor = Processor_1 = __decorate([
         browser_service_js_1.BrowserService,
         screenshot_service_js_1.ScreenshotService,
         open_form_step_js_1.OpenFormStep,
-        validate_schema_step_js_1.ValidateSchemaStep,
         fill_fields_step_js_1.FillFieldsStep,
         attach_files_step_js_1.AttachFilesStep,
         submit_form_step_js_1.SubmitFormStep,

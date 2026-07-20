@@ -9,9 +9,15 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
+const action_executor_js_1 = require("./agent/act/action.executor.js");
+const semantic_field_mapper_js_1 = require("./agent/dom/semantic-field.mapper.js");
+const form_agent_js_1 = require("./agent/form.agent.js");
+const gemini_client_js_1 = require("./agent/gemini/gemini.client.js");
+const page_observer_js_1 = require("./agent/observe/page.observer.js");
+const agent_planner_js_1 = require("./agent/think/agent.planner.js");
 const browser_service_js_1 = require("./browser/browser.service.js");
+const pre_wizard_navigator_js_1 = require("./browser/pre-wizard.navigator.js");
 const open_form_step_js_1 = require("./steps/open-form.step.js");
-const validate_schema_step_js_1 = require("./steps/validate-schema.step.js");
 const fill_fields_step_js_1 = require("./steps/fill-fields.step.js");
 const fill_wizard_step_js_1 = require("./steps/fill-wizard.step.js");
 const attach_files_step_js_1 = require("./steps/attach-files.step.js");
@@ -24,6 +30,7 @@ const wizard_field_groups_js_1 = require("./filler/wizard-field-groups.js");
 const wizard_navigator_js_1 = require("./filler/wizard.navigator.js");
 const notifications_service_js_1 = require("./notifications/notifications.service.js");
 const processor_js_1 = require("./processor.js");
+const relogin_processor_js_1 = require("./relogin/relogin.processor.js");
 const prisma_module_js_1 = require("./prisma/prisma.module.js");
 const screenshot_service_js_1 = require("./screenshot/screenshot.service.js");
 let AppModule = class AppModule {
@@ -34,14 +41,20 @@ exports.AppModule = AppModule = __decorate([
         imports: [config_1.ConfigModule.forRoot({ isGlobal: true }), prisma_module_js_1.PrismaModule],
         providers: [
             browser_service_js_1.BrowserService,
+            pre_wizard_navigator_js_1.PreWizardNavigator,
             screenshot_service_js_1.ScreenshotService,
+            gemini_client_js_1.GeminiClient,
+            page_observer_js_1.PageObserver,
+            agent_planner_js_1.AgentPlanner,
+            action_executor_js_1.ActionExecutor,
+            semantic_field_mapper_js_1.SemanticFieldMapper,
+            form_agent_js_1.FormAgent,
             field_mapper_js_1.FieldMapper,
             file_attacher_js_1.FileAttacher,
             wizard_navigator_js_1.WizardNavigator,
             wizard_field_groups_js_1.WizardFieldGroups,
             form_filler_js_1.FormFiller,
             open_form_step_js_1.OpenFormStep,
-            validate_schema_step_js_1.ValidateSchemaStep,
             fill_fields_step_js_1.FillFieldsStep,
             fill_wizard_step_js_1.FillWizardStep,
             attach_files_step_js_1.AttachFilesStep,
@@ -49,6 +62,7 @@ exports.AppModule = AppModule = __decorate([
             log_result_step_js_1.LogResultStep,
             notifications_service_js_1.NotificationsService,
             processor_js_1.Processor,
+            relogin_processor_js_1.ReloginProcessor,
         ],
     })
 ], AppModule);

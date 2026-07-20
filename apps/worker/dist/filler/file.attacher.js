@@ -8,6 +8,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FileAttacher = void 0;
 const common_1 = require("@nestjs/common");
+const field_locator_js_1 = require("./field.locator.js");
 let FileAttacher = class FileAttacher {
     async attachFiles(page, profile, fields) {
         const fileFields = fields.filter((field) => field.type === 'file' && field.documentType);
@@ -19,13 +20,20 @@ let FileAttacher = class FileAttacher {
                 }
                 continue;
             }
+            const locator = await (0, field_locator_js_1.resolveFieldLocator)(page, field);
+            if (!locator) {
+                if (field.required) {
+                    throw new Error(`File input not found: ${field.selector}${field.labelHint ? ` / "${field.labelHint}"` : ''}`);
+                }
+                continue;
+            }
             const response = await fetch(fileUrl);
             if (!response.ok) {
                 throw new Error(`Failed to download document ${field.documentType}`);
             }
             const contentType = response.headers.get('content-type') ?? 'application/octet-stream';
             const buffer = Buffer.from(await response.arrayBuffer());
-            await page.locator(field.selector).setInputFiles({
+            await locator.setInputFiles({
                 name: `${field.documentType}.pdf`,
                 mimeType: contentType,
                 buffer,

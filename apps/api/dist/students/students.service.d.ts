@@ -93,6 +93,8 @@ export declare class StudentsService {
         universityRaw: string;
         universityId: string;
     }): Promise<StudentProfile>;
+    private hasContactData;
+    private toContactCreateData;
     private parseTargets;
     private toArray;
     private toBoolean;

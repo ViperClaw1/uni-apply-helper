@@ -147,6 +147,43 @@ let ApplicationsService = class ApplicationsService {
             motivationLetter,
         };
     }
+    async markApplicationReady(id) {
+        const application = await this.prisma.application.findUnique({
+            where: { id },
+            include: { steps: true },
+        });
+        if (!application) {
+            throw new common_1.NotFoundException(`Application "${id}" was not found.`);
+        }
+        if (application.status === 'submitted') {
+            throw new common_1.BadRequestException('Application is already submitted.');
+        }
+        if (application.status === 'blocked') {
+            throw new common_1.BadRequestException(application.blockedReason ?? 'Application is blocked.');
+        }
+        if (application.status === 'ready_for_submission') {
+            return this.enrichApplicationResponse(application);
+        }
+        const readyAt = new Date();
+        const updated = await this.prisma.application.update({
+            where: { id },
+            data: {
+                status: 'ready_for_submission',
+                errorMessage: null,
+                steps: {
+                    create: {
+                        stepName: 'extension_ready',
+                        status: 'completed',
+                        startedAt: readyAt,
+                        completedAt: readyAt,
+                    },
+                },
+            },
+            include: { steps: true },
+        });
+        await this.recalculateBatchCounters(updated.batchId);
+        return this.enrichApplicationResponse(updated);
+    }
     async submitApplication(id, input = {}) {
         const application = await this.prisma.application.findUnique({
             where: { id },

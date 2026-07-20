@@ -1,3 +1,4 @@
+import type { AgentConfig } from './agent.types.js';
 export interface FieldConfig {
     selector: string;
     mapsTo: string | null;
@@ -7,6 +8,12 @@ export interface FieldConfig {
     options?: string[];
     essayPrompt?: string;
     documentType?: string;
+    /** Fallback for semantic locator: getByLabel / getByPlaceholder */
+    labelHint?: string;
+}
+export interface SessionConfig {
+    loginUrlPattern?: string;
+    expiredIndicators?: string[];
 }
 export interface WizardConfig {
     totalSteps: number;
@@ -20,6 +27,8 @@ export interface UniversitySchema {
     requiredDocuments: string[];
     fields: FieldConfig[];
     wizard?: WizardConfig;
+    session?: SessionConfig;
+    agent?: AgentConfig;
     requiresEssay: boolean;
     essayPrompt?: string;
     notes?: string;

@@ -1,6 +1,12 @@
 export class SessionExpiredError extends Error {
-  constructor(message = 'ZZU session expired — update zzu-session.json manually') {
+  readonly universityId?: string;
+
+  constructor(
+    message = 'Browser session expired — re-login required',
+    universityId?: string,
+  ) {
     super(message);
     this.name = 'SessionExpiredError';
+    this.universityId = universityId;
   }
 }

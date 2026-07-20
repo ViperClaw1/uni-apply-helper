@@ -11,15 +11,20 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UniversitiesService = void 0;
 const common_1 = require("@nestjs/common");
+const shared_1 = require("@uni-apply/shared");
+const node_path_1 = require("node:path");
 const prisma_service_js_1 = require("../prisma/prisma.service.js");
+const queue_service_js_1 = require("../queue/queue.service.js");
 const university_name_matcher_js_1 = require("./lib/university-name-matcher.js");
 const schemas_service_js_1 = require("./schemas.service.js");
 let UniversitiesService = class UniversitiesService {
     prisma;
     schemasService;
-    constructor(prisma, schemasService) {
+    queueService;
+    constructor(prisma, schemasService, queueService) {
         this.prisma = prisma;
         this.schemasService = schemasService;
+        this.queueService = queueService;
     }
     async findAll() {
         const universities = await this.prisma.universitySchema.findMany({
@@ -112,6 +117,20 @@ let UniversitiesService = class UniversitiesService {
     async findAliases(universityId) {
         const university = await this.findOne(universityId);
         return university.aliases;
+    }
+    async requestRelogin(universityId) {
+        await this.findOne(universityId);
+        const job = await this.queueService.addJob(shared_1.QUEUES.BROWSER_RELOGIN, {
+            universityId,
+        });
+        const profilesRoot = process.env.BROWSER_PROFILES_DIR ?? (0, node_path_1.join)(process.cwd(), 'profiles');
+        return {
+            jobId: job.id,
+            status: 'queued',
+            universityId,
+            profilePath: (0, node_path_1.join)(profilesRoot, universityId),
+            message: 'Headed browser will open on the worker. Log in manually — session is saved to the profile directory.',
+        };
     }
     async createAlias(input) {
         await this.findOne(input.universityId);
@@ -279,6 +298,7 @@ exports.UniversitiesService = UniversitiesService;
 exports.UniversitiesService = UniversitiesService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_js_1.PrismaService,
-        schemas_service_js_1.SchemasService])
+        schemas_service_js_1.SchemasService,
+        queue_service_js_1.QueueService])
 ], UniversitiesService);
 //# sourceMappingURL=universities.service.js.map

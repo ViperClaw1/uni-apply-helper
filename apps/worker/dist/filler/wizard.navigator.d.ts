@@ -3,5 +3,8 @@ import type { Page } from 'playwright';
 export declare class WizardNavigator {
     forEachStep(page: Page, wizard: WizardConfig, handler: (step: number) => Promise<void>): Promise<void>;
     clickNext(page: Page, selector: string): Promise<void>;
+    private resolveNextButton;
+    private dismissBlockingDialogs;
     clickSubmit(page: Page, selector: string): Promise<void>;
+    private waitForUiReady;
 }

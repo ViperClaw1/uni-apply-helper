@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { FieldConfig, StudentProfile } from '@uni-apply/shared';
 import type { Page } from 'playwright';
+import { resolveFieldLocator } from './field.locator.js';
 
 @Injectable()
 export class FileAttacher {
@@ -24,6 +25,17 @@ export class FileAttacher {
         continue;
       }
 
+      const locator = await resolveFieldLocator(page, field);
+      if (!locator) {
+        if (field.required) {
+          throw new Error(
+            `File input not found: ${field.selector}${field.labelHint ? ` / "${field.labelHint}"` : ''}`,
+          );
+        }
+
+        continue;
+      }
+
       const response = await fetch(fileUrl);
 
       if (!response.ok) {
@@ -34,7 +46,7 @@ export class FileAttacher {
         response.headers.get('content-type') ?? 'application/octet-stream';
       const buffer = Buffer.from(await response.arrayBuffer());
 
-      await page.locator(field.selector).setInputFiles({
+      await locator.setInputFiles({
         name: `${field.documentType}.pdf`,
         mimeType: contentType,
         buffer,

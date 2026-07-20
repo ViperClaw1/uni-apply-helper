@@ -16,5 +16,6 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 Object.defineProperty(exports, "__esModule", { value: true });
 __exportStar(require("./student.types"), exports);
 __exportStar(require("./university.types"), exports);
+__exportStar(require("./agent.types"), exports);
 __exportStar(require("./queue.names"), exports);
 __exportStar(require("./form-filler"), exports);

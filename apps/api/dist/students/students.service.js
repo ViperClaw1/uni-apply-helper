@@ -80,6 +80,20 @@ let StudentsService = class StudentsService {
                 applicationTargets: {
                     create: targets,
                 },
+                ...(this.hasContactData(data.guarantor)
+                    ? {
+                        guarantor: {
+                            create: this.toContactCreateData(data.guarantor),
+                        },
+                    }
+                    : {}),
+                ...(this.hasContactData(data.emergencyContact)
+                    ? {
+                        emergencyContact: {
+                            create: this.toContactCreateData(data.emergencyContact),
+                        },
+                    }
+                    : {}),
             },
         });
     }
@@ -225,6 +239,21 @@ let StudentsService = class StudentsService {
             throw new common_1.BadRequestException(`Application target "${universityRaw}" was not found for this student.`);
         }
         return this.getFullProfile(studentId);
+    }
+    hasContactData(contact) {
+        return Boolean(contact?.name?.trim());
+    }
+    toContactCreateData(contact) {
+        return {
+            name: contact.name.trim(),
+            relationship: contact.relationship?.trim() || 'Not specified',
+            nationality: contact.nationality?.trim() || undefined,
+            company: contact.company?.trim() || undefined,
+            position: contact.position?.trim() || undefined,
+            homeAddress: contact.homeAddress?.trim() || undefined,
+            phone: contact.phone?.trim() || undefined,
+            email: contact.email?.trim() || undefined,
+        };
     }
     parseTargets(raw, shared) {
         if (!raw) {

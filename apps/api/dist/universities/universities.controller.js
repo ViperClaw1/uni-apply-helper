@@ -56,6 +56,9 @@ let UniversitiesController = class UniversitiesController {
     findAliases(id) {
         return this.universitiesService.findAliases(id);
     }
+    relogin(id) {
+        return this.universitiesService.requestRelogin(id);
+    }
 };
 exports.UniversitiesController = UniversitiesController;
 __decorate([
@@ -105,6 +108,13 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], UniversitiesController.prototype, "findAliases", null);
+__decorate([
+    (0, common_1.Patch)(':id/relogin'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], UniversitiesController.prototype, "relogin", null);
 exports.UniversitiesController = UniversitiesController = __decorate([
     (0, common_1.Controller)('universities'),
     __metadata("design:paramtypes", [universities_service_js_1.UniversitiesService,

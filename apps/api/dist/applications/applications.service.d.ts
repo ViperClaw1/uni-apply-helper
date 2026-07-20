@@ -14,6 +14,7 @@ export declare class ApplicationsService {
     findBatch(id: string): Promise<ApplicationBatchResponse>;
     findApplication(id: string): Promise<ApplicationResponse>;
     findActiveByUrl(url: string, studentId: string): Promise<ActiveApplicationResponse>;
+    markApplicationReady(id: string): Promise<ApplicationResponse>;
     submitApplication(id: string, input?: SubmitApplicationInput): Promise<ApplicationResponse>;
     updateApplication(id: string, input: UpdateApplicationInput): Promise<ApplicationResponse>;
     addStep(applicationId: string, input: {

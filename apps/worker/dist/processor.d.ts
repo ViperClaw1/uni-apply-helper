@@ -9,13 +9,11 @@ import { FillWizardStep } from './steps/fill-wizard.step.js';
 import { LogResultStep } from './steps/log-result.step.js';
 import { OpenFormStep } from './steps/open-form.step.js';
 import { SubmitFormStep } from './steps/submit-form.step.js';
-import { ValidateSchemaStep } from './steps/validate-schema.step.js';
 export declare class Processor implements OnModuleInit, OnModuleDestroy {
     private readonly prisma;
     private readonly browserService;
     private readonly screenshotService;
     private readonly openFormStep;
-    private readonly validateSchemaStep;
     private readonly fillFieldsStep;
     private readonly attachFilesStep;
     private readonly submitFormStep;
@@ -25,7 +23,7 @@ export declare class Processor implements OnModuleInit, OnModuleDestroy {
     private readonly logger;
     private worker?;
     private readonly steps;
-    constructor(prisma: PrismaService, browserService: BrowserService, screenshotService: ScreenshotService, openFormStep: OpenFormStep, validateSchemaStep: ValidateSchemaStep, fillFieldsStep: FillFieldsStep, attachFilesStep: AttachFilesStep, submitFormStep: SubmitFormStep, fillWizardStep: FillWizardStep, logResultStep: LogResultStep, notificationsService: NotificationsService);
+    constructor(prisma: PrismaService, browserService: BrowserService, screenshotService: ScreenshotService, openFormStep: OpenFormStep, fillFieldsStep: FillFieldsStep, attachFilesStep: AttachFilesStep, submitFormStep: SubmitFormStep, fillWizardStep: FillWizardStep, logResultStep: LogResultStep, notificationsService: NotificationsService);
     private getSteps;
     onModuleInit(): void;
     onModuleDestroy(): Promise<void>;

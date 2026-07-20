@@ -2,6 +2,10 @@
   "id": "zhengzhou-university",
   "displayName": "Zhengzhou University",
   "formUrl": "https://zzu.17gz.org/apply/index.do",
+  "session": {
+    "loginUrlPattern": "/member/login\\.do",
+    "expiredIndicators": ["CSRF attack protection", "Account Sign In"]
+  },
   "aliases": [
     "Zhengzhou University",
     "Zhengzhou Univ",
@@ -32,14 +36,16 @@
       "mapsTo": "personal.surname",
       "type": "text",
       "required": true,
-      "wizardStep": 1
+      "wizardStep": 1,
+      "labelHint": "Family Name"
     },
     {
       "selector": "input[name=\"apply.givenName\"]",
       "mapsTo": "personal.givenName",
       "type": "text",
       "required": true,
-      "wizardStep": 1
+      "wizardStep": 1,
+      "labelHint": "Given Name"
     },
     {
       "selector": "input[name=\"apply.name\"]",
@@ -81,7 +87,8 @@
       "mapsTo": "personal.passportNo",
       "type": "text",
       "required": true,
-      "wizardStep": 1
+      "wizardStep": 1,
+      "labelHint": "Passport No"
     },
     {
       "selector": "input[name=\"apply.passportExpire\"]",
@@ -290,6 +297,12 @@
     "totalSteps": 7,
     "nextButtonSelector": "input[value=\"Save and Next\"]",
     "submitButtonSelector": "input[value=\"Submit\"]"
+  },
+  "agent": {
+    "fillMode": "hybrid",
+    "maxSteps": 40,
+    "useVision": false,
+    "goal": "Complete and submit the Zhengzhou University online application form"
   },
   "requiresEssay": false,
   "notes": "17gz 7-step wizard. Steps 1-6: fill form and attachments. Step 7: summary/preview and Submit only. Pre-wizard screens (Agree, program selection) require manual navigation. CSCA (ATTACH_TYPE_8135227092) is portal-required but has no profile documentType mapping yet."

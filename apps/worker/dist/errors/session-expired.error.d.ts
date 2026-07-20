@@ -1,3 +1,4 @@
 export declare class SessionExpiredError extends Error {
-    constructor(message?: string);
+    readonly universityId?: string;
+    constructor(message?: string, universityId?: string);
 }

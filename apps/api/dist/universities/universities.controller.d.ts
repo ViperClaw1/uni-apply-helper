@@ -18,4 +18,11 @@ export declare class UniversitiesController {
     generateSchemaDraft(body: GenerateUniversitySchemaInput): Promise<import("./types/schema-generator.types.js").GenerateUniversitySchemaResult>;
     findOne(id: string): Promise<import("./types/university-api.types.js").UniversitySchemaResponse>;
     findAliases(id: string): Promise<string[]>;
+    relogin(id: string): Promise<{
+        jobId: string | undefined;
+        status: string;
+        universityId: string;
+        profilePath: string;
+        message: string;
+    }>;
 }

@@ -19,7 +19,7 @@ let FillFieldsStep = class FillFieldsStep {
         this.formFiller = formFiller;
     }
     async execute(context) {
-        await this.formFiller.fillFields(context.page, context.profile, context.university.fields, context.motivationLetterContent);
+        await this.formFiller.fillFields(context.page, context.profile, context.university.fields, context.motivationLetterContent, context.university);
     }
 };
 exports.FillFieldsStep = FillFieldsStep;

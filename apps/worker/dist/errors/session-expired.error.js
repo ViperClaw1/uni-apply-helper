@@ -2,9 +2,11 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SessionExpiredError = void 0;
 class SessionExpiredError extends Error {
-    constructor(message = 'ZZU session expired — update zzu-session.json manually') {
+    universityId;
+    constructor(message = 'Browser session expired — re-login required', universityId) {
         super(message);
         this.name = 'SessionExpiredError';
+        this.universityId = universityId;
     }
 }
 exports.SessionExpiredError = SessionExpiredError;

@@ -54,6 +54,11 @@ export class ApplicationsController {
     return this.applicationsService.findApplication(id);
   }
 
+  @Patch('applications/:id/ready')
+  markApplicationReady(@Param('id') id: string) {
+    return this.applicationsService.markApplicationReady(id);
+  }
+
   @Post('applications/:id/submit')
   @UseGuards(ApiKeyGuard)
   submitApplication(

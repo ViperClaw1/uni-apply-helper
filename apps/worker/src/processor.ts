@@ -29,7 +29,7 @@ import type {
   ApplicationPipelineStep,
   ApplicationStepContext,
 } from './steps/step-context.js';
-import { ValidateSchemaStep } from './steps/validate-schema.step.js';
+import { ReloginProcessor } from './relogin/relogin.processor.js';
 
 type ApplicationProcessJobData = {
   applicationId: string;
@@ -49,7 +49,6 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
     private readonly browserService: BrowserService,
     private readonly screenshotService: ScreenshotService,
     private readonly openFormStep: OpenFormStep,
-    private readonly validateSchemaStep: ValidateSchemaStep,
     private readonly fillFieldsStep: FillFieldsStep,
     private readonly attachFilesStep: AttachFilesStep,
     private readonly submitFormStep: SubmitFormStep,
@@ -59,7 +58,6 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
   ) {
     this.steps = [
       this.openFormStep,
-      this.validateSchemaStep,
       this.fillFieldsStep,
       this.attachFilesStep,
       this.submitFormStep,
@@ -136,7 +134,7 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
     });
 
     try {
-      await this.browserService.withPage(async (page) => {
+      await this.browserService.withPage(university.id, async (page) => {
         const context: ApplicationStepContext = {
           applicationId: application.id,
           batchId: application.batchId,
@@ -196,6 +194,7 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
       if (error instanceof SessionExpiredError) {
         await this.notificationsService.notifySessionExpired(
           university.displayName,
+          university.id,
         );
       } else {
         await this.notificationsService.notifyFailed(
@@ -295,12 +294,16 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
     });
 
     if (university) {
+      const fileSchema = await this.findFileSchema(universityId);
       return {
         id: university.id,
         displayName: university.displayName,
         formUrl: university.formUrl,
         requiredDocuments: this.toStringArray(university.requiredDocuments),
         fields: this.toFieldConfigArray(university.fields),
+        wizard: fileSchema?.wizard,
+        session: fileSchema?.session,
+        agent: fileSchema?.agent,
         requiresEssay: university.requiresEssay,
         essayPrompt: university.essayPrompt ?? undefined,
         notes: university.notes ?? undefined,
@@ -341,6 +344,8 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
           requiredDocuments: this.toStringArray(schema.requiredDocuments),
           fields: this.toFieldConfigArray(schema.fields),
           wizard: schema.wizard,
+          session: schema.session,
+          agent: schema.agent,
           requiresEssay: schema.requiresEssay ?? false,
           essayPrompt: schema.essayPrompt,
           notes: schema.notes,

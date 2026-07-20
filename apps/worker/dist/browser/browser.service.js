@@ -13,61 +13,77 @@ exports.BrowserService = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const stealth_config_js_1 = require("./stealth.config.js");
+const profile_path_js_1 = require("./profile-path.js");
 const zzu_session_meta_js_1 = require("./zzu-session-meta.js");
 const zzu_session_loader_js_1 = require("./zzu-session.loader.js");
 let BrowserService = class BrowserService {
     configService;
     browser;
-    persistentContext;
+    activeContexts = new Set();
     constructor(configService) {
         this.configService = configService;
     }
-    async withPage(handler) {
-        const { browser, context, page, persistent } = await this.createSession();
+    async withPage(universityId, handler) {
+        return this.withPageOptions({ universityId }, handler);
+    }
+    async withPageOptions(options, handler) {
+        const session = await this.createSession(options);
         try {
-            return await handler(page);
+            return await handler(session.page);
         }
         finally {
-            if (persistent) {
-                await context.close();
-            }
-            else {
-                await context.close();
-                await browser?.close();
+            await session.context.close();
+            this.activeContexts.delete(session.context);
+            if (session.browser) {
+                await session.browser.close();
+                this.browser = undefined;
             }
         }
     }
     async onModuleDestroy() {
-        await this.persistentContext?.close();
+        await Promise.all([...this.activeContexts].map((context) => context.close()));
         await this.browser?.close();
     }
-    async createSession() {
-        const cdpUrl = this.configService.get('ZZU_CDP_URL');
-        if (cdpUrl) {
-            const browser = await stealth_config_js_1.chromium.connectOverCDP(cdpUrl);
-            const context = browser.contexts()[0] ?? (await browser.newContext());
-            const page = context.pages()[0] ?? (await context.newPage());
-            return { browser, context, page, persistent: false };
-        }
-        const profileDir = this.configService.get('ZZU_PROFILE_DIR');
-        const useProfile = this.configService.get('ZZU_USE_PROFILE') === '1' || Boolean(profileDir);
-        if (useProfile) {
+    getProfileDir(universityId) {
+        return (0, profile_path_js_1.resolveProfileDir)(this.configService, universityId);
+    }
+    async createSession(options) {
+        const profileDir = (0, profile_path_js_1.resolveProfileDir)(this.configService, options.universityId);
+        const headed = options.headed ?? this.configService.get('BROWSER_HEADED') === '1';
+        if (profileDir) {
             const launchOptions = {
-                headless: this.configService.get('ZZU_HEADED') !== '1',
+                headless: !headed,
                 args: ['--disable-blink-features=AutomationControlled'],
                 acceptDownloads: true,
+                viewport: { width: 1440, height: 1200 },
                 ...(0, zzu_session_meta_js_1.getZzuContextOptions)((0, zzu_session_meta_js_1.loadZzuSessionMeta)(this.configService)),
             };
-            const channel = this.configService.get('ZZU_BROWSER_CHANNEL');
+            const channel = this.configService.get('BROWSER_CHANNEL');
             if (channel) {
                 launchOptions.channel = channel;
             }
-            const context = await stealth_config_js_1.chromium.launchPersistentContext(profileDir ?? `${process.cwd()}/zzu-browser-profile`, launchOptions);
-            this.persistentContext = context;
+            else {
+                const legacyChannel = this.configService.get('ZZU_BROWSER_CHANNEL');
+                if (legacyChannel) {
+                    launchOptions.channel = legacyChannel;
+                }
+            }
+            const context = await stealth_config_js_1.chromium.launchPersistentContext(profileDir, launchOptions);
+            this.activeContexts.add(context);
             const page = context.pages()[0] ?? (await context.newPage());
-            return { context, page, persistent: true };
+            return { context, page };
         }
-        const browser = await this.getBrowser();
+        const cdpUrl = this.configService.get('ZZU_USE_CDP') === '1'
+            ? this.configService.get('ZZU_CDP_URL')
+            : undefined;
+        if (cdpUrl) {
+            const browser = await stealth_config_js_1.chromium.connectOverCDP(cdpUrl);
+            const context = browser.contexts()[0] ?? (await browser.newContext());
+            this.activeContexts.add(context);
+            const page = context.pages()[0] ?? (await context.newPage());
+            return { browser, context, page };
+        }
+        const browser = await this.getBrowser(headed);
         const storageState = (0, zzu_session_loader_js_1.loadZzuStorageState)(this.configService);
         const context = await browser.newContext({
             acceptDownloads: true,
@@ -75,18 +91,19 @@ let BrowserService = class BrowserService {
             ...(storageState ? { storageState } : {}),
             ...(0, zzu_session_meta_js_1.getZzuContextOptions)((0, zzu_session_meta_js_1.loadZzuSessionMeta)(this.configService)),
         });
+        this.activeContexts.add(context);
         const page = await context.newPage();
-        return { browser, context, page, persistent: false };
+        return { browser, context, page };
     }
-    async getBrowser() {
+    async getBrowser(headed) {
         if (this.browser) {
             return this.browser;
         }
+        const channel = this.configService.get('BROWSER_CHANNEL') ??
+            this.configService.get('ZZU_BROWSER_CHANNEL');
         this.browser = await stealth_config_js_1.chromium.launch({
-            headless: this.configService.get('ZZU_HEADED') !== '1',
-            ...(this.configService.get('ZZU_BROWSER_CHANNEL')
-                ? { channel: this.configService.get('ZZU_BROWSER_CHANNEL') }
-                : {}),
+            headless: !headed,
+            ...(channel ? { channel: channel } : {}),
             args: ['--disable-blink-features=AutomationControlled'],
         });
         return this.browser;

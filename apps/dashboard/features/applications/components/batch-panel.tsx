@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { isMissingApprovedMotivationLetter } from "@/features/letters/lib/letter-utils";
-import { openUniversityForm } from "../lib/extension-bridge";
+import {
+  canOpenUniversityForm,
+  prepareAndOpenUniversityForm,
+} from "../lib/open-form";
 import {
   getApplicationStatusLabel,
   getBatchStatusLabel,
@@ -13,12 +16,18 @@ import type { ApplicationBatch } from "../types/application.types";
 type BatchPanelProps = {
   batch?: ApplicationBatch;
   studentId: string;
+  onApplicationsChange?: () => void | Promise<void>;
 };
 
-export function BatchPanel({ batch, studentId }: BatchPanelProps) {
+export function BatchPanel({
+  batch,
+  studentId,
+  onApplicationsChange,
+}: BatchPanelProps) {
   const [openingApplicationId, setOpeningApplicationId] = useState<string | null>(
     null,
   );
+  const [openError, setOpenError] = useState<string | null>(null);
 
   if (!batch) {
     return (
@@ -79,27 +88,32 @@ export function BatchPanel({ batch, studentId }: BatchPanelProps) {
                       {application.errorMessage}
                     </div>
                   ) : null}
-                  {application.formUrl &&
-                  application.status === "ready_for_submission" ? (
+                  {application.formUrl && canOpenUniversityForm(application) ? (
                     <button
                       type="button"
-                      title="Откроет форму вуза. Extension заполнит поля автоматически, если установлен."
+                      title="Переведёт заявку в ready_for_submission и откроет форму. Extension заполнит поля автоматически, если установлен."
                       disabled={openingApplicationId === application.id}
-                      onClick={() => {
+                      onClick={async () => {
                         if (openingApplicationId === application.id) {
                           return;
                         }
 
                         setOpeningApplicationId(application.id);
-                        openUniversityForm({
-                          studentId,
-                          applicationId: application.id,
-                          formUrl: application.formUrl!,
-                        });
-                        window.setTimeout(
-                          () => setOpeningApplicationId(null),
-                          1500,
-                        );
+                        setOpenError(null);
+
+                        try {
+                          await prepareAndOpenUniversityForm({
+                            studentId,
+                            application,
+                          });
+                          await onApplicationsChange?.();
+                        } catch {
+                          setOpenError(
+                            "Не удалось подготовить заявку к заполнению через Extension.",
+                          );
+                        } finally {
+                          setOpeningApplicationId(null);
+                        }
                       }}
                       className="mt-2 inline-flex h-8 cursor-pointer items-center rounded-lg bg-violet-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-violet-700 disabled:pointer-events-none disabled:opacity-60"
                     >
@@ -129,6 +143,12 @@ export function BatchPanel({ batch, studentId }: BatchPanelProps) {
               ) : null}
             </div>
           ))}
+        </div>
+      ) : null}
+
+      {openError ? (
+        <div className="mt-4 rounded-xl bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 ring-1 ring-rose-100">
+          {openError}
         </div>
       ) : null}
     </div>

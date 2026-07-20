@@ -16,8 +16,8 @@ const lodash_1 = require("lodash");
 const notifications_service_js_1 = require("../notifications/notifications.service.js");
 const students_service_js_1 = require("../students/students.service.js");
 const FIELD_MAP = {
-    'Фамилия (заглавными буквами) / Surname': 'personal.surname',
     'Имя (заглавными буквами) / Given Name': 'personal.givenName',
+    'Фамилия (заглавными буквами) / Surname': 'personal.surname',
     'Пол / Sex': 'personal.sex',
     'Гражданство / Nationality': 'personal.nationality',
     'Город рождения / City of Birth': 'personal.cityOfBirth',
@@ -46,6 +46,17 @@ const FIELD_MAP = {
     'Степень / Degree': 'applicationDegree',
     'Срок обучения / Duration of Study': 'applicationDuration',
     'Источник финансирования / Financial resources for study': 'applicationFunding',
+    'Имя гаранта / Guarantor Name': 'guarantor.name',
+    'Телефон гаранта / Guarantor Phone': 'guarantor.phone',
+    'Email гаранта / Guarantor Email': 'guarantor.email',
+    'Адрес гаранта / Guarantor Address': 'guarantor.homeAddress',
+    'Отношение к гаранту / Relationship': 'guarantor.relationship',
+    'Имя контакта / Emergency Name': 'emergencyContact.name',
+    'Телефон контакта / Emergency Phone': 'emergencyContact.phone',
+    'Email контакта / Emergency Email': 'emergencyContact.email',
+    'Отношение / Relationship': 'emergencyContact.relationship',
+    'Год начала обучения / Study Period Start': 'education.0.periodStart',
+    'Год окончания / Study Period End': 'education.0.periodEnd',
 };
 const FORM_VALUES_PATHS = [
     undefined,
@@ -72,6 +83,17 @@ const FORM_VALUES_PATHS = [
     'education.0.degree',
     'education.0.institution',
     'education.0.major',
+    'education.0.periodStart',
+    'education.0.periodEnd',
+    'guarantor.name',
+    'guarantor.phone',
+    'guarantor.email',
+    'guarantor.homeAddress',
+    'guarantor.relationship',
+    'emergencyContact.name',
+    'emergencyContact.phone',
+    'emergencyContact.email',
+    'emergencyContact.relationship',
     'languages.chinese',
     'languages.english',
     'applicationTargets',
@@ -279,6 +301,48 @@ let WebhookService = WebhookService_1 = class WebhookService {
             return this.hasAny(normalizedKey, ['application', 'заявки'])
                 ? 'applicationMajor'
                 : 'education.0.major';
+        }
+        if (this.hasAny(normalizedKey, [
+            'study period start',
+            'год начала обучения',
+            'period start',
+        ])) {
+            return 'education.0.periodStart';
+        }
+        if (this.hasAny(normalizedKey, [
+            'study period end',
+            'год окончания',
+            'period end',
+        ])) {
+            return 'education.0.periodEnd';
+        }
+        if (this.hasAny(normalizedKey, ['guarantor name', 'имя гаранта'])) {
+            return 'guarantor.name';
+        }
+        if (this.hasAny(normalizedKey, ['guarantor phone', 'телефон гаранта'])) {
+            return 'guarantor.phone';
+        }
+        if (this.hasAny(normalizedKey, ['guarantor email', 'email гаранта'])) {
+            return 'guarantor.email';
+        }
+        if (this.hasAny(normalizedKey, ['guarantor address', 'адрес гаранта'])) {
+            return 'guarantor.homeAddress';
+        }
+        if (this.hasAny(normalizedKey, ['guarantor relationship', 'отношение к гаранту'])) {
+            return 'guarantor.relationship';
+        }
+        if (this.hasAny(normalizedKey, ['emergency name', 'имя контакта'])) {
+            return 'emergencyContact.name';
+        }
+        if (this.hasAny(normalizedKey, ['emergency phone', 'телефон контакта'])) {
+            return 'emergencyContact.phone';
+        }
+        if (this.hasAny(normalizedKey, ['emergency email', 'email контакта'])) {
+            return 'emergencyContact.email';
+        }
+        if (this.hasAny(normalizedKey, ['emergency relationship', 'отношение']) &&
+            this.hasAny(normalizedKey, ['emergency', 'контакт', 'экстрен'])) {
+            return 'emergencyContact.relationship';
         }
         if (this.hasAny(normalizedKey, ['chinese language', 'китайского языка'])) {
             return 'languages.chinese';
