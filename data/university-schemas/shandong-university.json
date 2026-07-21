@@ -1,0 +1,159 @@
+{
+  "id": "shandong-university",
+  "displayName": "Shandong University",
+  "formUrl": "http://www.apply.sdu.edu.cn/en/student/apply/create",
+  "aliases": [
+    "Shandong University"
+  ],
+  "requiredDocuments": [
+    "photo",
+    "passport",
+    "transcript",
+    "diploma",
+    "language_certificate",
+    "personal_statement",
+    "medical",
+    "financial"
+  ],
+  "fields": [
+    {
+      "selector": "input[name=\"student[last_name]\"]",
+      "mapsTo": "personal.surname",
+      "type": "text",
+      "required": false,
+      "wizardStep": 3
+    },
+    {
+      "selector": "input[name=\"student[first_name]\"]",
+      "mapsTo": "personal.givenName",
+      "type": "text",
+      "required": false,
+      "wizardStep": 3
+    },
+    {
+      "selector": "input[name=\"passport[number]\"]",
+      "mapsTo": "personal.passportNo",
+      "type": "text",
+      "required": false,
+      "wizardStep": 3
+    },
+    {
+      "selector": "input[name=\"passport[due_time]\"]",
+      "mapsTo": "personal.passportExpiry",
+      "type": "text",
+      "required": false,
+      "wizardStep": 3
+    },
+    {
+      "selector": "input[name=\"student[name]\"]",
+      "mapsTo": "personal.chineseName",
+      "type": "text",
+      "required": false,
+      "wizardStep": 3
+    },
+    {
+      "selector": "select[name=\"student[marital_status]\"]",
+      "mapsTo": "personal.maritalStatus",
+      "type": "select",
+      "required": false,
+      "wizardStep": 3
+    },
+    {
+      "selector": "select[name=\"student[gender]\"]",
+      "mapsTo": "personal.sex",
+      "type": "select",
+      "required": false,
+      "wizardStep": 3
+    },
+    {
+      "selector": "input[name=\"student[birthdate]\"]",
+      "mapsTo": "personal.dateOfBirth",
+      "type": "text",
+      "required": false,
+      "wizardStep": 3
+    },
+    {
+      "selector": "input[name=\"student[birth_place]\"]",
+      "mapsTo": "personal.cityOfBirth",
+      "type": "text",
+      "required": false,
+      "wizardStep": 3
+    },
+    {
+      "selector": "select[name=\"student[religion]\"]",
+      "mapsTo": "personal.religion",
+      "type": "select",
+      "required": false,
+      "wizardStep": 3
+    },
+    {
+      "selector": "input[name=\"student[hobby]\"]",
+      "mapsTo": "personal.hobby",
+      "type": "text",
+      "required": false,
+      "wizardStep": 3
+    },
+    {
+      "selector": "input[name=\"recommend[guarantor_en_name]\"]",
+      "mapsTo": "guarantor.name",
+      "type": "text",
+      "required": false,
+      "wizardStep": 3
+    },
+    {
+      "selector": "input[name=\"recommend[guar_mobile]\"]",
+      "mapsTo": "guarantor.phone",
+      "type": "text",
+      "required": false,
+      "wizardStep": 3
+    },
+    {
+      "selector": "input[name=\"emergency_contact[0][emergency_name]\"]",
+      "mapsTo": "emergencyContact.name",
+      "type": "text",
+      "required": false,
+      "wizardStep": 3
+    },
+    {
+      "selector": "input[name=\"emergency_contact[0][emergency_mobile]\"]",
+      "mapsTo": "emergencyContact.phone",
+      "type": "text",
+      "required": false,
+      "wizardStep": 3
+    },
+    {
+      "selector": "input[name=\"education[0][school_name]\"]",
+      "mapsTo": "education.0.institution",
+      "type": "text",
+      "required": false,
+      "wizardStep": 3
+    },
+    {
+      "selector": "select[name=\"education[0][learning_type]\"]",
+      "mapsTo": "education.0.degree",
+      "type": "select",
+      "required": false,
+      "wizardStep": 3
+    },
+    {
+      "selector": "input[name=\"education[0][stuhis_major]\"]",
+      "mapsTo": "education.0.major",
+      "type": "text",
+      "required": false,
+      "wizardStep": 3
+    },
+    {
+      "selector": "textarea[name=\"text_content[1]\"]",
+      "type": "essay",
+      "required": false,
+      "wizardStep": 4
+    }
+  ],
+  "wizard": {
+    "totalSteps": 4,
+    "nextButtonSelector": "input[value=\"Next\"]",
+    "submitButtonSelector": "input[value=\"Submit\"]"
+  },
+  "requiresEssay": true,
+  "notes": "User must log in, accept terms, and select program before starting the application wizard steps."
+}
