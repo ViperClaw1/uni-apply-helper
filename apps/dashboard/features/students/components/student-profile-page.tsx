@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { ApplicationTargetsPanel } from "@/features/applications/components/application-targets-panel";
 import { BatchPanel } from "@/features/applications/components/batch-panel";
 import { MotivationLettersPanel } from "@/features/letters/components/motivation-letters-panel";
 import {
@@ -16,7 +17,11 @@ import { DocumentUploader } from "@/features/documents/components/document-uploa
 import { getStudentDocuments } from "@/features/documents/api/documents.api";
 import type { StudentDocument } from "@/features/documents/types/document.types";
 import { getStudentProfile } from "../api/students.api";
-import type { ContactInfo, StudentProfile } from "../types/student.types";
+import type {
+  ApplicationTarget,
+  ContactInfo,
+  StudentProfile,
+} from "../types/student.types";
 
 export function StudentProfilePage() {
   const params = useParams<{ id: string }>();
@@ -36,6 +41,10 @@ export function StudentProfilePage() {
 
   const loadBatches = useCallback(async () => {
     setBatches(await getApplicationBatches(studentId));
+  }, [studentId]);
+
+  const loadProfile = useCallback(async () => {
+    setStudent(await getStudentProfile(studentId));
   }, [studentId]);
 
   useEffect(() => {
@@ -118,13 +127,32 @@ export function StudentProfilePage() {
     return groupedDocuments;
   }, [documents]);
 
+  const resolvedTargets = useMemo(
+    () =>
+      student?.applicationTargets.filter((target) =>
+        Boolean(target.universityId),
+      ) ?? [],
+    [student?.applicationTargets],
+  );
+
+  function handleTargetsChange(targets: ApplicationTarget[]) {
+    setStudent((current) =>
+      current ? { ...current, applicationTargets: targets } : current,
+    );
+  }
+
   async function handleCreateBatch() {
+    if (resolvedTargets.length === 0) {
+      setSubmitError("Сначала добавьте хотя бы один вуз по URL формы.");
+      return;
+    }
+
     setIsSubmitting(true);
     setSubmitError(null);
 
     try {
       await createApplicationBatch(studentId);
-      await loadBatches();
+      await Promise.all([loadBatches(), loadProfile()]);
     } catch {
       setSubmitError("Не удалось запустить подачу заявок.");
     } finally {
@@ -169,11 +197,11 @@ export function StudentProfilePage() {
           <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600 lg:max-w-sm">
             <div className="font-semibold text-slate-950">Вузы</div>
             <div className="mt-2">
-              {student.applicationTargets.length > 0
-                ? student.applicationTargets
+              {resolvedTargets.length > 0
+                ? resolvedTargets
                     .map((target) => target.universityRaw)
                     .join(", ")
-                : "Не указаны"}
+                : "Не выбраны — добавьте URL ниже"}
             </div>
           </div>
         </div>
@@ -224,6 +252,23 @@ export function StudentProfilePage() {
         </section>
 
         <div className="grid gap-8">
+          <section>
+            <div className="mb-3">
+              <h2 className="text-xl font-semibold tracking-tight text-slate-950">
+                Вузы батча
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Список вузов для подачи. URL должен совпадать со схемой вуза.
+              </p>
+            </div>
+
+            <ApplicationTargetsPanel
+              studentId={studentId}
+              targets={student.applicationTargets}
+              onTargetsChange={handleTargetsChange}
+            />
+          </section>
+
           <MotivationLettersPanel
             student={student}
             highlightUniversityId={highlightUniversityId}
@@ -255,10 +300,14 @@ export function StudentProfilePage() {
             <button
               type="button"
               onClick={handleCreateBatch}
-              disabled={isSubmitting}
+              disabled={isSubmitting || resolvedTargets.length === 0}
               className="mt-4 inline-flex h-12 w-full cursor-pointer items-center justify-center rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm transition-transform hover:bg-slate-800 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-60"
             >
-              {isSubmitting ? "Запускаем..." : "Отправить заявки во все вузы"}
+              {isSubmitting
+                ? "Запускаем..."
+                : resolvedTargets.length === 0
+                  ? "Добавьте вузы для батча"
+                  : `Отправить заявки (${resolvedTargets.length})`}
             </button>
           </section>
         </div>

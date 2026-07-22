@@ -118,7 +118,14 @@ export class UniversitiesService {
   }
 
   async findByFormUrl(pageUrl: string): Promise<UniversitySchemaResponse | null> {
-    const normalizedPageUrl = this.normalizePageUrl(pageUrl);
+    let normalizedPageUrl: { originPath: string; hostname: string };
+
+    try {
+      normalizedPageUrl = this.normalizePageUrl(pageUrl);
+    } catch {
+      return null;
+    }
+
     const universities = await this.findAll();
 
     for (const summary of universities) {
@@ -130,6 +137,36 @@ export class UniversitiesService {
     }
 
     return null;
+  }
+
+  async resolveByFormUrl(formUrl: string): Promise<UniversitySchemaResponse> {
+    const trimmed = formUrl?.trim();
+
+    if (!trimmed) {
+      throw new BadRequestException('formUrl is required.');
+    }
+
+    let parsed: URL;
+
+    try {
+      parsed = new URL(trimmed);
+    } catch {
+      throw new BadRequestException(`Invalid URL: "${formUrl}".`);
+    }
+
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      throw new BadRequestException('URL must use http or https.');
+    }
+
+    const university = await this.findByFormUrl(parsed.toString());
+
+    if (!university) {
+      throw new NotFoundException(
+        `No university schema matches form URL "${trimmed}".`,
+      );
+    }
+
+    return university;
   }
 
   private normalizePageUrl(url: string): { originPath: string; hostname: string } {

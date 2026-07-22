@@ -17,3 +17,15 @@ export async function getStudentProfile(studentId: string) {
 
   return response.data;
 }
+
+export async function setStudentApplicationTargets(
+  studentId: string,
+  formUrls: string[],
+) {
+  const response = await apiClient.put<StudentProfile>(
+    `/students/${studentId}/application-targets`,
+    { formUrls },
+  );
+
+  return response.data;
+}

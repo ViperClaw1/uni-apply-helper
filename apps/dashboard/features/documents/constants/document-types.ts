@@ -20,18 +20,6 @@ export const DEFAULT_DOCUMENT_TYPES: DocumentTypeOption[] = [
     parse: false,
   },
   {
-    key: "diploma",
-    label: "Диплом о среднем/высшем образовании",
-    accept: { "application/pdf": [".pdf"], "image/*": [] },
-    parse: false,
-  },
-  {
-    key: "language_certificate",
-    label: "Языковой сертификат (IELTS, TOEFL и др.)",
-    accept: { "application/pdf": [".pdf"], "image/*": [] },
-    parse: false,
-  },
-  {
     key: "medical",
     label: "Медицинская справка",
     accept: { "application/pdf": [".pdf"] },

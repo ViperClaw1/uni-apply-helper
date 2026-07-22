@@ -4,6 +4,7 @@ import { NotificationsService } from '../notifications/notifications.service.js'
 import { StudentsService } from '../students/students.service.js';
 
 const FIELD_MAP: Record<string, string> = {
+  // Section 1: Basic data
   'Имя (заглавными буквами) / Given Name': 'personal.givenName',
   'Фамилия (заглавными буквами) / Surname': 'personal.surname',
   'Пол / Sex': 'personal.sex',
@@ -26,6 +27,8 @@ const FIELD_MAP: Record<string, string> = {
     'personal.currentInstitution',
   'Бывали ли вы в Китае? / Have you ever been to China?':
     'personal.beenToChina',
+
+  // Section 2: Education
   'Учились или работали ли вы в Китае? / Have you ever studied or worked in China?':
     'personal.studiedInChina',
   'Высшее образование (степень) / Highest Degree': 'education.0.degree',
@@ -35,30 +38,47 @@ const FIELD_MAP: Record<string, string> = {
   'Уровень китайского языка (HSK, баллы) / Chinese language level':
     'languages.chinese',
   'Уровень английского языка / English language level': 'languages.english',
-  'Учебное заведение, куда подаётся заявка / Application School':
-    'applicationTargets',
   'Специальность заявки / Application Major': 'applicationMajor',
   'Степень / Degree': 'applicationDegree',
-  'Срок обучения / Duration of Study': 'applicationDuration',
+  'Год начала обучения / Study Period Start': 'education.0.periodStart',
+  'Год окончания / Study Period End': 'education.0.periodEnd',
   'Источник финансирования / Financial resources for study':
     'applicationFunding',
+
+  // Section 3: Guarantor
   'Имя гаранта / Guarantor Name': 'guarantor.name',
   'Телефон гаранта / Guarantor Phone': 'guarantor.phone',
   'Email гаранта / Guarantor Email': 'guarantor.email',
   'Адрес гаранта / Guarantor Address': 'guarantor.homeAddress',
   'Отношение к гаранту / Relationship': 'guarantor.relationship',
+
+  // Section 4: Emergency contact
   'Имя контакта / Emergency Name': 'emergencyContact.name',
   'Телефон контакта / Emergency Phone': 'emergencyContact.phone',
   'Email контакта / Emergency Email': 'emergencyContact.email',
   'Отношение / Relationship': 'emergencyContact.relationship',
-  'Год начала обучения / Study Period Start': 'education.0.periodStart',
-  'Год окончания / Study Period End': 'education.0.periodEnd',
+
+  // Section 5: Relatives
+  "Полное имя отца / Father's full name": 'family.father.fullName',
+  "Национальность отца / Father's nationality": 'family.father.nationality',
+  "Номер телефона отца / Father's phone number": 'family.father.phone',
+  "Email отца / Father's email": 'family.father.email',
+  "Место работы отца / Father's work place": 'family.father.company',
+  "Должность отца / Father's job": 'family.father.position',
+  "Полное имя матери / Mother's full name": 'family.mother.fullName',
+  "Национальность матери / Mother's nationality": 'family.mother.nationality',
+  "Номер телефона матери / Mother's phone number": 'family.mother.phone',
+  "Email матери / Mother's email": 'family.mother.email',
+  "Место работы матери / Mother's work place": 'family.mother.company',
+  "Должность матери / Mother's job": 'family.mother.position',
 };
 
+/** Positional fallback for Apps Script `values[]` (index 0 = timestamp). */
 const FORM_VALUES_PATHS = [
   undefined,
-  'personal.surname',
+  // Section 1
   'personal.givenName',
+  'personal.surname',
   'personal.sex',
   'personal.nationality',
   'personal.cityOfBirth',
@@ -76,28 +96,42 @@ const FORM_VALUES_PATHS = [
   'personal.postCode',
   'personal.currentInstitution',
   'personal.beenToChina',
+  // Section 2
   'personal.studiedInChina',
   'education.0.degree',
   'education.0.institution',
   'education.0.major',
+  'languages.chinese',
+  'languages.english',
+  'applicationMajor',
+  'applicationDegree',
   'education.0.periodStart',
   'education.0.periodEnd',
+  'applicationFunding',
+  // Section 3
   'guarantor.name',
   'guarantor.phone',
   'guarantor.email',
   'guarantor.homeAddress',
   'guarantor.relationship',
+  // Section 4
   'emergencyContact.name',
   'emergencyContact.phone',
   'emergencyContact.email',
   'emergencyContact.relationship',
-  'languages.chinese',
-  'languages.english',
-  'applicationTargets',
-  'applicationMajor',
-  'applicationDegree',
-  'applicationDuration',
-  'applicationFunding',
+  // Section 5
+  'family.father.fullName',
+  'family.father.nationality',
+  'family.father.phone',
+  'family.father.email',
+  'family.father.company',
+  'family.father.position',
+  'family.mother.fullName',
+  'family.mother.nationality',
+  'family.mother.phone',
+  'family.mother.email',
+  'family.mother.company',
+  'family.mother.position',
 ] as const;
 
 @Injectable()
@@ -237,12 +271,16 @@ export class WebhookService {
 
   private toNormalizedPreview(normalized: Record<string, unknown>) {
     const personal = this.isRecord(normalized.personal) ? normalized.personal : {};
+    const family = this.isRecord(normalized.family) ? normalized.family : {};
 
     return {
       surname: personal.surname,
       givenName: personal.givenName,
       email: personal.email,
-      applicationTargets: normalized.applicationTargets,
+      applicationMajor: normalized.applicationMajor,
+      applicationDegree: normalized.applicationDegree,
+      familyFather: this.isRecord(family.father) ? family.father.fullName : undefined,
+      familyMother: this.isRecord(family.mother) ? family.mother.fullName : undefined,
     };
   }
 
@@ -261,19 +299,52 @@ export class WebhookService {
   private resolveFieldPath(key: string): string | undefined {
     const normalizedKey = this.normalizeKey(key);
 
+    // Relatives first — otherwise "Father's email" hits personal.email
+    const fatherPath = this.resolveRelativePath(normalizedKey, 'father', 'отца');
+    if (fatherPath) {
+      return fatherPath;
+    }
+
+    const motherPath = this.resolveRelativePath(normalizedKey, 'mother', 'матери');
+    if (motherPath) {
+      return motherPath;
+    }
+
     if (this.hasAny(normalizedKey, ['surname', 'фамилия'])) {
       return 'personal.surname';
     }
 
-    if (this.hasAny(normalizedKey, ['given name', 'имя'])) {
+    if (this.hasAny(normalizedKey, ['chinese name', 'китайское имя'])) {
+      return 'personal.chineseName';
+    }
+
+    if (
+      this.hasAny(normalizedKey, ['given name', 'имя']) &&
+      !this.hasAny(normalizedKey, [
+        'guarantor',
+        'гаранта',
+        'emergency',
+        'контакта',
+        'chinese',
+        'китайское',
+        'father',
+        'mother',
+        'отца',
+        'матери',
+      ])
+    ) {
       return 'personal.givenName';
     }
 
-    if (this.hasAny(normalizedKey, ['sex', 'пол'])) {
+    if (this.hasAny(normalizedKey, ['sex', 'пол']) &&
+      !this.hasAny(normalizedKey, ['marital', 'семейное'])) {
       return 'personal.sex';
     }
 
-    if (this.hasAny(normalizedKey, ['nationality', 'гражданство'])) {
+    if (
+      this.hasAny(normalizedKey, ['nationality', 'гражданство']) &&
+      !this.hasAny(normalizedKey, ['father', 'mother', 'отца', 'матери'])
+    ) {
       return 'personal.nationality';
     }
 
@@ -283,10 +354,6 @@ export class WebhookService {
 
     if (this.hasAny(normalizedKey, ['date of birth', 'дата рождения'])) {
       return 'personal.dateOfBirth';
-    }
-
-    if (this.hasAny(normalizedKey, ['chinese name', 'китайское имя'])) {
-      return 'personal.chineseName';
     }
 
     if (this.hasAny(normalizedKey, ['religion', 'религия'])) {
@@ -315,11 +382,35 @@ export class WebhookService {
       return 'personal.maritalStatus';
     }
 
-    if (this.hasAny(normalizedKey, ['e mail', 'email', 'электронная почта'])) {
+    if (
+      this.hasAny(normalizedKey, ['e mail', 'email', 'электронная почта']) &&
+      !this.hasAny(normalizedKey, [
+        'guarantor',
+        'гаранта',
+        'emergency',
+        'контакта',
+        'father',
+        'mother',
+        'отца',
+        'матери',
+      ])
+    ) {
       return 'personal.email';
     }
 
-    if (this.hasAny(normalizedKey, ['phone number', 'phone', 'номер телефона'])) {
+    if (
+      this.hasAny(normalizedKey, ['phone number', 'phone', 'номер телефона']) &&
+      !this.hasAny(normalizedKey, [
+        'guarantor',
+        'гаранта',
+        'emergency',
+        'контакта',
+        'father',
+        'mother',
+        'отца',
+        'матери',
+      ])
+    ) {
       return 'personal.phone';
     }
 
@@ -373,10 +464,17 @@ export class WebhookService {
       return 'education.0.institution';
     }
 
-    if (this.hasAny(normalizedKey, ['major', 'специальность заявки'])) {
-      return this.hasAny(normalizedKey, ['application', 'заявки'])
-        ? 'applicationMajor'
-        : 'education.0.major';
+    if (
+      this.hasAny(normalizedKey, ['application major', 'специальность заявки'])
+    ) {
+      return 'applicationMajor';
+    }
+
+    if (
+      this.hasAny(normalizedKey, ['major', 'специальность']) &&
+      !this.hasAny(normalizedKey, ['application', 'заявки'])
+    ) {
+      return 'education.0.major';
     }
 
     if (
@@ -432,8 +530,17 @@ export class WebhookService {
     }
 
     if (
-      this.hasAny(normalizedKey, ['emergency relationship', 'отношение']) &&
+      this.hasAny(normalizedKey, ['relationship', 'отношение']) &&
       this.hasAny(normalizedKey, ['emergency', 'контакт', 'экстрен'])
+    ) {
+      return 'emergencyContact.relationship';
+    }
+
+    // Section 4 title is just "Отношение / Relationship"
+    if (
+      normalizedKey === 'отношение relationship' ||
+      normalizedKey === 'relationship' ||
+      normalizedKey === 'отношение'
     ) {
       return 'emergencyContact.relationship';
     }
@@ -447,22 +554,10 @@ export class WebhookService {
     }
 
     if (
-      this.hasAny(normalizedKey, [
-        'application school',
-        'application university',
-        'куда подается заявка',
-        'куда подаётся заявка',
-      ])
+      this.hasAny(normalizedKey, ['degree', 'степень']) &&
+      !this.hasAny(normalizedKey, ['highest', 'высшее', 'образование'])
     ) {
-      return 'applicationTargets';
-    }
-
-    if (this.hasAny(normalizedKey, ['degree', 'степень'])) {
       return 'applicationDegree';
-    }
-
-    if (this.hasAny(normalizedKey, ['duration of study', 'срок обучения'])) {
-      return 'applicationDuration';
     }
 
     if (
@@ -473,6 +568,51 @@ export class WebhookService {
       ])
     ) {
       return 'applicationFunding';
+    }
+
+    return undefined;
+  }
+
+  private resolveRelativePath(
+    normalizedKey: string,
+    englishRole: 'father' | 'mother',
+    russianRole: string,
+  ): string | undefined {
+    if (!this.hasAny(normalizedKey, [englishRole, russianRole])) {
+      return undefined;
+    }
+
+    const prefix = `family.${englishRole}`;
+
+    if (this.hasAny(normalizedKey, ['full name', 'полное имя', 'name', 'имя'])) {
+      return `${prefix}.fullName`;
+    }
+
+    if (this.hasAny(normalizedKey, ['nationality', 'национальность'])) {
+      return `${prefix}.nationality`;
+    }
+
+    if (this.hasAny(normalizedKey, ['phone', 'телефон'])) {
+      return `${prefix}.phone`;
+    }
+
+    if (this.hasAny(normalizedKey, ['email', 'e mail'])) {
+      return `${prefix}.email`;
+    }
+
+    if (
+      this.hasAny(normalizedKey, [
+        'work place',
+        'workplace',
+        'место работы',
+        'company',
+      ])
+    ) {
+      return `${prefix}.company`;
+    }
+
+    if (this.hasAny(normalizedKey, ['job', 'должность', 'position'])) {
+      return `${prefix}.position`;
     }
 
     return undefined;

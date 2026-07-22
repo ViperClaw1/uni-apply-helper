@@ -72,8 +72,10 @@ export interface StudentProfile {
   };
   documents: Record<string, string>;
   applicationTargets: Array<{
+    id?: string;
     universityRaw: string;
     universityId?: string;
+    formUrl?: string;
     degree?: string;
     major?: string;
     duration?: string;

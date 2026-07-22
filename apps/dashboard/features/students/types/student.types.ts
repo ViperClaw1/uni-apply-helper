@@ -2,6 +2,7 @@ export type ApplicationTarget = {
   id?: string;
   universityRaw: string;
   universityId?: string;
+  formUrl?: string;
   degree?: string;
   major?: string;
   duration?: string;

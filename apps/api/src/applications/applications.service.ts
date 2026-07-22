@@ -94,12 +94,22 @@ export class ApplicationsService {
     }
 
     const profile = await this.studentsService.getFullProfile(input.studentId);
+    const selectedTargets = profile.applicationTargets.filter((target) =>
+      Boolean(target.universityId),
+    );
 
-    if (profile.applicationTargets.length === 0) {
-      throw new BadRequestException('Student has no application targets.');
+    if (selectedTargets.length === 0) {
+      throw new BadRequestException(
+        'Student has no resolved application targets. Add universities by form URL first.',
+      );
     }
 
-    const prepared = await this.prepareApplications(profile);
+    const batchProfile = {
+      ...profile,
+      applicationTargets: selectedTargets,
+    };
+
+    const prepared = await this.prepareApplications(batchProfile);
     const unresolvedCount = prepared.unresolvedTargets.length;
     const blockedCount =
       prepared.applications.filter((application) => application.status === 'blocked')
@@ -108,7 +118,7 @@ export class ApplicationsService {
     const batch = await this.prisma.applicationBatch.create({
       data: {
         studentId: input.studentId,
-        total: profile.applicationTargets.length,
+        total: selectedTargets.length,
         blocked: blockedCount,
         status: prepared.applications.some(
           (application) => application.status === 'ready_for_submission',
@@ -139,8 +149,8 @@ export class ApplicationsService {
       include: this.batchInclude,
     });
 
-    await this.notifyUnresolvedTargets(profile, prepared.unresolvedTargets);
-    await this.notificationsService.notifyBatchCreated(batch, profile);
+    await this.notifyUnresolvedTargets(batchProfile, prepared.unresolvedTargets);
+    await this.notificationsService.notifyBatchCreated(batch, batchProfile);
 
     return this.toBatchResponse(batch);
   }

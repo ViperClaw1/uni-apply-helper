@@ -36,6 +36,15 @@ export class UniversitiesController {
     return this.universitiesService.resolve(name);
   }
 
+  @Get('by-form-url')
+  resolveByFormUrl(@Query('url') url?: string) {
+    if (!url?.trim()) {
+      throw new BadRequestException('Query param "url" is required.');
+    }
+
+    return this.universitiesService.resolveByFormUrl(url);
+  }
+
   @Post('aliases')
   createAlias(@Body() body: CreateUniversityAliasInput) {
     if (!body.alias?.trim()) {

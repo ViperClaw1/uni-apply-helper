@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Param,
+  Put,
+  Post,
+} from '@nestjs/common';
 import { StudentsService } from './students.service';
 
 @Controller('students')
@@ -18,6 +26,14 @@ export class StudentsController {
   @Get(':id/profile')
   getFullProfile(@Param('id') id: string) {
     return this.studentsService.getFullProfile(id);
+  }
+
+  @Put(':id/application-targets')
+  setApplicationTargets(
+    @Param('id') id: string,
+    @Body() body: { formUrls?: string[] },
+  ) {
+    return this.studentsService.setApplicationTargetsByFormUrls(id, body);
   }
 
   @Post(':id/application-targets/resolve')
