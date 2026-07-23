@@ -3,6 +3,7 @@ import type { Page } from 'playwright';
 export type PreWizardScreen =
   | 'application_notes'
   | 'program_type'
+  | 'student_type'
   | 'program_selection';
 
 export async function waitForUiReady(page: Page): Promise<void> {
@@ -82,35 +83,44 @@ export async function dismissBlockingDialogs(page: Page): Promise<void> {
 export async function detectPreWizardScreen(
   page: Page,
 ): Promise<PreWizardScreen | null> {
-  return page.evaluate(() => {
-    if (document.querySelector('select[name="collegeId"]')) {
-      return 'program_selection';
-    }
+  if ((await page.locator('select[name="collegeId"]').count()) > 0) {
+    return 'program_selection';
+  }
 
-    // Radios win over notes text — KMMC combines 申请须知 + program type on one page.
-    if (document.querySelector('input[name="projectTypeId"]')) {
+  const bodyText = await page.locator('body').innerText().catch(() => '');
+
+  // KMMC screen 2: "please choose your type :" (Doctoral / Master / ...)
+  if (
+    /please choose your type\s*:/i.test(bodyText) &&
+    !/please choose your program/i.test(bodyText)
+  ) {
+    return 'student_type';
+  }
+
+  // KMMC screen 1: scholarship program radios (must be visible, not leftover DOM)
+  const programRadios = page.locator(
+    'input[type="radio"][name="projectTypeId"]',
+  );
+  const programCount = await programRadios.count();
+  for (let i = 0; i < programCount; i += 1) {
+    if (await programRadios.nth(i).isVisible().catch(() => false)) {
       return 'program_type';
     }
+  }
 
-    const bodyText = document.body?.innerText ?? '';
-    if (
-      /application notes|application instructions|申请须知|申请人保证/i.test(
-        bodyText,
-      )
-    ) {
-      return 'application_notes';
-    }
+  if (/please choose your program/i.test(bodyText)) {
+    return 'program_type';
+  }
 
-    if (
-      /please choose your (program|type)|choose your (program )?type/i.test(
-        bodyText,
-      )
-    ) {
-      return 'program_type';
-    }
+  if (
+    /application notes|application instructions|申请须知|申请人保证/i.test(
+      bodyText,
+    )
+  ) {
+    return 'application_notes';
+  }
 
-    return null;
-  });
+  return null;
 }
 
 export async function isMainWizard(page: Page): Promise<boolean> {
@@ -420,6 +430,59 @@ async function selectStudyPlanRow(page: Page): Promise<string | null> {
   });
 }
 
+async function pickFirstVisibleRadio(page: Page): Promise<boolean> {
+  const radios = page.locator('input[type="radio"]');
+  const count = await radios.count();
+
+  for (let i = 0; i < count; i += 1) {
+    const radio = radios.nth(i);
+    if (!(await radio.isVisible().catch(() => false))) {
+      continue;
+    }
+
+    await radio.check({ force: true }).catch(() => undefined);
+    if (await radio.isChecked().catch(() => false)) {
+      return true;
+    }
+
+    const label = radio.locator('xpath=ancestor::label[1]');
+    if ((await label.count()) > 0) {
+      await label.click({ force: true }).catch(() => undefined);
+      if (await radio.isChecked().catch(() => false)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+/** KMMC Next is <button class="el-button">Next</button>, not input[value="Next"]. */
+async function clickVisibleNext(page: Page): Promise<string | null> {
+  const candidates = [
+    page.getByRole('button', { name: /^Next$/i }),
+    page.locator('button.el-button--primary:has-text("Next")'),
+    page.locator('button:has-text("Next")'),
+    page.locator('input[type="button"][value="Next"]'),
+    page.locator('input[value="Next"]'),
+  ];
+
+  for (const locator of candidates) {
+    const btn = locator.first();
+    if ((await btn.count()) === 0) {
+      continue;
+    }
+    if (!(await btn.isVisible().catch(() => false))) {
+      continue;
+    }
+
+    await btn.click({ force: true });
+    return 'Next:button';
+  }
+
+  return null;
+}
+
 export async function fillPreWizardScreen(
   page: Page,
   screen: PreWizardScreen,
@@ -434,6 +497,9 @@ export async function fillPreWizardScreen(
       await checkAgree(page);
       await pickProjectTypeRadio(page, programHint);
       break;
+    case 'student_type':
+      await pickFirstVisibleRadio(page);
+      break;
     case 'program_selection':
       await fillProgramSelection(page);
       break;
@@ -445,12 +511,14 @@ export async function fillPreWizardScreen(
 }
 
 /**
- * Critical: program_type Next must call saveProjectType(form), not DOM click.
+ * After radio select, click visible Next button.
+ * Do NOT prefer window.saveProjectType — on KMMC it leaves stuck "请求正在处理中" overlay.
+ * Next is an Element-UI <button>, not input[value="Next"].
  */
 async function clickPreWizardNext(
   page: Page,
   screen: PreWizardScreen,
-  programHint?: string,
+  _programHint?: string,
 ): Promise<string | null> {
   if (screen === 'application_notes') {
     const agreeButton = page
@@ -474,25 +542,32 @@ async function clickPreWizardNext(
     return invokeButton(page, ['Agree and Continue', 'Agree']);
   }
 
-  if (screen === 'program_type') {
-    // HARD GUARD: never call saveProjectType without a checked radio —
-    // empty submit leaves a stuck "请求正在处理中..." overlay.
-    const checked = page.locator('input[name="projectTypeId"]:checked').first();
-    if ((await checked.count()) === 0) {
-      return null;
+  if (screen === 'program_type' || screen === 'student_type') {
+    if (screen === 'program_type') {
+      const checked = page.locator('input[name="projectTypeId"]:checked').first();
+      if ((await checked.count()) === 0) {
+        return null;
+      }
+    } else {
+      const anyChecked = page.locator('input[type="radio"]:checked').first();
+      if ((await anyChecked.count()) === 0) {
+        return null;
+      }
     }
 
-    const checkedValue = await checked.getAttribute('value');
+    const nextClicked = await clickVisibleNext(page);
+    if (nextClicked) {
+      return nextClicked;
+    }
 
-    return page.evaluate((selectedValue) => {
+    // Last resort only — avoid on KMMC if possible
+    return page.evaluate(() => {
       const selected = document.querySelector(
         'input[name="projectTypeId"]:checked',
       ) as HTMLInputElement | null;
-
-      if (!selected || selected.value !== selectedValue) {
+      if (!selected) {
         return null;
       }
-
       const form =
         selected.form ??
         (document.querySelector('form') as HTMLFormElement | null);
@@ -501,28 +576,12 @@ async function clickPreWizardNext(
           saveProjectType?: (form: HTMLFormElement) => void;
         }
       ).saveProjectType;
-
       if (typeof save === 'function' && form) {
         save(form);
         return `saveProjectType:${selected.value}`;
       }
-
-      const btn = document.querySelector(
-        'input[value="Next"]',
-      ) as HTMLInputElement | null;
-      if (btn) {
-        const onclick = btn.getAttribute('onclick');
-        if (onclick) {
-          const run = new Function('btn', onclick.replace(/\bthis\b/g, 'btn'));
-          run(btn);
-          return 'Next:onclick';
-        }
-        btn.click();
-        return 'Next:click';
-      }
-
       return null;
-    }, checkedValue);
+    });
   }
 
   if (screen === 'program_selection') {
@@ -535,11 +594,10 @@ async function clickPreWizardNext(
       return row;
     }
 
-    // College/major Chosen selects + Next (no study-plan table yet)
-    return invokeButton(page, ['Next', 'Save and Next']);
+    return (await clickVisibleNext(page)) ?? invokeButton(page, ['Next', 'Save and Next']);
   }
 
-  return invokeButton(page, ['Next']);
+  return (await clickVisibleNext(page)) ?? invokeButton(page, ['Next']);
 }
 
 async function invokeButton(
@@ -614,6 +672,13 @@ export async function advancePreWizardScreen(
     const selected = await page
       .locator('input[name="projectTypeId"]:checked')
       .count();
+    if (selected === 0) {
+      return false;
+    }
+  }
+
+  if (current === 'student_type') {
+    const selected = await page.locator('input[type="radio"]:checked').count();
     if (selected === 0) {
       return false;
     }
@@ -732,7 +797,10 @@ export async function describeNavigationState(page: Page): Promise<string> {
     const hasSave =
       typeof (window as unknown as { saveProjectType?: unknown }).saveProjectType ===
       'function';
-    const next = document.querySelector('input[value="Next"]');
+    const nextInput = document.querySelector('input[value="Next"]');
+    const nextButton = [...document.querySelectorAll('button')].find((button) =>
+      /^next$/i.test(button.textContent?.trim() ?? ''),
+    );
     const form = document.querySelector('form');
     const body = (document.body?.innerText ?? '')
       .replace(/\s+/g, ' ')
@@ -748,7 +816,8 @@ export async function describeNavigationState(page: Page): Promise<string> {
       `checked=${checked ? checked.value : 'none'}`,
       `inputs=[${inputDump}]`,
       `saveProjectType=${hasSave}`,
-      `next=${Boolean(next)}`,
+      `nextInput=${Boolean(nextInput)}`,
+      `nextButton=${Boolean(nextButton)}`,
       `form=${Boolean(form)}`,
       `step1Visible=${Boolean(lastName && lastName.offsetParent !== null)}`,
       `body="${body}"`,
