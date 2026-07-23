@@ -101,21 +101,31 @@ export class FormFiller {
 
     await this.waitForStepOneFields(page, university);
 
-    await this.wizardNavigator.forEachStep(page, wizard, async (step) => {
-      const fields = this.wizardFieldGroups.fieldsForStep(university, step);
-      await this.fillFieldBatch(
-        page,
-        profile,
-        fields.filter((field) => field.type !== 'file'),
-        motivationLetterContent,
-        fillMode,
-      );
+    await this.wizardNavigator.forEachStep(
+      page,
+      wizard,
+      async (step) => {
+        const fields = this.wizardFieldGroups.fieldsForStep(university, step);
+        await this.fillFieldBatch(
+          page,
+          profile,
+          fields.filter((field) => field.type !== 'file'),
+          motivationLetterContent,
+          fillMode,
+        );
 
-      const fileFields = fields.filter((field) => field.type === 'file');
-      if (fileFields.length > 0) {
-        await this.fileAttacher.attachFiles(page, profile, fileFields);
-      }
-    });
+        const fileFields = fields.filter((field) => field.type === 'file');
+        if (fileFields.length > 0) {
+          await this.fileAttacher.attachFiles(page, profile, fileFields);
+        }
+      },
+      {
+        markerForStep: (step) =>
+          this.wizardFieldGroups
+            .fieldsForStep(university, step)
+            .find((field) => field.selector && field.type !== 'file')?.selector,
+      },
+    );
 
     await this.wizardNavigator.clickSubmit(page, wizard.submitButtonSelector);
   }
