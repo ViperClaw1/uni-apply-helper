@@ -203,7 +203,9 @@ export function printSessionArtifacts(universityId) {
   console.log(`  meta:          ${metaFile}`);
   console.log('\nRailway (если без Volume):');
   console.log(`  ${envKey}=<содержимое ${b64File}>`);
-  console.log('\nRailway (рекомендуется):');
+  console.log('  (или ZZU_SESSION_STATE_B64 / SDU_SESSION_STATE_B64 — legacy aliases)');
+  console.log('\nАвтопуш: задай RAILWAY_API_TOKEN + PROJECT/ENVIRONMENT/SERVICE_ID в apps/worker/.env');
+  console.log('\nRailway (рекомендуется Volume):');
   console.log('  BROWSER_PROFILES_DIR=/data/profiles');
   console.log('  + Volume mount /data на сервис worker');
 }

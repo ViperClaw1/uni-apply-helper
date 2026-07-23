@@ -1,3 +1,7 @@
+/**
+ * Session is valid if we can open formUrl without landing on a login page.
+ * Do NOT scan body for loose "sign in" / "log in" — apply pages often contain those strings.
+ */
 export async function verifyUniversitySession(page, university) {
   await page.goto(university.formUrl, {
     waitUntil: 'networkidle',
@@ -5,22 +9,45 @@ export async function verifyUniversitySession(page, university) {
   });
 
   const url = page.url();
-  const bodyPreview = (await page.locator('body').innerText().catch(() => '')).slice(
-    0,
-    1_500,
-  );
-
-  const redirectedToLogin =
-    /login|signin|register/i.test(url) ||
-    /sign in|log in|account sign in/i.test(bodyPreview);
+  const onLoginPage = await isLoginPage(page);
 
   return {
-    ok: !redirectedToLogin,
+    ok: !onLoginPage,
     url,
-    reason: redirectedToLogin
+    reason: onLoginPage
       ? 'Redirected to login — session not valid yet'
       : 'Session looks valid',
   };
+}
+
+async function isLoginPage(page) {
+  const url = page.url();
+  let pathname = url;
+
+  try {
+    pathname = new URL(url).pathname;
+  } catch {
+    // keep raw url
+  }
+
+  if (
+    /\/member\/login\.do$|\/login\.do$|\/student\/login\/?$|\/signin\/?$|\/sign-in\/?$|\/auth\/login/i.test(
+      pathname,
+    )
+  ) {
+    return true;
+  }
+
+  if ((await page.getByText('Account Sign In', { exact: true }).count()) > 0) {
+    return true;
+  }
+
+  const username = await page.locator("input[name='username']").count();
+  const password = await page
+    .locator("input[name='password'], input[type='password']")
+    .count();
+
+  return username > 0 && password > 0;
 }
 
 export function printVerifyResult(university, result) {

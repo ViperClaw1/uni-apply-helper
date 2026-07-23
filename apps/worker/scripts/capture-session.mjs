@@ -7,6 +7,11 @@ import {
   saveSessionMeta,
 } from './browser-session.mjs';
 import {
+  canPushToRailway,
+  loadWorkerEnvFile,
+  pushSessionToRailway,
+} from './push-session-to-railway.mjs';
+import {
   getUniversity,
   resolveUniversityId,
 } from './universities.mjs';
@@ -14,6 +19,8 @@ import {
   printVerifyResult,
   verifyUniversitySession,
 } from './session-verify.mjs';
+
+loadWorkerEnvFile();
 
 const universityId = resolveUniversityId();
 const university = getUniversity(universityId);
@@ -58,6 +65,22 @@ printSessionArtifacts(university.id);
 console.log('\nПроверка в том же браузере...');
 const result = await verifyUniversitySession(page, university);
 printVerifyResult(university, result);
+
+if (result.ok && canPushToRailway()) {
+  console.log('\nПушим сессию в Railway worker...');
+  try {
+    await pushSessionToRailway(university.id);
+  } catch (error) {
+    console.error(
+      `Railway push failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    console.error('Сессия сохранена локально — залей base64 вручную.');
+  }
+} else if (result.ok) {
+  console.log(
+    '\nRailway push пропущен (нет RAILWAY_API_TOKEN / PROJECT / ENVIRONMENT / SERVICE_ID).',
+  );
+}
 
 if (keepOpen) {
   console.log('\nБраузер оставлен открытым. Закрой окно вручную когда закончишь.');
