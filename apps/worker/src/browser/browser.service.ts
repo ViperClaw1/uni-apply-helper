@@ -67,29 +67,14 @@ export class BrowserService implements OnModuleDestroy {
       options.headed ?? this.configService.get<string>('BROWSER_HEADED') === '1';
 
     if (profileDir) {
-      const launchOptions: Parameters<typeof chromium.launchPersistentContext>[1] =
-        {
-          headless: !headed,
-          args: ['--disable-blink-features=AutomationControlled'],
-          acceptDownloads: true,
-          viewport: { width: 1440, height: 1200 },
-          ...getZzuContextOptions(loadZzuSessionMeta(this.configService)),
-        };
-
-      const channel = this.configService.get<string>('BROWSER_CHANNEL');
-      if (channel) {
-        launchOptions.channel = channel as 'chrome';
-      } else {
-        const legacyChannel = this.configService.get<string>('ZZU_BROWSER_CHANNEL');
-        if (legacyChannel) {
-          launchOptions.channel = legacyChannel as 'chrome';
-        }
-      }
-
-      const context = await chromium.launchPersistentContext(
-        profileDir,
-        launchOptions,
-      );
+      // Bundled Chromium only — system channel 'chrome' is missing on Railway.
+      const context = await chromium.launchPersistentContext(profileDir, {
+        headless: !headed,
+        args: ['--disable-blink-features=AutomationControlled'],
+        acceptDownloads: true,
+        viewport: { width: 1440, height: 1200 },
+        ...getZzuContextOptions(loadZzuSessionMeta(this.configService)),
+      });
       this.activeContexts.add(context);
       const page = context.pages()[0] ?? (await context.newPage());
       return { context, page };
@@ -129,13 +114,8 @@ export class BrowserService implements OnModuleDestroy {
       return this.browser;
     }
 
-    const channel =
-      this.configService.get<string>('BROWSER_CHANNEL') ??
-      this.configService.get<string>('ZZU_BROWSER_CHANNEL');
-
     this.browser = await chromium.launch({
       headless: !headed,
-      ...(channel ? { channel: channel as 'chrome' } : {}),
       args: ['--disable-blink-features=AutomationControlled'],
     });
 

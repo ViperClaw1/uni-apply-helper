@@ -129,7 +129,15 @@ export class NotificationsService {
       return;
     }
 
-    await this.bot.api.sendMessage(this.chatId, text, { parse_mode: 'HTML' });
+    try {
+      await this.bot.api.sendMessage(this.chatId, text, { parse_mode: 'HTML' });
+    } catch (error) {
+      this.logger.error(
+        `Telegram sendMessage failed (chat ${this.chatId}): ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
   }
 
   private escapeHtml(value: unknown) {
