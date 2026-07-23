@@ -46,7 +46,7 @@ export async function detectPreWizardScreen(
       return 'program_selection';
     }
 
-    const bodyText = document.body.innerText;
+    const bodyText = document.body?.innerText ?? '';
     if (/application notes|application instructions/i.test(bodyText)) {
       return 'application_notes';
     }
@@ -289,7 +289,7 @@ async function fillProgramSelection(page: Page): Promise<void> {
 }
 
 async function isProgramSelectionEmpty(page: Page): Promise<boolean> {
-  return page.evaluate(() => /Total:\s*0/i.test(document.body.innerText));
+  return page.evaluate(() => /Total:\s*0/i.test(document.body?.innerText ?? ''));
 }
 
 async function selectStudyPlanRow(page: Page): Promise<string | null> {
@@ -368,34 +368,67 @@ async function clickPreWizardNext(
 
   if (screen === 'program_type') {
     return page.evaluate(() => {
-      if (!document.querySelector('input[name="projectTypeId"]:checked')) {
+      const checked = document.querySelector(
+        'input[name="projectTypeId"]:checked',
+      ) as HTMLInputElement | null;
+      if (!checked) {
         return null;
       }
 
-      const btn = document.querySelector(
-        'input[value="Next"]',
-      ) as HTMLInputElement | null;
-      const save = (window as unknown as { saveProjectType?: (form: HTMLFormElement) => void })
-        .saveProjectType;
+      const form =
+        checked.form ??
+        (document.querySelector('form') as HTMLFormElement | null);
+      const save = (
+        window as unknown as {
+          saveProjectType?: (form: HTMLFormElement) => void;
+        }
+      ).saveProjectType;
 
-      if (typeof save === 'function' && btn?.form) {
-        save(btn.form);
+      // KMMC often has saveProjectType(form) but no input[value="Next"]
+      if (typeof save === 'function' && form) {
+        save(form);
         return 'saveProjectType';
       }
 
-      if (btn) {
-        const onclick = btn.getAttribute('onclick');
-        if (onclick) {
-          const run = new Function('btn', onclick.replace(/\bthis\b/g, 'btn'));
-          run(btn);
-          return 'Next:onclick';
-        }
+      const candidates = [
+        ...document.querySelectorAll(
+          'button, input[type="button"], input[type="submit"], a.btn, a',
+        ),
+      ] as HTMLElement[];
 
-        btn.click();
-        return 'Next:click';
+      const next = candidates.find((el) => {
+        const text = (
+          el instanceof HTMLInputElement
+            ? (el.value ?? '')
+            : (el.textContent ?? '')
+        )
+          .trim()
+          .toLowerCase();
+        return (
+          text === 'next' ||
+          text.includes('next') ||
+          text.includes('save') ||
+          text.includes('continue') ||
+          text.includes('confirm') ||
+          text.includes('下一步') ||
+          text.includes('确认') ||
+          text.includes('保存')
+        );
+      });
+
+      if (!next) {
+        return null;
       }
 
-      return null;
+      const onclick = next.getAttribute('onclick');
+      if (onclick) {
+        const run = new Function('btn', onclick.replace(/\bthis\b/g, 'btn'));
+        run(next);
+        return 'button:onclick';
+      }
+
+      next.click();
+      return 'button:click';
     });
   }
 
@@ -560,7 +593,10 @@ export async function describeNavigationState(page: Page): Promise<string> {
       typeof (window as unknown as { saveProjectType?: unknown }).saveProjectType ===
       'function';
     const next = document.querySelector('input[value="Next"]');
-    const body = document.body.innerText.replace(/\s+/g, ' ').slice(0, 240);
+    const form = document.querySelector('form');
+    const body = (document.body?.innerText ?? '')
+      .replace(/\s+/g, ' ')
+      .slice(0, 240);
 
     return [
       `screen=${screen}`,
@@ -568,6 +604,7 @@ export async function describeNavigationState(page: Page): Promise<string> {
       `checked=${checked ? checked.value : 'none'}`,
       `saveProjectType=${hasSave}`,
       `next=${Boolean(next)}`,
+      `form=${Boolean(form)}`,
       `body="${body}"`,
     ].join('; ');
   });
