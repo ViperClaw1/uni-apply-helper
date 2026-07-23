@@ -121,24 +121,14 @@ async function acceptApplicationNotes(page: Page): Promise<boolean> {
 }
 
 async function isWizardStep(page: Page): Promise<boolean> {
-  const bodyText = await page.locator('body').innerText();
-  if (/basic info(rmation)?/i.test(bodyText)) {
-    return true;
-  }
-
-  if (/save and next/i.test(bodyText)) {
-    return true;
-  }
-
+  // Require real Step 1 fields — "Save and Next" / "Basic Info" text also
+  // appears on program-selection and other pre-wizard screens (false positive).
   const formFields = await page
     .locator(
       [
         'input[name="apply.lastName"]',
         'input[name="apply.givenName"]',
         'input[name="apply.passportNo"]',
-        'select[name*="sex"]',
-        'input[name="surname"]',
-        'input[name="givenName"]',
       ].join(', '),
     )
     .count();
@@ -290,4 +280,12 @@ export async function navigateToZzuApplication(
   }
 
   await advanceToWizard(page, formUrl, programHint);
+
+  if (!(await isWizardStep(page))) {
+    throw new Error(
+      'ZZU wizard Step 1 (Basic Info) not reached after navigation. ' +
+        'Likely stuck on program selection / notes, or portal is off-season with no Edit draft. ' +
+        `URL: ${page.url()}`,
+    );
+  }
 }

@@ -99,6 +99,8 @@ export class FormFiller {
       throw new Error(`University "${university.id}" has no wizard config`);
     }
 
+    await this.waitForStepOneFields(page, university);
+
     await this.wizardNavigator.forEachStep(page, wizard, async (step) => {
       const fields = this.wizardFieldGroups.fieldsForStep(university, step);
       await this.fillFieldBatch(
@@ -116,6 +118,33 @@ export class FormFiller {
     });
 
     await this.wizardNavigator.clickSubmit(page, wizard.submitButtonSelector);
+  }
+
+  private async waitForStepOneFields(
+    page: Page,
+    university: UniversitySchema,
+  ): Promise<void> {
+    const stepOneSelectors = this.wizardFieldGroups
+      .fieldsForStep(university, 1)
+      .filter((field) => field.selector && field.type !== 'file')
+      .slice(0, 3)
+      .map((field) => field.selector);
+
+    if (stepOneSelectors.length === 0) {
+      return;
+    }
+
+    const selector = stepOneSelectors.join(', ');
+    try {
+      await page.waitForSelector(selector, {
+        state: 'attached',
+        timeout: 15_000,
+      });
+    } catch {
+      throw new Error(
+        `Step 1 form fields not found after navigation (${selector}). URL: ${page.url()}`,
+      );
+    }
   }
 
   private async fillFieldBatch(
