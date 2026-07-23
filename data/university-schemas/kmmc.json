@@ -2,7 +2,7 @@
   "id": "kmmc",
   "displayName": "Kunming Medical University",
   "formUrl": "http://study.kmmc.cn/apply/index.do",
-  "defaultProgram": "self-supporting Program",
+  "defaultProgram": "self-supporting",
   "session": {
     "loginUrlPattern": "/member/login\\.do",
     "expiredIndicators": ["CSRF attack protection", "Account Sign In"]

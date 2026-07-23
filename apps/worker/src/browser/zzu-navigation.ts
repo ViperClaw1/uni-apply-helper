@@ -1,6 +1,12 @@
 import type { Page } from 'playwright';
 import type { StudentProfile } from '@uni-apply/shared';
 import { resolveProgramHint } from './program-hint.js';
+import {
+  advanceThroughPreWizard,
+  describeNavigationState,
+  detectPreWizardScreen,
+  isMainWizard,
+} from './zzu-pre-wizard.js';
 
 function memberUrlFromForm(formUrl: string): string {
   return `${new URL(formUrl).origin}/member/index.do`;
@@ -14,6 +20,7 @@ const NAV_APPLICATION = [
 const START_APPLICATION = [
   'a:has-text("Start Application")',
   'button:has-text("Start Application")',
+  'input[value="Start Application"]',
   'a:has-text("Online Application")',
   'a:has-text("New Application")',
 ].join(', ');
@@ -24,14 +31,6 @@ const EDIT_APPLICATION = [
   'a:has-text("Edit")',
   'button:has-text("Edit")',
   'input[value="Edit"]',
-].join(', ');
-
-const AGREE_SELECTORS = [
-  'button:has-text("Agree and continue")',
-  'button:has-text("Agree and Continue")',
-  'input[value="Agree and Continue"]',
-  'a:has-text("Agree and Continue")',
-  'button:has-text("Agree")',
 ].join(', ');
 
 async function waitForUiReady(page: Page): Promise<void> {
@@ -81,172 +80,45 @@ async function clickEditApplication(page: Page): Promise<boolean> {
   return clickIfVisible(page, EDIT_APPLICATION, { force: true });
 }
 
-async function acceptApplicationNotes(page: Page): Promise<boolean> {
-  const bodyText = await page.locator('body').innerText();
-  if (!/application notes|application instructions/i.test(bodyText)) {
-    return false;
-  }
-
-  const label = page.getByText(/I have carefully read/i).first();
-  if ((await label.count()) > 0) {
-    await label.click({ force: true });
-  } else {
-    const checkbox = page.locator('.el-checkbox, input[type="checkbox"]').first();
-    if ((await checkbox.count()) > 0) {
-      await checkbox.click({ force: true });
-    }
-  }
-
-  await page.waitForTimeout(500);
-
-  const agreeButton = page.getByRole('button', { name: /agree and continue/i }).first();
-  if ((await agreeButton.count()) === 0) {
-    return clickIfVisible(page, AGREE_SELECTORS, { force: true });
-  }
-
-  await page
-    .waitForFunction(() => {
-      const buttons = [...document.querySelectorAll('button')];
-      const agree = buttons.find((button) =>
-        /agree and continue/i.test(button.textContent ?? ''),
-      );
-      return Boolean(agree && !agree.disabled);
-    }, { timeout: 10_000 })
-    .catch(() => undefined);
-
-  await agreeButton.click({ force: true });
-  await page
-    .waitForLoadState('networkidle', { timeout: 30_000 })
-    .catch(() => undefined);
-  await page.waitForTimeout(800);
-  return true;
-}
-
 async function isWizardStep(page: Page): Promise<boolean> {
-  // Require real Step 1 fields — "Save and Next" / "Basic Info" text also
-  // appears on program-selection and other pre-wizard screens (false positive).
-  const formFields = await page
-    .locator(
-      [
-        'input[name="apply.lastName"]',
-        'input[name="apply.givenName"]',
-        'input[name="apply.passportNo"]',
-      ].join(', '),
-    )
-    .count();
-
-  return formFields > 0;
-}
-
-async function selectNextOption(
-  page: Page,
-  programHint?: string,
-): Promise<boolean> {
-  const bodyText = await page.locator('body').innerText();
-  if (!/please choose your (program|type)/i.test(bodyText)) {
-    return false;
-  }
-
-  const radioSelected = await page.evaluate((hint) => {
-    const radios = [
-      ...document.querySelectorAll('input[type="radio"]'),
-    ] as HTMLInputElement[];
-
-    const labelOf = (radio: HTMLInputElement) =>
-      (
-        radio.closest('label')?.textContent ??
-        radio.parentElement?.textContent ??
-        ''
-      ).trim();
-
-    if (hint) {
-      const needle = hint.toLowerCase();
-      const match = radios.find((radio) =>
-        labelOf(radio).toLowerCase().includes(needle),
-      );
-      if (match) {
-        match.click();
-        return true;
-      }
-    }
-
-    const first =
-      radios.find((radio) => !radio.disabled && radio.offsetParent !== null) ??
-      radios[0];
-    if (first) {
-      first.click();
-      return true;
-    }
-
-    return false;
-  }, programHint ?? null);
-
-  if (!radioSelected) {
-    return false;
-  }
-
-  await page.waitForTimeout(500);
-
-  const nextClicked = await page.evaluate(() => {
-    const candidates = [
-      ...document.querySelectorAll(
-        'button, input[type="button"], input[type="submit"], a',
-      ),
-    ] as HTMLElement[];
-
-    const next = candidates.find((el) => {
-      const text =
-        el instanceof HTMLInputElement
-          ? (el.value ?? '').trim()
-          : (el.textContent ?? '').trim();
-      return /^next$/i.test(text);
-    });
-
-    if (!next) {
-      return false;
-    }
-
-    next.click();
-    return true;
-  });
-
-  if (!nextClicked) {
-    return false;
-  }
-
-  await page
-    .waitForLoadState('networkidle', { timeout: 30_000 })
-    .catch(() => undefined);
-  await page.waitForTimeout(800);
-  return true;
+  return isMainWizard(page);
 }
 
 async function advanceIntermediateSteps(
   page: Page,
   programHint?: string,
 ): Promise<boolean> {
-  for (let step = 0; step < 8; step += 1) {
+  for (let step = 0; step < 10; step += 1) {
     if (await isWizardStep(page)) {
       return true;
     }
 
+    // Prefer DOM detection over body-text heuristics (KMMC / 17gz).
+    if (await detectPreWizardScreen(page)) {
+      const advanced = await advanceThroughPreWizard(page, programHint);
+      if (advanced || (await isWizardStep(page))) {
+        return true;
+      }
+      // Still on a pre-wizard screen that didn't advance — stop spinning.
+      if (await detectPreWizardScreen(page)) {
+        return false;
+      }
+    }
+
     const bodyText = await page.locator('body').innerText();
 
-    if (/application status|application list/i.test(bodyText)) {
-      await clickEditApplication(page);
-      continue;
-    }
-
-    if (/please choose your (program|type)/i.test(bodyText)) {
-      const advanced = await selectNextOption(page, programHint);
-      if (!advanced) {
-        break;
+    if (
+      /application status|application list|my application|start application/i.test(
+        bodyText,
+      )
+    ) {
+      const started = await clickIfVisible(page, START_APPLICATION, {
+        force: true,
+      });
+      const edited = await clickEditApplication(page);
+      if (!started && !edited) {
+        return false;
       }
-      continue;
-    }
-
-    if (/application notes|application instructions/i.test(bodyText)) {
-      await acceptApplicationNotes(page);
       continue;
     }
 
@@ -266,7 +138,9 @@ async function advanceToWizard(
       return;
     }
 
+    await clickIfVisible(page, START_APPLICATION, { force: true });
     await clickEditApplication(page);
+
     if (await advanceIntermediateSteps(page, programHint)) {
       return;
     }
@@ -308,22 +182,28 @@ export async function navigateToZzuApplication(
     return;
   }
 
-  const onApplySection = page.url().includes('/apply/');
-  if (!onApplySection) {
-    await clickIfVisible(page, NAV_APPLICATION);
-    await clickIfVisible(page, START_APPLICATION);
-  }
+  // Always try start/edit even when already on /apply/ — list and wizard share path.
+  await clickIfVisible(page, NAV_APPLICATION);
+  await clickIfVisible(page, START_APPLICATION, { force: true });
+  await clickEditApplication(page);
 
   await advanceToWizard(page, formUrl, programHint);
+
+  // Final sweep through any remaining pre-wizard screens.
+  if (!(await isWizardStep(page))) {
+    await advanceThroughPreWizard(page, programHint);
+  }
 
   if (!(await isWizardStep(page))) {
     const shotPath = `nav-stuck-${universityId}-${Date.now()}.png`;
     await page.screenshot({ path: shotPath, fullPage: true }).catch(() => undefined);
+    const diagnostics = await describeNavigationState(page).catch(
+      () => 'diagnostics unavailable',
+    );
 
     throw new Error(
       '17gz wizard Step 1 (Basic Info) not reached after navigation. ' +
-        'Likely stuck on program selection / notes, or no Edit draft. ' +
-        `URL: ${page.url()}. Screenshot: ${shotPath}`,
+        `URL: ${page.url()}. Screenshot: ${shotPath}. ${diagnostics}`,
     );
   }
 }
