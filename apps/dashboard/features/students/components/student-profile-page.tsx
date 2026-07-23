@@ -221,8 +221,8 @@ export function StudentProfilePage() {
         </section>
       ) : null}
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <section>
+      <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+        <section className="lg:sticky lg:top-6 lg:self-start">
           <div className="mb-3 flex items-end justify-between">
             <div>
               <h2 className="text-xl font-semibold tracking-tight text-slate-950">

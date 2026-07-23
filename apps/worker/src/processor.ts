@@ -191,17 +191,23 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
       });
       await this.recalculateBatchCounters(application.batchId);
 
-      if (error instanceof SessionExpiredError) {
-        await this.notificationsService.notifySessionExpired(
-          university.displayName,
-          university.id,
-        );
-      } else {
-        await this.notificationsService.notifyFailed(
-          university.displayName,
-          studentName,
-          message,
-        );
+      // BullMQ retries (attempts: 2) — notify only on the final failure.
+      const maxAttempts = job.opts.attempts ?? 1;
+      const isFinalAttempt = job.attemptsMade >= maxAttempts;
+
+      if (isFinalAttempt) {
+        if (error instanceof SessionExpiredError) {
+          await this.notificationsService.notifySessionExpired(
+            university.displayName,
+            university.id,
+          );
+        } else {
+          await this.notificationsService.notifyFailed(
+            university.displayName,
+            studentName,
+            message,
+          );
+        }
       }
 
       throw error;

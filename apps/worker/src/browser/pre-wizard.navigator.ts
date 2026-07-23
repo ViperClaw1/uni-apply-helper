@@ -61,13 +61,17 @@ export class PreWizardNavigator {
       .slice(0, 8);
 
     for (const selector of selectors) {
-      if ((await page.locator(selector).count()) > 0) {
+      const locator = page.locator(selector).first();
+      if ((await locator.count()) === 0) {
+        continue;
+      }
+
+      if (await locator.isVisible().catch(() => false)) {
         return true;
       }
     }
 
-    const bodyText = await page.locator('body').innerText();
-    return /save and next|basic info(rmation)?/i.test(bodyText);
+    return false;
   }
 
   private async chooseProgramIfNeeded(page: Page): Promise<boolean> {

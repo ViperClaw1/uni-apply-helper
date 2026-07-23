@@ -34,9 +34,11 @@ export async function dismissBlockingDialogs(page: Page): Promise<void> {
           '.messager-button .okButton',
           '.messager-button input[value="Ok"]',
           '.messager-button input[value="OK"]',
+          '.messager-button a',
           'button:has-text("OK")',
           'button:has-text("Continue")',
           'button:has-text("Accept")',
+          'button:has-text("确定")',
         ].join(', '),
       )
       .first();
@@ -48,6 +50,22 @@ export async function dismissBlockingDialogs(page: Page): Promise<void> {
     await okButton.click({ force: true }).catch(() => undefined);
     await page.waitForTimeout(400);
   }
+
+  // Force-hide stuck "请求正在处理中..." easyui overlay if it never clears.
+  await page
+    .evaluate(() => {
+      const text = document.body?.innerText ?? '';
+      if (!/请求正在处理中|processing/i.test(text)) {
+        return;
+      }
+
+      for (const el of document.querySelectorAll(
+        '.window-mask, .datagrid-mask, .messager-window, .panel.window',
+      )) {
+        (el as HTMLElement).style.display = 'none';
+      }
+    })
+    .catch(() => undefined);
 }
 
 export async function detectPreWizardScreen(
@@ -85,19 +103,25 @@ export async function detectPreWizardScreen(
 }
 
 export async function isMainWizard(page: Page): Promise<boolean> {
-  const hasStepFields =
-    (await page
-      .locator(
-        [
-          'input[name="apply.lastName"]',
-          'input[name="apply.givenName"]',
-          'input[name="apply.passportNo"]',
-          'form[action*="saveBase"]',
-        ].join(', '),
-      )
-      .count()) > 0;
+  // Hidden Step 1 fields can sit in DOM on pre-wizard screens — require visible.
+  const selectors = [
+    'input[name="apply.lastName"]',
+    'input[name="apply.givenName"]',
+    'input[name="apply.passportNo"]',
+  ];
 
-  return hasStepFields;
+  for (const selector of selectors) {
+    const locator = page.locator(selector).first();
+    if ((await locator.count()) === 0) {
+      continue;
+    }
+
+    if (await locator.isVisible().catch(() => false)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 async function getPreWizardSignature(
@@ -700,6 +724,10 @@ export async function describeNavigationState(page: Page): Promise<string> {
       .replace(/\s+/g, ' ')
       .slice(0, 240);
 
+    const lastName = document.querySelector(
+      'input[name="apply.lastName"]',
+    ) as HTMLInputElement | null;
+
     return [
       `screen=${screen}`,
       `radios=${radios.length}`,
@@ -707,6 +735,7 @@ export async function describeNavigationState(page: Page): Promise<string> {
       `saveProjectType=${hasSave}`,
       `next=${Boolean(next)}`,
       `form=${Boolean(form)}`,
+      `step1Visible=${Boolean(lastName && lastName.offsetParent !== null)}`,
       `body="${body}"`,
     ].join('; ');
   });
