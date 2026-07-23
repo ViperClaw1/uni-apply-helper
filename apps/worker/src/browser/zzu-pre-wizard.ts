@@ -7,10 +7,22 @@ export type PreWizardScreen =
 
 export async function waitForUiReady(page: Page): Promise<void> {
   await page
-    .locator('.window-mask, .el-loading-mask')
+    .locator('.window-mask, .el-loading-mask, .datagrid-mask')
     .first()
     .waitFor({ state: 'hidden', timeout: 20_000 })
     .catch(() => undefined);
+
+  // 17gz: "提示 你的请求正在处理中..." blocks interaction
+  await page
+    .waitForFunction(
+      () => {
+        const text = document.body?.innerText ?? '';
+        return !/请求正在处理中|please wait|processing/i.test(text);
+      },
+      { timeout: 30_000 },
+    )
+    .catch(() => undefined);
+
   await page.waitForTimeout(300);
 }
 
@@ -46,8 +58,17 @@ export async function detectPreWizardScreen(
       return 'program_selection';
     }
 
+    // Radios win over notes text — KMMC combines 申请须知 + program type on one page.
+    if (document.querySelector('input[name="projectTypeId"]')) {
+      return 'program_type';
+    }
+
     const bodyText = document.body?.innerText ?? '';
-    if (/application notes|application instructions/i.test(bodyText)) {
+    if (
+      /application notes|application instructions|申请须知|申请人保证/i.test(
+        bodyText,
+      )
+    ) {
       return 'application_notes';
     }
 
@@ -56,10 +77,6 @@ export async function detectPreWizardScreen(
         bodyText,
       )
     ) {
-      return 'program_type';
-    }
-
-    if (document.querySelector('input[name="projectTypeId"]')) {
       return 'program_type';
     }
 
@@ -103,7 +120,7 @@ async function getPreWizardSignature(
   return `pre:${screen ?? 'unknown'}:${names}`;
 }
 
-/** 17gz radios often need onclick / Element-UI label click, not raw .click(). */
+/** 17gz radios are often CSS-hidden; set checked via JS + fire handlers. */
 async function pickProjectTypeRadio(
   page: Page,
   programHint?: string,
@@ -134,44 +151,83 @@ async function pickProjectTypeRadio(
     }
 
     target ??=
-      radios.find((radio) => radio.value && radio.value !== '0' && !radio.disabled) ??
-      radios[0];
+      radios.find(
+        (radio) => radio.value && radio.value !== '0' && !radio.disabled,
+      ) ?? radios[0];
 
     if (!target) {
       return false;
     }
 
+    // Uncheck siblings first (some portals keep previous selection visually only)
+    for (const radio of radios) {
+      radio.checked = radio === target;
+    }
+
+    const fire = (el: HTMLElement) => {
+      el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+      el.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+
     const onclick = target.getAttribute('onclick');
     const fnName = onclick?.match(/^([\w$]+)\(/)?.[1];
-    if (fnName && typeof (window as unknown as Record<string, unknown>)[fnName] === 'function') {
-      (
-        (window as unknown as Record<string, (el: HTMLElement, ev: Event) => void>)[
-          fnName
-        ]
-      )(target, new MouseEvent('click'));
-      if (target.checked) {
-        return true;
+    if (
+      fnName &&
+      typeof (window as unknown as Record<string, unknown>)[fnName] ===
+        'function'
+    ) {
+      try {
+        (
+          window as unknown as Record<
+            string,
+            (el: HTMLElement, ev: Event) => void
+          >
+        )[fnName](target, new MouseEvent('click'));
+      } catch {
+        // continue with other strategies
       }
     }
 
     const elLabel = target
       .closest('.el-radio')
-      ?.querySelector('.el-radio__label') as HTMLElement | null;
+      ?.querySelector('.el-radio__label, .el-radio__inner') as HTMLElement | null;
     if (elLabel) {
-      elLabel.click();
-      if (target.checked) {
-        return true;
+      fire(elLabel);
+    }
+
+    const label =
+      (target.id
+        ? (document.querySelector(
+            `label[for="${CSS.escape(target.id)}"]`,
+          ) as HTMLElement | null)
+        : null) ?? (target.closest('label') as HTMLElement | null);
+    if (label) {
+      fire(label);
+    }
+
+    target.checked = true;
+    fire(target);
+
+    const jq = (
+      window as unknown as {
+        jQuery?: (el: Element) => { trigger: (e: string) => unknown };
+      }
+    ).jQuery;
+    if (typeof jq === 'function') {
+      try {
+        jq(target).trigger('click');
+        jq(target).trigger('change');
+      } catch {
+        // ignore
       }
     }
 
-    target.closest('label')?.click();
-    if (!target.checked) {
-      target.checked = true;
-      target.dispatchEvent(new Event('change', { bubbles: true }));
-      target.dispatchEvent(new Event('click', { bubbles: true }));
-    }
-
-    return target.checked;
+    return Boolean(
+      document.querySelector('input[name="projectTypeId"]:checked'),
+    );
   }, programHint ?? null);
 }
 
@@ -325,6 +381,7 @@ export async function fillPreWizardScreen(
       await pickProjectTypeRadio(page, programHint);
       break;
     case 'program_type':
+      await checkAgree(page);
       await pickProjectTypeRadio(page, programHint);
       break;
     case 'program_selection':
@@ -343,6 +400,7 @@ export async function fillPreWizardScreen(
 async function clickPreWizardNext(
   page: Page,
   screen: PreWizardScreen,
+  programHint?: string,
 ): Promise<string | null> {
   if (screen === 'application_notes') {
     const agreeButton = page
@@ -367,16 +425,52 @@ async function clickPreWizardNext(
   }
 
   if (screen === 'program_type') {
-    return page.evaluate(() => {
-      const checked = document.querySelector(
-        'input[name="projectTypeId"]:checked',
-      ) as HTMLInputElement | null;
-      if (!checked) {
+    return page.evaluate((hint) => {
+      const radios = [
+        ...document.querySelectorAll(
+          'input[type="radio"][name="projectTypeId"]',
+        ),
+      ] as HTMLInputElement[];
+
+      const labelOf = (radio: HTMLInputElement) =>
+        (
+          radio.closest('label')?.textContent ??
+          radio.closest('.el-radio')?.textContent ??
+          radio.parentElement?.textContent ??
+          ''
+        ).trim();
+
+      let target =
+        (document.querySelector(
+          'input[name="projectTypeId"]:checked',
+        ) as HTMLInputElement | null) ?? undefined;
+
+      if (!target && radios.length > 0) {
+        if (hint) {
+          const needle = hint.toLowerCase();
+          target = radios.find((radio) =>
+            labelOf(radio).toLowerCase().includes(needle),
+          );
+        }
+        target ??=
+          radios.find(
+            (radio) => radio.value && radio.value !== '0' && !radio.disabled,
+          ) ?? radios[0];
+      }
+
+      if (!target) {
         return null;
       }
 
+      for (const radio of radios) {
+        radio.checked = radio === target;
+      }
+      target.checked = true;
+      target.dispatchEvent(new Event('change', { bubbles: true }));
+      target.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
       const form =
-        checked.form ??
+        target.form ??
         (document.querySelector('form') as HTMLFormElement | null);
       const save = (
         window as unknown as {
@@ -384,7 +478,6 @@ async function clickPreWizardNext(
         }
       ).saveProjectType;
 
-      // KMMC often has saveProjectType(form) but no input[value="Next"]
       if (typeof save === 'function' && form) {
         save(form);
         return 'saveProjectType';
@@ -403,21 +496,30 @@ async function clickPreWizardNext(
             : (el.textContent ?? '')
         )
           .trim()
-          .toLowerCase();
+          .toLowerCase()
+          .replace(/\s+/g, '');
         return (
-          text === 'next' ||
           text.includes('next') ||
           text.includes('save') ||
+          text.includes('saveprojecttype') ||
           text.includes('continue') ||
           text.includes('confirm') ||
           text.includes('下一步') ||
           text.includes('确认') ||
-          text.includes('保存')
+          text.includes('保存') ||
+          text.includes('提交')
         );
       });
 
       if (!next) {
-        return null;
+        const fallback = form?.querySelector(
+          'input[type="submit"], input[type="button"], button',
+        ) as HTMLElement | null;
+        if (!fallback) {
+          return null;
+        }
+        fallback.click();
+        return 'form-fallback-click';
       }
 
       const onclick = next.getAttribute('onclick');
@@ -429,7 +531,7 @@ async function clickPreWizardNext(
 
       next.click();
       return 'button:click';
-    });
+    }, programHint ?? null);
   }
 
   if (screen === 'program_selection') {
@@ -517,7 +619,7 @@ export async function advancePreWizardScreen(
   await fillPreWizardScreen(page, current, programHint);
   await page.waitForTimeout(400);
 
-  const clicked = await clickPreWizardNext(page, current);
+  const clicked = await clickPreWizardNext(page, current, programHint);
   if (!clicked || clicked === 'empty_list') {
     return false;
   }
