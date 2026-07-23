@@ -62,11 +62,16 @@ export class BrowserService implements OnModuleDestroy {
     context: BrowserContext;
     page: Page;
   }> {
-    const profileDir = resolveProfileDir(this.configService, options.universityId);
     const headed =
       options.headed ?? this.configService.get<string>('BROWSER_HEADED') === '1';
+    const storageState =
+      loadUniversityStorageState(this.configService, options.universityId) ??
+      loadZzuStorageState(this.configService);
+    const profileDir = resolveProfileDir(this.configService, options.universityId);
 
-    if (profileDir) {
+    // Session B64 (from capture → Railway vars) always wins over persistent profile.
+    // Railway Volume profiles go stale; capture does not sync them.
+    if (profileDir && !storageState) {
       // Bundled Chromium only — system channel 'chrome' is missing on Railway.
       const context = await chromium.launchPersistentContext(profileDir, {
         headless: !headed,
@@ -94,9 +99,6 @@ export class BrowserService implements OnModuleDestroy {
     }
 
     const browser = await this.getBrowser(headed);
-    const storageState =
-      loadUniversityStorageState(this.configService, options.universityId) ??
-      loadZzuStorageState(this.configService);
     const context = await browser.newContext({
       acceptDownloads: true,
       viewport: { width: 1440, height: 1200 },
