@@ -4,9 +4,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@uni-apply/database';
-import type { StudentProfile } from '@uni-apply/shared';
+import { QUEUES, type StudentProfile } from '@uni-apply/shared';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { QueueService } from '../queue/queue.service.js';
 import { StudentsService } from '../students/students.service.js';
 import { UniversitiesService } from '../universities/universities.service.js';
 import type { UniversityMatchCandidate } from '../universities/types/university-api.types.js';
@@ -84,6 +85,7 @@ export class ApplicationsService {
     private readonly studentsService: StudentsService,
     private readonly universitiesService: UniversitiesService,
     private readonly notificationsService: NotificationsService,
+    private readonly queueService: QueueService,
   ) {}
 
   async createBatch(
@@ -151,6 +153,21 @@ export class ApplicationsService {
 
     await this.notifyUnresolvedTargets(batchProfile, prepared.unresolvedTargets);
     await this.notificationsService.notifyBatchCreated(batch, batchProfile);
+
+    const readyApplications = batch.applications.filter(
+      (app) => app.status === 'ready_for_submission',
+    );
+
+    await Promise.all(
+      readyApplications.map((app) =>
+        this.queueService.addJob(QUEUES.APPLICATION_PROCESS, {
+          applicationId: app.id,
+          batchId: batch.id,
+          studentId: input.studentId,
+          universityId: app.universityId,
+        }),
+      ),
+    );
 
     return this.toBatchResponse(batch);
   }
