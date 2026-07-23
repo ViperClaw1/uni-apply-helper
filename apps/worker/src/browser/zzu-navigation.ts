@@ -147,49 +147,78 @@ async function selectNextOption(
     return false;
   }
 
-  if (programHint) {
-    const labeledOption = page
-      .locator('.el-radio, .el-radio__label, label')
-      .filter({ hasText: programHint })
-      .first();
+  const radioSelected = await page.evaluate((hint) => {
+    const radios = [
+      ...document.querySelectorAll('input[type="radio"]'),
+    ] as HTMLInputElement[];
 
-    if ((await labeledOption.count()) > 0) {
-      await labeledOption.click({ force: true });
-    } else {
-      const textMatch = page.getByText(programHint, { exact: false }).first();
-      if ((await textMatch.count()) > 0) {
-        await textMatch.click({ force: true });
+    const labelOf = (radio: HTMLInputElement) =>
+      (
+        radio.closest('label')?.textContent ??
+        radio.parentElement?.textContent ??
+        ''
+      ).trim();
+
+    if (hint) {
+      const needle = hint.toLowerCase();
+      const match = radios.find((radio) =>
+        labelOf(radio).toLowerCase().includes(needle),
+      );
+      if (match) {
+        match.click();
+        return true;
       }
     }
-  }
 
-  const selectedRadio = page.locator(
-    '.el-radio.is-checked, input[type="radio"]:checked',
-  );
-  if ((await selectedRadio.count()) === 0) {
-    const fallback = page
-      .locator('.el-radio, .el-radio__label, input[type="radio"]')
-      .first();
-    if ((await fallback.count()) > 0) {
-      await fallback.click({ force: true });
+    const first =
+      radios.find((radio) => !radio.disabled && radio.offsetParent !== null) ??
+      radios[0];
+    if (first) {
+      first.click();
+      return true;
     }
+
+    return false;
+  }, programHint ?? null);
+
+  if (!radioSelected) {
+    return false;
   }
 
   await page.waitForTimeout(500);
 
-  const nextButton = page.getByRole('button', { name: /^Next$/i }).first();
-  if ((await nextButton.count()) > 0) {
-    await nextButton.click({ force: true });
-    await page
-      .waitForLoadState('networkidle', { timeout: 30_000 })
-      .catch(() => undefined);
-    await page.waitForTimeout(800);
+  const nextClicked = await page.evaluate(() => {
+    const candidates = [
+      ...document.querySelectorAll(
+        'button, input[type="button"], input[type="submit"], a',
+      ),
+    ] as HTMLElement[];
+
+    const next = candidates.find((el) => {
+      const text =
+        el instanceof HTMLInputElement
+          ? (el.value ?? '').trim()
+          : (el.textContent ?? '').trim();
+      return /^next$/i.test(text);
+    });
+
+    if (!next) {
+      return false;
+    }
+
+    next.click();
     return true;
+  });
+
+  if (!nextClicked) {
+    return false;
   }
 
-  return clickIfVisible(page, 'button:has-text("Next"), input[value="Next"]', {
-    force: true,
-  });
+  await page
+    .waitForLoadState('networkidle', { timeout: 30_000 })
+    .catch(() => undefined);
+  await page.waitForTimeout(800);
+  return true;
 }
 
 async function advanceIntermediateSteps(
@@ -209,7 +238,10 @@ async function advanceIntermediateSteps(
     }
 
     if (/please choose your (program|type)/i.test(bodyText)) {
-      await selectNextOption(page, programHint);
+      const advanced = await selectNextOption(page, programHint);
+      if (!advanced) {
+        break;
+      }
       continue;
     }
 
@@ -260,10 +292,11 @@ export async function navigateToZzuApplication(
   formUrl: string,
   profile?: StudentProfile,
   universityId = 'zhengzhou-university',
+  defaultProgram?: string,
 ): Promise<void> {
-  const programHint = profile
-    ? resolveProgramHint(profile, universityId)
-    : undefined;
+  const programHint =
+    (profile ? resolveProgramHint(profile, universityId) : undefined) ??
+    defaultProgram;
 
   await page.goto(formUrl, {
     waitUntil: 'networkidle',
@@ -284,10 +317,13 @@ export async function navigateToZzuApplication(
   await advanceToWizard(page, formUrl, programHint);
 
   if (!(await isWizardStep(page))) {
+    const shotPath = `nav-stuck-${universityId}-${Date.now()}.png`;
+    await page.screenshot({ path: shotPath, fullPage: true }).catch(() => undefined);
+
     throw new Error(
-      'ZZU wizard Step 1 (Basic Info) not reached after navigation. ' +
-        'Likely stuck on program selection / notes, or portal is off-season with no Edit draft. ' +
-        `URL: ${page.url()}`,
+      '17gz wizard Step 1 (Basic Info) not reached after navigation. ' +
+        'Likely stuck on program selection / notes, or no Edit draft. ' +
+        `URL: ${page.url()}. Screenshot: ${shotPath}`,
     );
   }
 }

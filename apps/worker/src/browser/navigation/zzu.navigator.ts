@@ -18,6 +18,7 @@ export class ZzuNavigator implements UniversityNavigator {
       context.university.formUrl,
       context.profile,
       context.universityId,
+      context.university.defaultProgram,
     );
   }
 }

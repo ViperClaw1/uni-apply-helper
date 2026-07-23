@@ -41,6 +41,8 @@ export interface UniversitySchema {
   wizard?: WizardConfig;
   session?: SessionConfig;
   agent?: AgentConfig;
+  /** Pre-wizard program type label, e.g. "Self-supporting Program" */
+  defaultProgram?: string;
   requiresEssay: boolean;
   essayPrompt?: string;
   notes?: string;

@@ -211,6 +211,12 @@ export class SchemasService {
         this.isFieldConfig(field),
       ),
       wizard: this.parseWizard(parsed.wizard),
+      session: parsed.session,
+      agent: parsed.agent,
+      defaultProgram:
+        typeof parsed.defaultProgram === 'string'
+          ? parsed.defaultProgram
+          : undefined,
       requiresEssay: parsed.requiresEssay ?? false,
       essayPrompt: parsed.essayPrompt,
       notes: parsed.notes,
@@ -227,6 +233,9 @@ export class SchemasService {
       requiredDocuments: schema.requiredDocuments,
       fields: schema.fields,
       wizard: schema.wizard,
+      session: schema.session,
+      agent: schema.agent,
+      defaultProgram: schema.defaultProgram,
       requiresEssay: schema.requiresEssay,
       essayPrompt: schema.essayPrompt,
       notes: schema.notes,
