@@ -144,31 +144,15 @@ async function getPreWizardSignature(
   return `pre:${screen ?? 'unknown'}:${names}`;
 }
 
-/** 17gz radios are often CSS-hidden; set checked via JS + fire handlers. */
+/**
+ * Select project type without dispatching click — easyUI/jQuery click handlers
+ * often toggle/reset checked state right after we set it.
+ */
 async function pickProjectTypeRadio(
   page: Page,
   programHint?: string,
 ): Promise<boolean> {
-  // Prefer visible label click first (works when native input is display:none).
-  if (programHint) {
-    const byText = page
-      .locator('.el-radio, label, .el-radio__label, li, div')
-      .filter({ hasText: new RegExp(programHint.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') })
-      .first();
-    if ((await byText.count()) > 0) {
-      await byText.click({ force: true }).catch(() => undefined);
-      await page.waitForTimeout(300);
-    }
-  } else {
-    const firstRadioUi = page.locator('.el-radio, label:has(input[name="projectTypeId"])').first();
-    if ((await firstRadioUi.count()) > 0) {
-      await firstRadioUi.click({ force: true }).catch(() => undefined);
-      await page.waitForTimeout(300);
-    }
-  }
-
   return page.evaluate((hint) => {
-    // Do NOT require type=radio — KMMC may use custom widgets + hidden inputs.
     const inputs = [
       ...document.querySelectorAll('input[name="projectTypeId"]'),
     ] as HTMLInputElement[];
@@ -203,74 +187,16 @@ async function pickProjectTypeRadio(
     }
 
     for (const input of inputs) {
-      input.checked = input === target;
-    }
-
-    const fire = (el: HTMLElement) => {
-      el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-      el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
-      el.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      el.dispatchEvent(new Event('change', { bubbles: true }));
-      el.dispatchEvent(new Event('input', { bubbles: true }));
-    };
-
-    const onclick = target.getAttribute('onclick');
-    const fnName = onclick?.match(/^([\w$]+)\(/)?.[1];
-    if (
-      fnName &&
-      typeof (window as unknown as Record<string, unknown>)[fnName] ===
-        'function'
-    ) {
-      try {
-        (
-          window as unknown as Record<
-            string,
-            (el: HTMLElement, ev: Event) => void
-          >
-        )[fnName](target, new MouseEvent('click'));
-      } catch {
-        // continue
-      }
-    }
-
-    const elLabel = target
-      .closest('.el-radio')
-      ?.querySelector(
-        '.el-radio__label, .el-radio__inner',
-      ) as HTMLElement | null;
-    if (elLabel) {
-      fire(elLabel);
-    }
-
-    const label =
-      (target.id
-        ? (document.querySelector(
-            `label[for="${CSS.escape(target.id)}"]`,
-          ) as HTMLElement | null)
-        : null) ?? (target.closest('label') as HTMLElement | null);
-    if (label) {
-      fire(label);
+      input.checked = false;
+      input.removeAttribute('checked');
     }
 
     target.checked = true;
     target.setAttribute('checked', 'checked');
-    fire(target);
+    // change only — click toggles/resets on 17gz easyUI radio groups
+    target.dispatchEvent(new Event('change', { bubbles: true }));
 
-    const jq = (
-      window as unknown as {
-        jQuery?: (el: Element) => { trigger: (e: string) => unknown };
-      }
-    ).jQuery;
-    if (typeof jq === 'function') {
-      try {
-        jq(target).trigger('click');
-        jq(target).trigger('change');
-      } catch {
-        // ignore
-      }
-    }
-
-    return inputs.some((input) => input.checked) || target.checked;
+    return target.checked;
   }, programHint ?? null);
 }
 
@@ -468,106 +394,69 @@ async function clickPreWizardNext(
   }
 
   if (screen === 'program_type') {
+    // No click events — they toggle/reset easyUI radios. Set value + saveProjectType.
     return page.evaluate((hint) => {
-      const inputs = [
+      const radios = [
         ...document.querySelectorAll('input[name="projectTypeId"]'),
       ] as HTMLInputElement[];
 
-      const labelOf = (input: HTMLInputElement) =>
+      if (radios.length === 0) {
+        return null;
+      }
+
+      const labelOf = (radio: HTMLInputElement) =>
         (
-          input.closest('label')?.textContent ??
-          input.closest('.el-radio')?.textContent ??
-          input.parentElement?.textContent ??
+          radio.closest('label')?.textContent ??
+          radio.closest('.el-radio')?.textContent ??
+          radio.parentElement?.textContent ??
           ''
         ).trim();
 
-      let target =
-        inputs.find((input) => input.checked) ??
-        (hint
-          ? inputs.find((input) =>
-              labelOf(input).toLowerCase().includes(hint.toLowerCase()),
-            )
-          : undefined);
-
+      let target = hint
+        ? radios.find((radio) =>
+            labelOf(radio).toLowerCase().includes(hint.toLowerCase()),
+          )
+        : undefined;
       target ??=
-        inputs.find(
-          (input) => input.value && input.value !== '0' && !input.disabled,
-        ) ?? inputs[0];
+        radios.find((radio) => radio.value && radio.value !== '0') ?? radios[0];
 
       if (!target) {
         return null;
       }
 
-      for (const input of inputs) {
-        input.checked = input === target;
+      for (const radio of radios) {
+        radio.checked = false;
+        radio.removeAttribute('checked');
       }
       target.checked = true;
       target.setAttribute('checked', 'checked');
       target.dispatchEvent(new Event('change', { bubbles: true }));
-      target.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
       const form =
         target.form ??
         (document.querySelector('form') as HTMLFormElement | null);
-      const save = (
+      const saveFn = (
         window as unknown as {
           saveProjectType?: (form: HTMLFormElement) => void;
         }
       ).saveProjectType;
 
-      if (typeof save === 'function' && form) {
-        save(form);
-        return `saveProjectType:${target.value}`;
+      if (typeof saveFn !== 'function' || !form) {
+        return null;
       }
 
-      const candidates = [
-        ...document.querySelectorAll(
-          'button, input[type="button"], input[type="submit"], a.btn, a',
-        ),
-      ] as HTMLElement[];
-
-      const next = candidates.find((el) => {
-        const text = (
-          el instanceof HTMLInputElement
-            ? (el.value ?? '')
-            : (el.textContent ?? '')
-        )
-          .trim()
-          .toLowerCase()
-          .replace(/\s+/g, '');
-        return (
-          text.includes('next') ||
-          text.includes('save') ||
-          text.includes('saveprojecttype') ||
-          text.includes('continue') ||
-          text.includes('confirm') ||
-          text.includes('下一步') ||
-          text.includes('确认') ||
-          text.includes('保存') ||
-          text.includes('提交')
-        );
-      });
-
-      if (!next) {
-        const fallback = form?.querySelector(
-          'input[type="submit"], input[type="button"], button',
-        ) as HTMLElement | null;
-        if (!fallback) {
-          return null;
+      // Ensure form serializes the chosen value even if checked flips back.
+      for (const radio of radios) {
+        if (radio === target) {
+          radio.checked = true;
+          radio.value = target.value;
+        } else {
+          radio.checked = false;
         }
-        fallback.click();
-        return 'form-fallback-click';
       }
 
-      const onclick = next.getAttribute('onclick');
-      if (onclick) {
-        const run = new Function('btn', onclick.replace(/\bthis\b/g, 'btn'));
-        run(next);
-        return 'button:onclick';
-      }
-
-      next.click();
-      return 'button:click';
+      saveFn(form);
+      return `saveProjectType:${target.value}`;
     }, programHint ?? null);
   }
 
