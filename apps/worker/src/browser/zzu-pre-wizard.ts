@@ -89,31 +89,42 @@ export async function detectPreWizardScreen(
 
   const bodyText = await page.locator('body').innerText().catch(() => '');
 
-  // KMMC screen 2: student category (Doctoral / Master / ...) — EN or ZH
+  // KMMC: 请选择招生类别 (= "please choose your type") — NOT 类型, it's 类别!
+  // Same name=projectTypeId as program screen, so body text must win.
   if (
-    (/please choose your type\s*:/i.test(bodyText) ||
-      /请选择.*类型|请选择学生|报考类别/.test(bodyText)) &&
-    !/please choose your program|请选择.*项目|请选择培养项目/i.test(bodyText)
+    /please choose your type\s*:/i.test(bodyText) ||
+    /请选择招生类别|请选择.*类别|请选择学生|报考类别/.test(bodyText)
   ) {
     return 'student_type';
   }
 
-  // KMMC screen 1: scholarship program radios (must be visible, not leftover DOM)
+  if (
+    /please choose your program/i.test(bodyText) ||
+    /请选择.*项目|请选择培养项目|请选择招生项目/.test(bodyText)
+  ) {
+    return 'program_type';
+  }
+
+  // Scholarship program radios (visible) — typically 2–3 options
   const programRadios = page.locator(
     'input[type="radio"][name="projectTypeId"]',
   );
   const programCount = await programRadios.count();
+  let visibleProgram = 0;
   for (let i = 0; i < programCount; i += 1) {
     if (await programRadios.nth(i).isVisible().catch(() => false)) {
-      return 'program_type';
+      visibleProgram += 1;
     }
   }
-
-  if (/please choose your program|请选择.*项目|请选择培养项目/i.test(bodyText)) {
+  // Student-type screen also reuses projectTypeId with ~7 options
+  if (visibleProgram >= 5) {
+    return 'student_type';
+  }
+  if (visibleProgram > 0) {
     return 'program_type';
   }
 
-  // Visible non-projectType radios → student category (ZH UI often has no EN heading)
+  // Visible non-projectType radios → student category
   const anyRadios = page.locator('input[type="radio"]');
   const anyCount = await anyRadios.count();
   for (let i = 0; i < anyCount; i += 1) {
@@ -445,24 +456,150 @@ async function selectStudyPlanRow(page: Page): Promise<string | null> {
   });
 }
 
-async function pickFirstVisibleRadio(page: Page): Promise<boolean> {
-  const radios = page.locator('input[type="radio"]');
-  const count = await radios.count();
+const STUDENT_TYPE_HINTS = [
+  'undergraduate',
+  '本科',
+  'undergraduate student',
+  'bachelor',
+];
 
-  for (let i = 0; i < count; i += 1) {
-    const radio = radios.nth(i);
-    if (!(await radio.isVisible().catch(() => false))) {
-      continue;
+/**
+ * Student-type screen reuses name=projectTypeId. Native input may be hidden
+ * (custom UI) — isVisible() skips them; force-check + change events.
+ */
+async function pickStudentTypeRadio(page: Page): Promise<boolean> {
+  const picked = await page.evaluate((hints) => {
+    const normalize = (value: string) => value.replace(/\s+/g, ' ').trim();
+    const labelOf = (radio: HTMLInputElement) =>
+      normalize(
+        radio.closest('label')?.textContent ??
+          radio.closest('.el-radio')?.textContent ??
+          radio.parentElement?.textContent ??
+          '',
+      );
+
+    const list = [
+      ...document.querySelectorAll('input[type="radio"]'),
+    ] as HTMLInputElement[];
+    if (list.length === 0) {
+      return false;
     }
 
-    await radio.check({ force: true }).catch(() => undefined);
-    if (await radio.isChecked().catch(() => false)) {
+    const scored = list.map((radio, index) => {
+      const label = labelOf(radio).toLowerCase();
+      const hintHit = hints.some((hint) =>
+        label.includes(String(hint).toLowerCase()),
+      );
+      return { radio, index, label, hintHit };
+    });
+
+    const target =
+      scored.find((item) => item.hintHit)?.radio ??
+      scored.find((item) => item.radio.value && item.radio.value !== '0')
+        ?.radio ??
+      list[0];
+
+    if (!target) {
+      return false;
+    }
+
+    const fire = (radio: HTMLInputElement) => {
+      radio.checked = true;
+      for (const other of list) {
+        if (other !== radio && other.name === radio.name) {
+          other.checked = false;
+        }
+      }
+      radio.dispatchEvent(new Event('input', { bubbles: true }));
+      radio.dispatchEvent(new Event('change', { bubbles: true }));
+      radio.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      const jq = (
+        window as unknown as {
+          jQuery?: (el: HTMLElement) => {
+            prop: (k: string, v: boolean) => { trigger: (e: string) => void };
+          };
+        }
+      ).jQuery;
+      if (typeof jq === 'function') {
+        jq(radio).prop('checked', true).trigger('change');
+      }
+    };
+
+    const elInner = target
+      .closest('.el-radio')
+      ?.querySelector('.el-radio__inner') as HTMLElement | null;
+    elInner?.click();
+    if (target.checked) {
       return true;
     }
 
-    const label = radio.locator('xpath=ancestor::label[1]');
-    if ((await label.count()) > 0) {
-      await label.click({ force: true }).catch(() => undefined);
+    const elLabel = target
+      .closest('.el-radio')
+      ?.querySelector('.el-radio__label') as HTMLElement | null;
+    elLabel?.click();
+    if (target.checked) {
+      return true;
+    }
+
+    target.closest('label')?.click();
+    if (target.checked) {
+      return true;
+    }
+
+    if (target.id) {
+      document
+        .querySelector(`label[for="${CSS.escape(target.id)}"]`)
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      if (target.checked) {
+        return true;
+      }
+    }
+
+    try {
+      target.click();
+    } catch {
+      /* ignore */
+    }
+    if (target.checked) {
+      return true;
+    }
+
+    fire(target);
+    return target.checked;
+  }, STUDENT_TYPE_HINTS);
+
+  if (picked) {
+    return true;
+  }
+
+  // Playwright force-check as backup (works even when display:none)
+  const radios = page.locator('input[type="radio"]');
+  const count = await radios.count();
+
+  for (const prefer of [true, false]) {
+    for (let i = 0; i < count; i += 1) {
+      const radio = radios.nth(i);
+      const label = await radio.evaluate((el) =>
+        (
+          (el as HTMLInputElement).closest('label')?.textContent ??
+          (el as HTMLInputElement).parentElement?.textContent ??
+          ''
+        )
+          .replace(/\s+/g, ' ')
+          .trim()
+          .toLowerCase(),
+      );
+      const isPreferred = STUDENT_TYPE_HINTS.some((hint) =>
+        label.includes(hint.toLowerCase()),
+      );
+      if (prefer && !isPreferred) {
+        continue;
+      }
+      if (!prefer && isPreferred) {
+        continue;
+      }
+
+      await radio.check({ force: true }).catch(() => undefined);
       if (await radio.isChecked().catch(() => false)) {
         return true;
       }
@@ -570,7 +707,7 @@ export async function fillPreWizardScreen(
       await pickProjectTypeRadio(page, programHint);
       break;
     case 'student_type':
-      await pickFirstVisibleRadio(page);
+      await pickStudentTypeRadio(page);
       break;
     case 'program_selection':
       await fillProgramSelection(page);
@@ -641,7 +778,22 @@ async function clickPreWizardNext(
       return nextClicked;
     }
 
-    // Last resort only — avoid on KMMC if possible
+    // input[value=Next] often present on student_type even when <button> isn't
+    const invoked = await invokeButton(page, [
+      'Next',
+      '下一步',
+      'Save and Next',
+      '保存并下一步',
+    ]);
+    if (invoked) {
+      return invoked;
+    }
+
+    // saveProjectType is ONLY for scholarship/program screen — never student_type
+    if (screen !== 'program_type') {
+      return null;
+    }
+
     return page.evaluate(() => {
       const selected = document.querySelector(
         'input[name="projectTypeId"]:checked',
@@ -776,11 +928,13 @@ export async function advancePreWizardScreen(
     return false;
   }
 
+  // networkidle on 17gz can hang forever (polling) — keep short
   await page
-    .waitForLoadState('networkidle', { timeout: 30_000 })
+    .waitForLoadState('domcontentloaded', { timeout: 10_000 })
     .catch(() => undefined);
+  await page.waitForTimeout(600);
 
-  for (let attempt = 0; attempt < 12; attempt += 1) {
+  for (let attempt = 0; attempt < 6; attempt += 1) {
     await waitForUiReady(page);
     await dismissBlockingDialogs(page);
 
@@ -794,7 +948,7 @@ export async function advancePreWizardScreen(
       return true;
     }
 
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(350);
   }
 
   return false;
@@ -833,7 +987,7 @@ export async function clearStuckProcessing(page: Page): Promise<boolean> {
 export async function advanceThroughPreWizard(
   page: Page,
   programHint?: string,
-  { maxSteps = 10 } = {},
+  { maxSteps = 6 } = {},
 ): Promise<boolean> {
   await clearStuckProcessing(page);
 
@@ -860,10 +1014,17 @@ export async function describeNavigationState(page: Page): Promise<string> {
   return page.evaluate(() => {
     const normalize = (value: string) => value.replace(/\s+/g, ' ').trim();
     const nextRe = /^(Next|下一步|Save and Next|保存并下一步)$/i;
+    const bodyRaw = document.body?.innerText ?? '';
+    const body = normalize(bodyRaw).slice(0, 240);
 
     const screen = (() => {
       if (document.querySelector('select[name="collegeId"]')) {
         return 'program_selection';
+      }
+      if (
+        /请选择招生类别|please choose your type/i.test(bodyRaw)
+      ) {
+        return 'student_type';
       }
       if (document.querySelector('input[name="projectTypeId"]')) {
         return 'program_type';
@@ -875,13 +1036,14 @@ export async function describeNavigationState(page: Page): Promise<string> {
     })();
 
     const inputs = [
-      ...document.querySelectorAll('input[name="projectTypeId"]'),
+      ...document.querySelectorAll('input[type="radio"]'),
     ] as HTMLInputElement[];
     const checked = inputs.find((input) => input.checked);
     const inputDump = inputs
+      .slice(0, 10)
       .map(
         (input) =>
-          `type=${input.type};value=${input.value};checked=${input.checked};display=${getComputedStyle(input).display}`,
+          `name=${input.name};value=${input.value};checked=${input.checked};display=${getComputedStyle(input).display}`,
       )
       .join(' | ');
     const hasSave =
@@ -889,15 +1051,12 @@ export async function describeNavigationState(page: Page): Promise<string> {
       'function';
     const nextInput = document.querySelector(
       'input[value="Next"], input[value="下一步"]',
-    );
+    ) as HTMLInputElement | null;
     const buttons = [...document.querySelectorAll('button, a.el-button')].map(
       (button) => normalize(button.textContent ?? ''),
     );
     const nextButton = buttons.find((text) => nextRe.test(text));
     const form = document.querySelector('form');
-    const body = (document.body?.innerText ?? '')
-      .replace(/\s+/g, ' ')
-      .slice(0, 240);
 
     const lastName = document.querySelector(
       'input[name="apply.lastName"]',
@@ -906,7 +1065,7 @@ export async function describeNavigationState(page: Page): Promise<string> {
     return [
       `screen=${screen}`,
       `radios=${inputs.length}`,
-      `checked=${checked ? checked.value : 'none'}`,
+      `checked=${checked ? `${checked.name}:${checked.value}` : 'none'}`,
       `inputs=[${inputDump}]`,
       `saveProjectType=${hasSave}`,
       `nextInput=${Boolean(nextInput)}`,

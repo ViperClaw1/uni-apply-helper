@@ -16,6 +16,8 @@ function memberUrlFromForm(formUrl: string): string {
 const NAV_APPLICATION = [
   'a:has-text("Application"):not(:has-text("Status"))',
   'a[href*="apply"]:has-text("Application")',
+  'a:has-text("报名申请")',
+  'a[href*="apply"]:has-text("报名")',
 ].join(', ');
 
 const START_APPLICATION = [
@@ -24,6 +26,9 @@ const START_APPLICATION = [
   'input[value="Start Application"]',
   'a:has-text("Online Application")',
   'a:has-text("New Application")',
+  'a:has-text("开始申请")',
+  'a:has-text("在线申请")',
+  'input[value="开始申请"]',
 ].join(', ');
 
 const EDIT_APPLICATION = [
@@ -32,6 +37,8 @@ const EDIT_APPLICATION = [
   'a:has-text("Edit")',
   'button:has-text("Edit")',
   'input[value="Edit"]',
+  'a:has-text("编辑")',
+  'input[value="编辑"]',
 ].join(', ');
 
 async function waitForUiReady(page: Page): Promise<void> {
@@ -56,9 +63,9 @@ async function clickIfVisible(
   await waitForUiReady(page);
   await locator.click({ force });
   await page
-    .waitForLoadState('networkidle', { timeout: 30_000 })
+    .waitForLoadState('domcontentloaded', { timeout: 12_000 })
     .catch(() => undefined);
-  await page.waitForTimeout(800);
+  await page.waitForTimeout(500);
   return true;
 }
 
@@ -72,9 +79,9 @@ async function clickEditApplication(page: Page): Promise<boolean> {
   if ((await editButton.count()) > 0) {
     await editButton.click({ force: true });
     await page
-      .waitForLoadState('networkidle', { timeout: 30_000 })
+      .waitForLoadState('domcontentloaded', { timeout: 12_000 })
       .catch(() => undefined);
-    await page.waitForTimeout(800);
+    await page.waitForTimeout(500);
     return true;
   }
 
@@ -89,7 +96,7 @@ async function advanceIntermediateSteps(
   page: Page,
   programHint?: string,
 ): Promise<boolean> {
-  for (let step = 0; step < 10; step += 1) {
+  for (let step = 0; step < 6; step += 1) {
     if (await isWizardStep(page)) {
       return true;
     }
@@ -134,7 +141,7 @@ async function advanceToWizard(
   formUrl: string,
   programHint?: string,
 ): Promise<void> {
-  for (let attempt = 0; attempt < 3; attempt += 1) {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
     if (await advanceIntermediateSteps(page, programHint)) {
       return;
     }
