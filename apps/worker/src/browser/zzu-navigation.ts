@@ -2,7 +2,9 @@ import type { Page } from 'playwright';
 import type { StudentProfile } from '@uni-apply/shared';
 import { resolveProgramHint } from './program-hint.js';
 
-const MEMBER_URL = 'https://zzu.17gz.org/member/index.do';
+function memberUrlFromForm(formUrl: string): string {
+  return `${new URL(formUrl).origin}/member/index.do`;
+}
 
 const NAV_APPLICATION = [
   'a:has-text("Application"):not(:has-text("Status"))',
@@ -266,7 +268,7 @@ export async function navigateToZzuApplication(
   await page.goto(formUrl, {
     waitUntil: 'networkidle',
     timeout: 60_000,
-    referer: MEMBER_URL,
+    referer: memberUrlFromForm(formUrl),
   });
 
   if (await isWizardStep(page)) {

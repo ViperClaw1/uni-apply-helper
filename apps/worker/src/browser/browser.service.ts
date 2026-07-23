@@ -7,7 +7,6 @@ import {
   getZzuContextOptions,
   loadZzuSessionMeta,
 } from './zzu-session-meta.js';
-import { loadZzuStorageState } from './zzu-session.loader.js';
 import { loadUniversityStorageState } from './session.loader.js';
 
 export type BrowserSessionOptions = {
@@ -64,9 +63,10 @@ export class BrowserService implements OnModuleDestroy {
   }> {
     const headed =
       options.headed ?? this.configService.get<string>('BROWSER_HEADED') === '1';
-    const storageState =
-      loadUniversityStorageState(this.configService, options.universityId) ??
-      loadZzuStorageState(this.configService);
+    const storageState = loadUniversityStorageState(
+      this.configService,
+      options.universityId,
+    );
     const profileDir = resolveProfileDir(this.configService, options.universityId);
 
     // Session B64 (from capture → Railway vars) always wins over persistent profile.

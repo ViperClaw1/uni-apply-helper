@@ -1,7 +1,7 @@
 import type { SessionConfig, UniversitySchema } from '@uni-apply/shared';
 import type { Page } from 'playwright';
 import { SessionExpiredError } from '../errors/session-expired.error.js';
-import { isCsrfBlocked, isLoginPage } from './zzu-session.loader.js';
+import { isCsrfBlocked, isLoginPage, isZzuFormUrl } from './zzu-session.loader.js';
 
 const DEFAULT_LOGIN_PATTERN = /\/member\/login\.do|\/login\.do|\/signin|\/auth\/login/i;
 
@@ -57,13 +57,8 @@ export function getLoginUrl(
   formUrl: string,
   session?: SessionConfig,
 ): string {
-  if (session?.loginUrlPattern) {
-    const base = new URL(formUrl);
-    return `${base.origin}/member/login.do`;
-  }
-
-  if (/zzu\.17gz\.org/i.test(formUrl)) {
-    return 'https://zzu.17gz.org/member/login.do';
+  if (session?.loginUrlPattern || isZzuFormUrl(formUrl)) {
+    return `${new URL(formUrl).origin}/member/login.do`;
   }
 
   return formUrl;

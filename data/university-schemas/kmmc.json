@@ -1,0 +1,307 @@
+{
+  "id": "kmmc",
+  "displayName": "Kunming Medical University",
+  "formUrl": "http://study.kmmc.cn/apply/index.do",
+  "session": {
+    "loginUrlPattern": "/member/login\\.do",
+    "expiredIndicators": ["CSRF attack protection", "Account Sign In"]
+  },
+  "aliases": [
+    "Kunming Medical University",
+    "Kunming Medical Univ",
+    "Kunming Medical Univ.",
+    "KMMC",
+    "study.kmmc.cn",
+    "昆明医科大学"
+  ],
+  "requiredDocuments": [
+    "photo",
+    "passport",
+    "transcript",
+    "medical"
+  ],
+  "fields": [
+    {
+      "selector": "input[type=\"file\"][name=\"photo\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 1,
+      "documentType": "photo"
+    },
+    {
+      "selector": "input[name=\"apply.lastName\"]",
+      "mapsTo": "personal.surname",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Family Name"
+    },
+    {
+      "selector": "input[name=\"apply.givenName\"]",
+      "mapsTo": "personal.givenName",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Given Name"
+    },
+    {
+      "selector": "input[name=\"apply.name\"]",
+      "mapsTo": "personal.chineseName",
+      "type": "text",
+      "required": false,
+      "wizardStep": 1
+    },
+    {
+      "selector": "input[type=\"radio\"][name=\"apply.sex\"]",
+      "mapsTo": "personal.sex",
+      "type": "radio",
+      "required": true,
+      "wizardStep": 1
+    },
+    {
+      "selector": "input[type=\"radio\"][name=\"apply.marryStatus\"]",
+      "mapsTo": "personal.maritalStatus",
+      "type": "radio",
+      "required": false,
+      "wizardStep": 1
+    },
+    {
+      "selector": "select[name=\"apply.countryId\"]",
+      "mapsTo": "personal.nationality",
+      "type": "select",
+      "required": true,
+      "wizardStep": 1
+    },
+    {
+      "selector": "input[name=\"apply.bornedDate\"]",
+      "mapsTo": "personal.dateOfBirth",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1
+    },
+    {
+      "selector": "input[name=\"apply.passportNo\"]",
+      "mapsTo": "personal.passportNo",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Passport No"
+    },
+    {
+      "selector": "input[name=\"apply.passportExpire\"]",
+      "mapsTo": "personal.passportExpiry",
+      "type": "text",
+      "required": false,
+      "wizardStep": 1
+    },
+    {
+      "selector": "select[name=\"apply.englishLanguageSkillId\"]",
+      "mapsTo": null,
+      "type": "select",
+      "required": false,
+      "wizardStep": 2
+    },
+    {
+      "selector": "select[name=\"apply.yydjzs\"]",
+      "mapsTo": null,
+      "type": "select",
+      "required": false,
+      "wizardStep": 2
+    },
+    {
+      "selector": "input[name=\"apply.yydjzsScore\"]",
+      "mapsTo": null,
+      "type": "text",
+      "required": false,
+      "wizardStep": 2
+    },
+    {
+      "selector": "input[name=\"apply.guarantorEnname\"]",
+      "mapsTo": "guarantor.name",
+      "type": "text",
+      "required": false,
+      "wizardStep": 2
+    },
+    {
+      "selector": "input[name=\"apply.guarPhone\"]",
+      "mapsTo": "guarantor.phone",
+      "type": "text",
+      "required": false,
+      "wizardStep": 2
+    },
+    {
+      "selector": "input[name=\"apply.guarMobile\"]",
+      "mapsTo": null,
+      "type": "text",
+      "required": false,
+      "wizardStep": 2
+    },
+    {
+      "selector": "input[name=\"sh.studyPlace\"]",
+      "mapsTo": "education.0.institution",
+      "type": "text",
+      "required": false,
+      "wizardStep": 3
+    },
+    {
+      "selector": "input[name=\"sh.stuhisMajor\"]",
+      "mapsTo": "education.0.major",
+      "type": "text",
+      "required": false,
+      "wizardStep": 3
+    },
+    {
+      "selector": "select[name=\"sh.educationId\"]",
+      "mapsTo": "education.0.degree",
+      "type": "select",
+      "required": false,
+      "wizardStep": 3
+    },
+    {
+      "selector": "input[type=\"radio\"][name=\"applyEx.haveStudiedInChina\"]",
+      "mapsTo": "personal.studiedInChina",
+      "type": "radio",
+      "required": false,
+      "wizardStep": 3
+    },
+    {
+      "selector": "input[name=\"apply.emergencyName\"]",
+      "mapsTo": "emergencyContact.name",
+      "type": "text",
+      "required": false,
+      "wizardStep": 4
+    },
+    {
+      "selector": "input[name=\"apply.emergencyPhone\"]",
+      "mapsTo": "emergencyContact.phone",
+      "type": "text",
+      "required": false,
+      "wizardStep": 4
+    },
+    {
+      "selector": "input[name=\"apply.emergencyMobile\"]",
+      "mapsTo": null,
+      "type": "text",
+      "required": false,
+      "wizardStep": 4
+    },
+    {
+      "selector": "input[name=\"apply.homeMobile\"]",
+      "mapsTo": "personal.phone",
+      "type": "text",
+      "required": true,
+      "wizardStep": 5
+    },
+    {
+      "selector": "input[name=\"apply.homeAddress\"]",
+      "mapsTo": "personal.permanentAddress",
+      "type": "text",
+      "required": false,
+      "wizardStep": 5
+    },
+    {
+      "selector": "input[name=\"apply.homeZip\"]",
+      "mapsTo": "personal.postCode",
+      "type": "text",
+      "required": false,
+      "wizardStep": 5
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_passportImage\"] input[type=\"file\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": true,
+      "wizardStep": 6,
+      "documentType": "passport"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_8135227092\"] input[type=\"file\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": true,
+      "wizardStep": 6
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_HighstEducationImage\"] input[type=\"file\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6,
+      "documentType": "diploma"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_scoreImage\"] input[type=\"file\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6,
+      "documentType": "transcript"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_152170289\"] input[type=\"file\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6,
+      "documentType": "personal_statement"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_158931292\"] input[type=\"file\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6,
+      "documentType": "language_certificate"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_checkBodyreport\"] input[type=\"file\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6,
+      "documentType": "medical"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_115623117\"] input[type=\"file\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_115623116\"] input[type=\"file\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_158951430\"] input[type=\"file\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_appendFile\"] input[type=\"file\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6
+    }
+  ],
+  "wizard": {
+    "totalSteps": 7,
+    "nextButtonSelector": "input[value=\"Save and Next\"]",
+    "submitButtonSelector": "input[value=\"Submit\"]"
+  },
+  "agent": {
+    "fillMode": "hybrid",
+    "maxSteps": 40,
+    "useVision": false,
+    "goal": "Complete and submit the Kunming Medical University online application form"
+  },
+  "requiresEssay": false,
+  "notes": "17gz 7-step wizard (same platform as ZZU). Schema copied from zhengzhou-university — verify attachTypeIds on Step 6 after first live capture if Field not found."
+}

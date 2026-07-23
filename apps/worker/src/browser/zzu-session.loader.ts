@@ -48,5 +48,6 @@ export async function isCsrfBlocked(page: Page): Promise<boolean> {
 }
 
 export function isZzuFormUrl(formUrl: string): boolean {
-  return /zzu\.17gz\.org/i.test(formUrl);
+  // 17gz white-label portals (ZZU, KMMC, and other *.17gz.org schools)
+  return /(?:^|\.)17gz\.org|kmmc\.cn/i.test(formUrl);
 }

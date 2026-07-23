@@ -6,6 +6,13 @@ export const UNIVERSITIES = {
     formUrl: 'https://zzu.17gz.org/apply/index.do',
     platform: '17gz',
   },
+  kmmc: {
+    id: 'kmmc',
+    displayName: 'Kunming Medical University',
+    loginUrl: 'http://study.kmmc.cn/member/login.do',
+    formUrl: 'http://study.kmmc.cn/apply/index.do',
+    platform: '17gz',
+  },
   'shandong-university': {
     id: 'shandong-university',
     displayName: 'Shandong University (SDU)',
