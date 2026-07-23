@@ -435,10 +435,41 @@ async function isProgramSelectionEmpty(page: Page): Promise<boolean> {
 }
 
 async function selectStudyPlanRow(page: Page): Promise<string | null> {
+  // Prefer Playwright text — KMMC uses "Apply" in the row action column
+  const applyLink = page
+    .locator(
+      'td.operation a, td:last-child a, table a, table input[type="button"]',
+    )
+    .filter({ hasText: /^(Apply|申请|选择|Select)$/i })
+    .first();
+
+  if (
+    (await applyLink.count()) > 0 &&
+    (await applyLink.isVisible().catch(() => false))
+  ) {
+    await applyLink.click({ force: true });
+    return 'Apply';
+  }
+
   return page.evaluate(() => {
-    const rowLink = document.querySelector(
-      'td.operation a, td:last-child a[onclick], a[onclick*="chooseStudyPlan"], a[onclick*="selectStudyPlan"], a[onclick*="chooseProject"]',
-    ) as HTMLElement | null;
+    const links = [
+      ...document.querySelectorAll(
+        'td.operation a, td:last-child a, table a[onclick], input[type="button"]',
+      ),
+    ] as HTMLElement[];
+
+    const rowLink =
+      links.find((el) =>
+        /^(Apply|申请|选择|Select)$/i.test(
+          ((el as HTMLInputElement).value || el.textContent || '').trim(),
+        ),
+      ) ??
+      links.find((el) =>
+        /chooseStudyPlan|selectStudyPlan|chooseProject|apply/i.test(
+          el.getAttribute('onclick') || '',
+        ),
+      ) ??
+      null;
 
     if (!rowLink) {
       return null;
@@ -452,145 +483,61 @@ async function selectStudyPlanRow(page: Page): Promise<string | null> {
     }
 
     rowLink.click();
-    return rowLink.textContent?.trim() ?? 'click';
+    return (
+      (rowLink as HTMLInputElement).value ||
+      rowLink.textContent?.trim() ||
+      'click'
+    );
   });
 }
 
 const STUDENT_TYPE_HINTS = [
-  'undergraduate',
+  'Undergraduate Student',
+  '本科生',
   '本科',
-  'undergraduate student',
+  'undergraduate',
   'bachelor',
 ];
 
 /**
- * Student-type screen reuses name=projectTypeId. Native input may be hidden
- * (custom UI) — isVisible() skips them; force-check + change events.
+ * Student-type: each radio wrapped in <label>, onclick on input.
+ * Probe: label.click / radio.click / checked=true all stick.
+ * Prefer Playwright text click (same as program_type success path).
  */
 async function pickStudentTypeRadio(page: Page): Promise<boolean> {
-  const picked = await page.evaluate((hints) => {
-    const normalize = (value: string) => value.replace(/\s+/g, ' ').trim();
-    const labelOf = (radio: HTMLInputElement) =>
-      normalize(
-        radio.closest('label')?.textContent ??
-          radio.closest('.el-radio')?.textContent ??
-          radio.parentElement?.textContent ??
-          '',
-      );
-
-    const list = [
-      ...document.querySelectorAll('input[type="radio"]'),
-    ] as HTMLInputElement[];
-    if (list.length === 0) {
-      return false;
-    }
-
-    const scored = list.map((radio, index) => {
-      const label = labelOf(radio).toLowerCase();
-      const hintHit = hints.some((hint) =>
-        label.includes(String(hint).toLowerCase()),
-      );
-      return { radio, index, label, hintHit };
-    });
-
-    const target =
-      scored.find((item) => item.hintHit)?.radio ??
-      scored.find((item) => item.radio.value && item.radio.value !== '0')
-        ?.radio ??
-      list[0];
-
-    if (!target) {
-      return false;
-    }
-
-    const fire = (radio: HTMLInputElement) => {
-      radio.checked = true;
-      for (const other of list) {
-        if (other !== radio && other.name === radio.name) {
-          other.checked = false;
-        }
-      }
-      radio.dispatchEvent(new Event('input', { bubbles: true }));
-      radio.dispatchEvent(new Event('change', { bubbles: true }));
-      radio.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      const jq = (
-        window as unknown as {
-          jQuery?: (el: HTMLElement) => {
-            prop: (k: string, v: boolean) => { trigger: (e: string) => void };
-          };
-        }
-      ).jQuery;
-      if (typeof jq === 'function') {
-        jq(radio).prop('checked', true).trigger('change');
-      }
-    };
-
-    const elInner = target
-      .closest('.el-radio')
-      ?.querySelector('.el-radio__inner') as HTMLElement | null;
-    elInner?.click();
-    if (target.checked) {
-      return true;
-    }
-
-    const elLabel = target
-      .closest('.el-radio')
-      ?.querySelector('.el-radio__label') as HTMLElement | null;
-    elLabel?.click();
-    if (target.checked) {
-      return true;
-    }
-
-    target.closest('label')?.click();
-    if (target.checked) {
-      return true;
-    }
-
-    if (target.id) {
-      document
-        .querySelector(`label[for="${CSS.escape(target.id)}"]`)
-        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-      if (target.checked) {
-        return true;
-      }
-    }
-
+  for (const hint of STUDENT_TYPE_HINTS) {
+    const byText = page.getByText(hint, { exact: false }).first();
     try {
-      target.click();
+      if (
+        (await byText.count()) > 0 &&
+        (await byText.isVisible().catch(() => false))
+      ) {
+        await byText.click({ force: true });
+        const checked = await page.locator('input[type="radio"]:checked').count();
+        if (checked > 0) {
+          return true;
+        }
+      }
     } catch {
-      /* ignore */
+      /* try next hint / fallback */
     }
-    if (target.checked) {
-      return true;
-    }
-
-    fire(target);
-    return target.checked;
-  }, STUDENT_TYPE_HINTS);
-
-  if (picked) {
-    return true;
   }
 
-  // Playwright force-check as backup (works even when display:none)
-  const radios = page.locator('input[type="radio"]');
-  const count = await radios.count();
-
+  // Visible label wrapping the preferred radio
+  const labels = page.locator('label:has(input[type="radio"][name="projectTypeId"])');
+  const labelCount = await labels.count();
   for (const prefer of [true, false]) {
-    for (let i = 0; i < count; i += 1) {
-      const radio = radios.nth(i);
-      const label = await radio.evaluate((el) =>
-        (
-          (el as HTMLInputElement).closest('label')?.textContent ??
-          (el as HTMLInputElement).parentElement?.textContent ??
-          ''
-        )
-          .replace(/\s+/g, ' ')
-          .trim()
-          .toLowerCase(),
-      );
+    for (let i = 0; i < labelCount; i += 1) {
+      const label = labels.nth(i);
+      if (!(await label.isVisible().catch(() => false))) {
+        continue;
+      }
+      const text = ((await label.innerText().catch(() => '')) || '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
       const isPreferred = STUDENT_TYPE_HINTS.some((hint) =>
-        label.includes(hint.toLowerCase()),
+        text.includes(hint.toLowerCase()),
       );
       if (prefer && !isPreferred) {
         continue;
@@ -599,26 +546,77 @@ async function pickStudentTypeRadio(page: Page): Promise<boolean> {
         continue;
       }
 
-      await radio.check({ force: true }).catch(() => undefined);
-      if (await radio.isChecked().catch(() => false)) {
+      await label.click({ force: true });
+      if ((await page.locator('input[type="radio"]:checked').count()) > 0) {
         return true;
       }
     }
   }
 
-  return false;
+  // evaluate: label.click only (proven in headed probe)
+  return page.evaluate((hints) => {
+    const normalize = (value: string) => value.replace(/\s+/g, ' ').trim();
+    const radios = [
+      ...document.querySelectorAll(
+        'input[type="radio"][name="projectTypeId"]',
+      ),
+    ] as HTMLInputElement[];
+
+    const labelOf = (radio: HTMLInputElement) =>
+      normalize(radio.closest('label')?.textContent ?? '');
+
+    const target =
+      radios.find((radio) => {
+        const label = labelOf(radio).toLowerCase();
+        return hints.some((hint) => label.includes(String(hint).toLowerCase()));
+      }) ?? radios[0];
+
+    if (!target) {
+      return false;
+    }
+
+    target.closest('label')?.click();
+    if (target.checked) {
+      return true;
+    }
+
+    target.click();
+    if (target.checked) {
+      return true;
+    }
+
+    // force without extra click (radio groups don't toggle-off on re-click,
+    // but keep this path click-free anyway)
+    for (const radio of radios) {
+      radio.checked = radio === target;
+    }
+    target.dispatchEvent(new Event('change', { bubbles: true }));
+    // Fire native onclick if present (saveProjectType validation may depend on it)
+    const onclick = target.getAttribute('onclick');
+    if (onclick) {
+      try {
+        const run = new Function('event', onclick);
+        run.call(target, new Event('click'));
+      } catch {
+        /* ignore */
+      }
+    }
+    return target.checked;
+  }, STUDENT_TYPE_HINTS);
 }
 
 /** Next labels: EN "Next" / ZH "下一步". KMMC uses <button class="el-button">. */
 const NEXT_NAME_RE = /^(Next|下一步|Save and Next|保存并下一步)$/i;
 
 async function clickVisibleNext(page: Page): Promise<string | null> {
+  // Student-type Next is input[value=Next] onclick=saveProjectType(this.form).
+  // Program-type may be <button>Next</button>. Try both; prefer visible.
   const candidates = [
+    page.locator('input[type="button"][value="Next"], input[type="button"][value="下一步"]'),
+    page.locator('input[value="Next"], input[value="下一步"]'),
     page.getByRole('button', { name: NEXT_NAME_RE }),
     page.locator('button.el-button--primary').filter({ hasText: NEXT_NAME_RE }),
     page.locator('button').filter({ hasText: NEXT_NAME_RE }),
-    page.locator('input[type="button"][value="Next"], input[type="button"][value="下一步"]'),
-    page.locator('input[value="Next"], input[value="下一步"]'),
     page.locator('a.el-button').filter({ hasText: NEXT_NAME_RE }),
   ];
 

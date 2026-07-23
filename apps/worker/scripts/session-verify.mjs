@@ -3,12 +3,32 @@
  * Do NOT scan body for loose "sign in" / "log in" — apply pages often contain those strings.
  */
 export async function verifyUniversitySession(page, university) {
-  await page.goto(university.formUrl, {
-    waitUntil: 'networkidle',
+  const formUrl = university.formUrl;
+  let referer;
+  try {
+    referer = `${new URL(formUrl).origin}/member/index.do`;
+  } catch {
+    referer = undefined;
+  }
+
+  // 17gz rejects cold apply/index.do without member Referer (looks like dead session).
+  await page.goto(formUrl, {
+    waitUntil: 'domcontentloaded',
     timeout: 60_000,
+    ...(referer ? { referer } : {}),
   });
 
   const url = page.url();
+  const body = await page.locator('body').innerText().catch(() => '');
+  if (/CSRF attack protection|security department|操作被拒绝/i.test(body)) {
+    return {
+      ok: false,
+      url,
+      reason:
+        'CSRF blocked even with referer — session cookies invalid, re-capture',
+    };
+  }
+
   const onLoginPage = await isLoginPage(page);
 
   return {
