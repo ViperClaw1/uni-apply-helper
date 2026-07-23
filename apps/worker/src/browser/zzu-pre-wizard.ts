@@ -145,57 +145,98 @@ async function getPreWizardSignature(
 }
 
 /**
- * Select project type without dispatching click — easyUI/jQuery click handlers
- * often toggle/reset checked state right after we set it.
+ * Native label.click() checks the radio via the browser — do NOT set
+ * radio.checked manually (easyUI/jQuery click handlers toggle it back).
+ * Restored from e1bd557 (last version that passed KMMC program_type).
  */
 async function pickProjectTypeRadio(
   page: Page,
   programHint?: string,
 ): Promise<boolean> {
   return page.evaluate((hint) => {
-    const inputs = [
-      ...document.querySelectorAll('input[name="projectTypeId"]'),
+    const radios = [
+      ...document.querySelectorAll('input[type="radio"][name="projectTypeId"]'),
     ] as HTMLInputElement[];
 
-    if (inputs.length === 0) {
+    if (radios.length === 0) {
       return false;
     }
 
-    const labelOf = (input: HTMLInputElement) =>
+    const labelOf = (radio: HTMLInputElement) =>
       (
-        input.closest('label')?.textContent ??
-        input.closest('.el-radio')?.textContent ??
-        input.parentElement?.textContent ??
+        radio.closest('label')?.textContent ??
+        radio.closest('.el-radio')?.textContent ??
+        radio.parentElement?.textContent ??
         ''
       ).trim();
 
     let target: HTMLInputElement | undefined;
     if (hint) {
       const needle = hint.toLowerCase();
-      target = inputs.find((input) =>
-        labelOf(input).toLowerCase().includes(needle),
+      target = radios.find((radio) =>
+        labelOf(radio).toLowerCase().includes(needle),
       );
     }
 
     target ??=
-      inputs.find(
-        (input) => input.value && input.value !== '0' && !input.disabled,
-      ) ?? inputs[0];
+      radios.find(
+        (radio) => radio.value && radio.value !== '0' && !radio.disabled,
+      ) ?? radios[0];
 
     if (!target) {
       return false;
     }
 
-    for (const input of inputs) {
-      input.checked = false;
-      input.removeAttribute('checked');
+    const onclick = target.getAttribute('onclick');
+    const fnName = onclick?.match(/^([\w$]+)\(/)?.[1];
+    if (
+      fnName &&
+      typeof (window as unknown as Record<string, unknown>)[fnName] ===
+        'function'
+    ) {
+      (
+        window as unknown as Record<
+          string,
+          (el: HTMLElement, ev: Event) => void
+        >
+      )[fnName](target, new MouseEvent('click'));
+      if (target.checked) {
+        return true;
+      }
     }
 
-    target.checked = true;
-    target.setAttribute('checked', 'checked');
-    // change only — click toggles/resets on 17gz easyUI radio groups
-    target.dispatchEvent(new Event('change', { bubbles: true }));
+    const elLabel = target
+      .closest('.el-radio')
+      ?.querySelector('.el-radio__label') as HTMLElement | null;
+    if (elLabel) {
+      elLabel.click();
+      if (target.checked) {
+        return true;
+      }
+    }
 
+    const wrappedLabel = target.closest('label') as HTMLLabelElement | null;
+    if (wrappedLabel) {
+      wrappedLabel.click();
+      if (target.checked) {
+        return true;
+      }
+    }
+
+    if (target.id) {
+      const forLabel = document.querySelector(
+        `label[for="${CSS.escape(target.id)}"]`,
+      ) as HTMLLabelElement | null;
+      if (forLabel) {
+        forLabel.click();
+        if (target.checked) {
+          return true;
+        }
+      }
+    }
+
+    // Last resort: native radio click (not synthetic Event)
+    target.click();
     return target.checked;
   }, programHint ?? null);
 }
@@ -394,70 +435,47 @@ async function clickPreWizardNext(
   }
 
   if (screen === 'program_type') {
-    // No click events — they toggle/reset easyUI radios. Set value + saveProjectType.
-    return page.evaluate((hint) => {
-      const radios = [
-        ...document.querySelectorAll('input[name="projectTypeId"]'),
-      ] as HTMLInputElement[];
+    // Label-click selection happens in pickProjectTypeRadio.
+    // Call saveProjectType(form) — do not require input[value="Next"] (KMMC has none).
+    return page.evaluate(() => {
+      const checked = document.querySelector(
+        'input[name="projectTypeId"]:checked',
+      ) as HTMLInputElement | null;
 
-      if (radios.length === 0) {
+      if (!checked) {
         return null;
       }
-
-      const labelOf = (radio: HTMLInputElement) =>
-        (
-          radio.closest('label')?.textContent ??
-          radio.closest('.el-radio')?.textContent ??
-          radio.parentElement?.textContent ??
-          ''
-        ).trim();
-
-      let target = hint
-        ? radios.find((radio) =>
-            labelOf(radio).toLowerCase().includes(hint.toLowerCase()),
-          )
-        : undefined;
-      target ??=
-        radios.find((radio) => radio.value && radio.value !== '0') ?? radios[0];
-
-      if (!target) {
-        return null;
-      }
-
-      for (const radio of radios) {
-        radio.checked = false;
-        radio.removeAttribute('checked');
-      }
-      target.checked = true;
-      target.setAttribute('checked', 'checked');
-      target.dispatchEvent(new Event('change', { bubbles: true }));
 
       const form =
-        target.form ??
+        checked.form ??
         (document.querySelector('form') as HTMLFormElement | null);
-      const saveFn = (
+      const save = (
         window as unknown as {
           saveProjectType?: (form: HTMLFormElement) => void;
         }
       ).saveProjectType;
 
-      if (typeof saveFn !== 'function' || !form) {
-        return null;
+      if (typeof save === 'function' && form) {
+        save(form);
+        return `saveProjectType:${checked.value}`;
       }
 
-      // Ensure form serializes the chosen value even if checked flips back.
-      for (const radio of radios) {
-        if (radio === target) {
-          radio.checked = true;
-          radio.value = target.value;
-        } else {
-          radio.checked = false;
+      const btn = document.querySelector(
+        'input[value="Next"]',
+      ) as HTMLInputElement | null;
+      if (btn) {
+        const onclick = btn.getAttribute('onclick');
+        if (onclick) {
+          const run = new Function('btn', onclick.replace(/\bthis\b/g, 'btn'));
+          run(btn);
+          return 'Next:onclick';
         }
+        btn.click();
+        return 'Next:click';
       }
 
-      saveFn(form);
-      return `saveProjectType:${target.value}`;
-    }, programHint ?? null);
+      return null;
+    });
   }
 
   if (screen === 'program_selection') {
