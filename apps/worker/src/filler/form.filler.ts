@@ -203,9 +203,56 @@ export class FormFiller {
 
     switch (field.type) {
       case 'select':
-        await locator.selectOption({ label: normalizedValue }).catch(async () => {
-          await locator.selectOption(normalizedValue);
-        });
+        try {
+          await locator.selectOption({ label: normalizedValue });
+        } catch {
+          try {
+            await locator.selectOption(normalizedValue);
+          } catch {
+            // Chosen / custom UI hides native <select>
+            await page.evaluate(
+              ({ selector, value }) => {
+                const sel = document.querySelector(
+                  selector,
+                ) as HTMLSelectElement | null;
+                if (!sel) {
+                  return;
+                }
+
+                const opt = [...sel.options].find(
+                  (option) =>
+                    option.text.trim() === value ||
+                    option.value === value ||
+                    option.text.trim().toLowerCase().includes(value.toLowerCase()),
+                );
+                if (!opt) {
+                  return;
+                }
+
+                sel.value = opt.value;
+                const jq = (
+                  window as unknown as {
+                    jQuery?: (el: Element) => {
+                      val: (v: string) => { trigger: (e: string) => unknown };
+                    };
+                  }
+                ).jQuery;
+                if (typeof jq === 'function') {
+                  try {
+                    jq(sel).val(opt.value).trigger('chosen:updated');
+                    jq(sel).val(opt.value).trigger('change');
+                  } catch {
+                    // ignore
+                  }
+                }
+
+                sel.dispatchEvent(new Event('input', { bubbles: true }));
+                sel.dispatchEvent(new Event('change', { bubbles: true }));
+              },
+              { selector: field.selector, value: normalizedValue },
+            );
+          }
+        }
         break;
       case 'radio':
         if (field.selector) {

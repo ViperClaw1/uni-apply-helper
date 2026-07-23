@@ -187,6 +187,77 @@ async function checkAgree(page: Page): Promise<void> {
   }
 }
 
+async function setHiddenSelectByName(
+  page: Page,
+  name: string,
+  optionIndex = 1,
+): Promise<string | null> {
+  return page.evaluate(
+    ({ fieldName, index }) => {
+      const sel = document.querySelector(
+        `select[name="${fieldName}"]`,
+      ) as HTMLSelectElement | null;
+      if (!sel || sel.options.length <= index) {
+        return null;
+      }
+
+      const option = sel.options[index];
+      if (!option?.value) {
+        return null;
+      }
+
+      sel.value = option.value;
+
+      const jq = (window as unknown as { jQuery?: (el: Element) => {
+        val: (v: string) => { trigger: (e: string) => unknown };
+      } }).jQuery;
+
+      if (typeof jq === 'function') {
+        try {
+          jq(sel).val(option.value).trigger('chosen:updated');
+          jq(sel).val(option.value).trigger('change');
+        } catch {
+          // fall through to native events
+        }
+      }
+
+      sel.dispatchEvent(new Event('input', { bubbles: true }));
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+
+      // 17gz cascade: college → major
+      const stepCollege = (
+        window as unknown as {
+          stepCollegeOnChange?: (
+            form: HTMLFormElement,
+            major: HTMLSelectElement | null,
+          ) => void;
+        }
+      ).stepCollegeOnChange;
+      if (fieldName === 'collegeId' && typeof stepCollege === 'function' && sel.form) {
+        stepCollege(
+          sel.form,
+          sel.form.querySelector(
+            'select[name="majorId"]',
+          ) as HTMLSelectElement | null,
+        );
+      }
+
+      const onchangeAttr = sel.getAttribute('onchange');
+      if (onchangeAttr && fieldName !== 'collegeId') {
+        try {
+          const run = new Function('event', onchangeAttr);
+          run.call(sel, new Event('change', { bubbles: true }));
+        } catch {
+          // ignore broken inline handlers
+        }
+      }
+
+      return option.value;
+    },
+    { fieldName: name, index: optionIndex },
+  );
+}
+
 async function fillProgramSelection(page: Page): Promise<void> {
   const hasNativeOptions = await page.evaluate(() => {
     const college = document.querySelector(
@@ -199,13 +270,8 @@ async function fillProgramSelection(page: Page): Promise<void> {
     return;
   }
 
-  const college = page.locator('select[name="collegeId"]');
-  const collegeValue = await college
-    .locator('option:nth-child(2)')
-    .getAttribute('value');
-  if (collegeValue) {
-    await college.selectOption(collegeValue);
-  }
+  // chosen-select hides the native <select> — Playwright selectOption times out.
+  await setHiddenSelectByName(page, 'collegeId', 1);
 
   await page.waitForTimeout(1500);
   await page
@@ -217,29 +283,8 @@ async function fillProgramSelection(page: Page): Promise<void> {
     }, { timeout: 15_000 })
     .catch(() => undefined);
 
-  const major = page.locator('select[name="majorId"]');
-  if ((await major.count()) > 0 && (await major.locator('option').count()) > 1) {
-    const majorValue = await major
-      .locator('option:nth-child(2)')
-      .getAttribute('value');
-    if (majorValue) {
-      await major.selectOption(majorValue);
-    }
-  }
-
-  const language = page.locator('select[name="teachLanguage"]');
-  if (
-    (await language.count()) > 0 &&
-    (await language.locator('option').count()) > 1
-  ) {
-    const langValue = await language
-      .locator('option:nth-child(2)')
-      .getAttribute('value');
-    if (langValue) {
-      await language.selectOption(langValue);
-    }
-  }
-
+  await setHiddenSelectByName(page, 'majorId', 1);
+  await setHiddenSelectByName(page, 'teachLanguage', 1);
   await page.waitForTimeout(500);
 }
 
@@ -359,7 +404,13 @@ async function clickPreWizardNext(
       return 'empty_list';
     }
 
-    return selectStudyPlanRow(page);
+    const row = await selectStudyPlanRow(page);
+    if (row) {
+      return row;
+    }
+
+    // College/major Chosen selects + Next (no study-plan table yet)
+    return invokeButton(page, ['Next', 'Save and Next']);
   }
 
   return invokeButton(page, ['Next']);
