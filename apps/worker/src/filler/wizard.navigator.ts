@@ -49,8 +49,25 @@ export class WizardNavigator {
       return cssButton;
     }
 
+    const fallbacks = [
+      'input[value="Save and Next"]',
+      'input[value="Next"]',
+      'input[value="下一步"]',
+      'input[value="保存并下一步"]',
+      'button:has-text("Save and Next")',
+      'button:has-text("Next")',
+      'button:has-text("下一步")',
+    ];
+
+    for (const fallback of fallbacks) {
+      const btn = page.locator(fallback).first();
+      if ((await btn.count()) > 0) {
+        return btn;
+      }
+    }
+
     const semanticButton = page
-      .getByRole('button', { name: /save and next|next/i })
+      .getByRole('button', { name: /save and next|next|下一步|保存并下一步/i })
       .first();
     if ((await semanticButton.count()) > 0) {
       return semanticButton;

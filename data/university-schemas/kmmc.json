@@ -192,7 +192,8 @@
       "mapsTo": "personal.phone",
       "type": "text",
       "required": true,
-      "wizardStep": 5
+      "wizardStep": 5,
+      "labelHint": "Mobile"
     },
     {
       "selector": "input[name=\"apply.homeAddress\"]",
@@ -294,8 +295,8 @@
   ],
   "wizard": {
     "totalSteps": 7,
-    "nextButtonSelector": "input[value=\"Save and Next\"]",
-    "submitButtonSelector": "input[value=\"Submit\"]"
+    "nextButtonSelector": "input[value=\"Save and Next\"], input[value=\"Next\"], input[value=\"下一步\"], input[value=\"保存并下一步\"]",
+    "submitButtonSelector": "input[value=\"Submit\"], input[value=\"提交\"]"
   },
   "agent": {
     "fillMode": "hybrid",

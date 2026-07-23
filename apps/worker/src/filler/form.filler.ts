@@ -179,10 +179,32 @@ export class FormFiller {
           motivationLetterContent,
         );
       }
+
+      // Required fields: wait briefly — step transition may lag after Next
+      if (!locator && field.required && field.selector) {
+        await page
+          .waitForSelector(field.selector, {
+            state: 'attached',
+            timeout: 10_000,
+          })
+          .catch(() => undefined);
+        locator = await resolveFieldLocator(page, field);
+      }
+
       if (!locator) {
         if (field.required) {
+          const present = await page
+            .evaluate(() =>
+              [...document.querySelectorAll('input[name], select[name], textarea[name]')]
+                .map((el) => (el as HTMLInputElement).name)
+                .filter((name) => name.startsWith('apply'))
+                .slice(0, 25)
+                .join(', '),
+            )
+            .catch(() => '');
           throw new Error(
-            `Field not found: ${field.selector}${field.labelHint ? ` / "${field.labelHint}"` : ''}`,
+            `Field not found: ${field.selector}${field.labelHint ? ` / "${field.labelHint}"` : ''}` +
+              ` (URL: ${page.url()}; apply* fields: [${present}])`,
           );
         }
 
