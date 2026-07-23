@@ -91,7 +91,9 @@ export class PreWizardNavigator {
 
     await page.waitForTimeout(400);
 
-    const nextButton = page.getByRole('button', { name: /^Next$/i }).first();
+    const nextButton = page
+      .getByRole('button', { name: /^(Next|下一步)$/i })
+      .first();
     if ((await nextButton.count()) > 0) {
       await nextButton.click({ force: true });
       await page
@@ -101,7 +103,9 @@ export class PreWizardNavigator {
     }
 
     const fallback = page
-      .locator('button:has-text("Next"), input[value="Next"]')
+      .locator(
+        'button:has-text("Next"), button:has-text("下一步"), input[value="Next"], input[value="下一步"]',
+      )
       .first();
 
     if ((await fallback.count()) > 0) {

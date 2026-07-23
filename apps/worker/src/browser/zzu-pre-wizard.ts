@@ -89,10 +89,11 @@ export async function detectPreWizardScreen(
 
   const bodyText = await page.locator('body').innerText().catch(() => '');
 
-  // KMMC screen 2: "please choose your type :" (Doctoral / Master / ...)
+  // KMMC screen 2: student category (Doctoral / Master / ...) — EN or ZH
   if (
-    /please choose your type\s*:/i.test(bodyText) &&
-    !/please choose your program/i.test(bodyText)
+    (/please choose your type\s*:/i.test(bodyText) ||
+      /请选择.*类型|请选择学生|报考类别/.test(bodyText)) &&
+    !/please choose your program|请选择.*项目|请选择培养项目/i.test(bodyText)
   ) {
     return 'student_type';
   }
@@ -108,8 +109,22 @@ export async function detectPreWizardScreen(
     }
   }
 
-  if (/please choose your program/i.test(bodyText)) {
+  if (/please choose your program|请选择.*项目|请选择培养项目/i.test(bodyText)) {
     return 'program_type';
+  }
+
+  // Visible non-projectType radios → student category (ZH UI often has no EN heading)
+  const anyRadios = page.locator('input[type="radio"]');
+  const anyCount = await anyRadios.count();
+  for (let i = 0; i < anyCount; i += 1) {
+    const radio = anyRadios.nth(i);
+    if (!(await radio.isVisible().catch(() => false))) {
+      continue;
+    }
+    const name = await radio.getAttribute('name').catch(() => null);
+    if (name !== 'projectTypeId') {
+      return 'student_type';
+    }
   }
 
   if (
@@ -457,14 +472,17 @@ async function pickFirstVisibleRadio(page: Page): Promise<boolean> {
   return false;
 }
 
-/** KMMC Next is <button class="el-button">Next</button>, not input[value="Next"]. */
+/** Next labels: EN "Next" / ZH "下一步". KMMC uses <button class="el-button">. */
+const NEXT_NAME_RE = /^(Next|下一步|Save and Next|保存并下一步)$/i;
+
 async function clickVisibleNext(page: Page): Promise<string | null> {
   const candidates = [
-    page.getByRole('button', { name: /^Next$/i }),
-    page.locator('button.el-button--primary:has-text("Next")'),
-    page.locator('button:has-text("Next")'),
-    page.locator('input[type="button"][value="Next"]'),
-    page.locator('input[value="Next"]'),
+    page.getByRole('button', { name: NEXT_NAME_RE }),
+    page.locator('button.el-button--primary').filter({ hasText: NEXT_NAME_RE }),
+    page.locator('button').filter({ hasText: NEXT_NAME_RE }),
+    page.locator('input[type="button"][value="Next"], input[type="button"][value="下一步"]'),
+    page.locator('input[value="Next"], input[value="下一步"]'),
+    page.locator('a.el-button').filter({ hasText: NEXT_NAME_RE }),
   ];
 
   for (const locator of candidates) {
@@ -480,7 +498,61 @@ async function clickVisibleNext(page: Page): Promise<string | null> {
     return 'Next:button';
   }
 
-  return null;
+  // DOM fallback — ZH/EN + primary el-button (Railway session often serves 中文 UI)
+  return page.evaluate(() => {
+    const normalize = (value: string) => value.replace(/\s+/g, ' ').trim();
+    const nextRe = /^(Next|下一步|Save and Next|保存并下一步)$/i;
+    const isShown = (el: HTMLElement) => {
+      const style = getComputedStyle(el);
+      return (
+        style.display !== 'none' &&
+        style.visibility !== 'hidden' &&
+        (el as HTMLButtonElement).offsetParent !== null
+      );
+    };
+
+    const nodes = [
+      ...document.querySelectorAll(
+        'button, a.el-button, input[type="button"], input[type="submit"], .el-button',
+      ),
+    ] as HTMLElement[];
+
+    const byLabel = nodes.find((el) => {
+      if (!isShown(el) || (el as HTMLButtonElement).disabled) {
+        return false;
+      }
+      const label = normalize(
+        (el as HTMLInputElement).value ||
+          el.getAttribute('aria-label') ||
+          el.textContent ||
+          '',
+      );
+      return nextRe.test(label);
+    });
+
+    if (byLabel) {
+      byLabel.click();
+      return `Next:dom:${normalize(byLabel.textContent || (byLabel as HTMLInputElement).value || '')}`;
+    }
+
+    const primary = nodes.find((el) => {
+      if (!el.classList.contains('el-button--primary')) {
+        return false;
+      }
+      if (!isShown(el) || (el as HTMLButtonElement).disabled) {
+        return false;
+      }
+      const label = normalize(el.textContent || '');
+      return label.length > 0 && !/search|login|查询|登录|搜/i.test(label);
+    });
+
+    if (primary) {
+      primary.click();
+      return `Next:primary:${normalize(primary.textContent || '')}`;
+    }
+
+    return null;
+  });
 }
 
 export async function fillPreWizardScreen(
@@ -522,14 +594,18 @@ async function clickPreWizardNext(
 ): Promise<string | null> {
   if (screen === 'application_notes') {
     const agreeButton = page
-      .getByRole('button', { name: /agree and continue/i })
+      .getByRole('button', {
+        name: /agree and continue|同意并继续|同意/i,
+      })
       .first();
     if ((await agreeButton.count()) > 0) {
       await page
         .waitForFunction(() => {
           const buttons = [...document.querySelectorAll('button')];
           const agree = buttons.find((button) =>
-            /agree and continue/i.test(button.textContent ?? ''),
+            /agree and continue|同意并继续|同意/i.test(
+              button.textContent ?? '',
+            ),
           );
           return Boolean(agree && !(agree as HTMLButtonElement).disabled);
         }, { timeout: 10_000 })
@@ -539,7 +615,12 @@ async function clickPreWizardNext(
       return 'Agree and Continue';
     }
 
-    return invokeButton(page, ['Agree and Continue', 'Agree']);
+    return invokeButton(page, [
+      'Agree and Continue',
+      'Agree',
+      '同意并继续',
+      '同意',
+    ]);
   }
 
   if (screen === 'program_type' || screen === 'student_type') {
@@ -594,10 +675,16 @@ async function clickPreWizardNext(
       return row;
     }
 
-    return (await clickVisibleNext(page)) ?? invokeButton(page, ['Next', 'Save and Next']);
+    return (
+      (await clickVisibleNext(page)) ??
+      invokeButton(page, ['Next', '下一步', 'Save and Next', '保存并下一步'])
+    );
   }
 
-  return (await clickVisibleNext(page)) ?? invokeButton(page, ['Next']);
+  return (
+    (await clickVisibleNext(page)) ??
+    invokeButton(page, ['Next', '下一步'])
+  );
 }
 
 async function invokeButton(
@@ -771,6 +858,9 @@ export async function advanceThroughPreWizard(
 
 export async function describeNavigationState(page: Page): Promise<string> {
   return page.evaluate(() => {
+    const normalize = (value: string) => value.replace(/\s+/g, ' ').trim();
+    const nextRe = /^(Next|下一步|Save and Next|保存并下一步)$/i;
+
     const screen = (() => {
       if (document.querySelector('select[name="collegeId"]')) {
         return 'program_selection';
@@ -797,10 +887,13 @@ export async function describeNavigationState(page: Page): Promise<string> {
     const hasSave =
       typeof (window as unknown as { saveProjectType?: unknown }).saveProjectType ===
       'function';
-    const nextInput = document.querySelector('input[value="Next"]');
-    const nextButton = [...document.querySelectorAll('button')].find((button) =>
-      /^next$/i.test(button.textContent?.trim() ?? ''),
+    const nextInput = document.querySelector(
+      'input[value="Next"], input[value="下一步"]',
     );
+    const buttons = [...document.querySelectorAll('button, a.el-button')].map(
+      (button) => normalize(button.textContent ?? ''),
+    );
+    const nextButton = buttons.find((text) => nextRe.test(text));
     const form = document.querySelector('form');
     const body = (document.body?.innerText ?? '')
       .replace(/\s+/g, ' ')
@@ -818,6 +911,7 @@ export async function describeNavigationState(page: Page): Promise<string> {
       `saveProjectType=${hasSave}`,
       `nextInput=${Boolean(nextInput)}`,
       `nextButton=${Boolean(nextButton)}`,
+      `buttons=[${buttons.filter(Boolean).slice(0, 12).join(' | ')}]`,
       `form=${Boolean(form)}`,
       `step1Visible=${Boolean(lastName && lastName.offsetParent !== null)}`,
       `body="${body}"`,
