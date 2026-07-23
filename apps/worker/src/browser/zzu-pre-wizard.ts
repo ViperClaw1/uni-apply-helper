@@ -435,59 +435,68 @@ async function isProgramSelectionEmpty(page: Page): Promise<boolean> {
 }
 
 async function selectStudyPlanRow(page: Page): Promise<string | null> {
-  // Prefer Playwright text — KMMC uses "Apply" in the row action column
+  // KMMC Apply links are often below the fold — isVisible() falsely fails.
+  await page.evaluate(() => {
+    const table =
+      document.querySelector('table.datagrid-btable, .datagrid-view table, table') ??
+      null;
+    table?.scrollIntoView({ block: 'start' });
+  });
+  await page.waitForTimeout(300);
+
   const applyLink = page
-    .locator(
-      'td.operation a, td:last-child a, table a, table input[type="button"]',
-    )
+    .locator('td a, table a, a')
     .filter({ hasText: /^(Apply|申请|选择|Select)$/i })
     .first();
 
-  if (
-    (await applyLink.count()) > 0 &&
-    (await applyLink.isVisible().catch(() => false))
-  ) {
+  if ((await applyLink.count()) > 0) {
+    await applyLink.scrollIntoViewIfNeeded().catch(() => undefined);
     await applyLink.click({ force: true });
     return 'Apply';
   }
 
   return page.evaluate(() => {
-    const links = [
-      ...document.querySelectorAll(
-        'td.operation a, td:last-child a, table a[onclick], input[type="button"]',
-      ),
-    ] as HTMLElement[];
+    const labelOf = (el: Element) =>
+      ((el as HTMLInputElement).value || el.textContent || '')
+        .replace(/\s+/g, ' ')
+        .trim();
 
-    const rowLink =
-      links.find((el) =>
-        /^(Apply|申请|选择|Select)$/i.test(
-          ((el as HTMLInputElement).value || el.textContent || '').trim(),
-        ),
-      ) ??
-      links.find((el) =>
-        /chooseStudyPlan|selectStudyPlan|chooseProject|apply/i.test(
-          el.getAttribute('onclick') || '',
-        ),
-      ) ??
-      null;
+    const link = [
+      ...document.querySelectorAll('a, input[type="button"], input[type="submit"]'),
+    ].find((el) =>
+      /^(Apply|申请|选择|Select)$/i.test(labelOf(el)),
+    ) as HTMLElement | null;
 
-    if (!rowLink) {
-      return null;
+    if (!link) {
+      // href-based fallback (no visible text / icon-only)
+      const byHref = [
+        ...document.querySelectorAll('a[href*="apply"], a[onclick*="StudyPlan"], a[onclick*="choose"]'),
+      ].find((el) => {
+        const style = getComputedStyle(el as HTMLElement);
+        return style.display !== 'none' && style.visibility !== 'hidden';
+      }) as HTMLElement | null;
+      if (!byHref) {
+        return null;
+      }
+      const onclick = byHref.getAttribute('onclick');
+      if (onclick) {
+        const run = new Function('el', onclick.replace(/\bthis\b/g, 'el'));
+        run(byHref);
+        return `Apply:onclick`;
+      }
+      byHref.click();
+      return 'Apply:href';
     }
 
-    const onclick = rowLink.getAttribute('onclick');
+    const onclick = link.getAttribute('onclick');
     if (onclick) {
       const run = new Function('el', onclick.replace(/\bthis\b/g, 'el'));
-      run(rowLink);
-      return onclick;
+      run(link);
+      return `Apply:${onclick.slice(0, 40)}`;
     }
 
-    rowLink.click();
-    return (
-      (rowLink as HTMLInputElement).value ||
-      rowLink.textContent?.trim() ||
-      'click'
-    );
+    link.click();
+    return `Apply:${labelOf(link)}`;
   });
 }
 

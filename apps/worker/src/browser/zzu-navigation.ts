@@ -1,6 +1,8 @@
 import type { Page } from 'playwright';
 import type { StudentProfile } from '@uni-apply/shared';
+import { SessionExpiredError } from '../errors/session-expired.error.js';
 import { resolveProgramHint } from './program-hint.js';
+import { isCsrfBlocked, isLoginPage, isLoginRedirect } from './zzu-session.loader.js';
 import {
   advanceThroughPreWizard,
   clearStuckProcessing,
@@ -181,10 +183,30 @@ export async function navigateToZzuApplication(
     defaultProgram;
 
   await page.goto(formUrl, {
-    waitUntil: 'networkidle',
+    waitUntil: 'domcontentloaded',
     timeout: 60_000,
     referer: memberUrlFromForm(formUrl),
   });
+
+  // Fail fast — don't burn 10m clicking around a login wall
+  if (isLoginRedirect(page.url())) {
+    throw new SessionExpiredError(
+      `Session expired for ${universityId}`,
+      universityId,
+    );
+  }
+  if (await isLoginPage(page)) {
+    throw new SessionExpiredError(
+      `Login form detected — session expired for ${universityId}`,
+      universityId,
+    );
+  }
+  if (await isCsrfBlocked(page)) {
+    throw new SessionExpiredError(
+      `CSRF protection triggered — re-login required for ${universityId}`,
+      universityId,
+    );
+  }
 
   await clearStuckProcessing(page);
 
