@@ -191,9 +191,11 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
       });
       await this.recalculateBatchCounters(application.batchId);
 
-      // BullMQ retries (attempts: 2) — notify only on the final failure.
+      // BullMQ: attemptsMade = failures so far (0 on first fail before increment).
+      // attemptsStarted = times moved to active (1 on first try, 2 on retry).
       const maxAttempts = job.opts.attempts ?? 1;
-      const isFinalAttempt = job.attemptsMade >= maxAttempts;
+      const attemptNumber = job.attemptsStarted || job.attemptsMade + 1;
+      const isFinalAttempt = attemptNumber >= maxAttempts;
 
       if (isFinalAttempt) {
         if (error instanceof SessionExpiredError) {

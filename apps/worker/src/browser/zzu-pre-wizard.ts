@@ -149,43 +149,61 @@ async function pickProjectTypeRadio(
   page: Page,
   programHint?: string,
 ): Promise<boolean> {
+  // Prefer visible label click first (works when native input is display:none).
+  if (programHint) {
+    const byText = page
+      .locator('.el-radio, label, .el-radio__label, li, div')
+      .filter({ hasText: new RegExp(programHint.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') })
+      .first();
+    if ((await byText.count()) > 0) {
+      await byText.click({ force: true }).catch(() => undefined);
+      await page.waitForTimeout(300);
+    }
+  } else {
+    const firstRadioUi = page.locator('.el-radio, label:has(input[name="projectTypeId"])').first();
+    if ((await firstRadioUi.count()) > 0) {
+      await firstRadioUi.click({ force: true }).catch(() => undefined);
+      await page.waitForTimeout(300);
+    }
+  }
+
   return page.evaluate((hint) => {
-    const radios = [
-      ...document.querySelectorAll('input[type="radio"][name="projectTypeId"]'),
+    // Do NOT require type=radio — KMMC may use custom widgets + hidden inputs.
+    const inputs = [
+      ...document.querySelectorAll('input[name="projectTypeId"]'),
     ] as HTMLInputElement[];
 
-    if (radios.length === 0) {
+    if (inputs.length === 0) {
       return false;
     }
 
-    const labelOf = (radio: HTMLInputElement) =>
+    const labelOf = (input: HTMLInputElement) =>
       (
-        radio.closest('label')?.textContent ??
-        radio.closest('.el-radio')?.textContent ??
-        radio.parentElement?.textContent ??
+        input.closest('label')?.textContent ??
+        input.closest('.el-radio')?.textContent ??
+        input.parentElement?.textContent ??
         ''
       ).trim();
 
     let target: HTMLInputElement | undefined;
     if (hint) {
       const needle = hint.toLowerCase();
-      target = radios.find((radio) =>
-        labelOf(radio).toLowerCase().includes(needle),
+      target = inputs.find((input) =>
+        labelOf(input).toLowerCase().includes(needle),
       );
     }
 
     target ??=
-      radios.find(
-        (radio) => radio.value && radio.value !== '0' && !radio.disabled,
-      ) ?? radios[0];
+      inputs.find(
+        (input) => input.value && input.value !== '0' && !input.disabled,
+      ) ?? inputs[0];
 
     if (!target) {
       return false;
     }
 
-    // Uncheck siblings first (some portals keep previous selection visually only)
-    for (const radio of radios) {
-      radio.checked = radio === target;
+    for (const input of inputs) {
+      input.checked = input === target;
     }
 
     const fire = (el: HTMLElement) => {
@@ -211,13 +229,15 @@ async function pickProjectTypeRadio(
           >
         )[fnName](target, new MouseEvent('click'));
       } catch {
-        // continue with other strategies
+        // continue
       }
     }
 
     const elLabel = target
       .closest('.el-radio')
-      ?.querySelector('.el-radio__label, .el-radio__inner') as HTMLElement | null;
+      ?.querySelector(
+        '.el-radio__label, .el-radio__inner',
+      ) as HTMLElement | null;
     if (elLabel) {
       fire(elLabel);
     }
@@ -233,6 +253,7 @@ async function pickProjectTypeRadio(
     }
 
     target.checked = true;
+    target.setAttribute('checked', 'checked');
     fire(target);
 
     const jq = (
@@ -249,9 +270,7 @@ async function pickProjectTypeRadio(
       }
     }
 
-    return Boolean(
-      document.querySelector('input[name="projectTypeId"]:checked'),
-    );
+    return inputs.some((input) => input.checked) || target.checked;
   }, programHint ?? null);
 }
 
@@ -450,46 +469,40 @@ async function clickPreWizardNext(
 
   if (screen === 'program_type') {
     return page.evaluate((hint) => {
-      const radios = [
-        ...document.querySelectorAll(
-          'input[type="radio"][name="projectTypeId"]',
-        ),
+      const inputs = [
+        ...document.querySelectorAll('input[name="projectTypeId"]'),
       ] as HTMLInputElement[];
 
-      const labelOf = (radio: HTMLInputElement) =>
+      const labelOf = (input: HTMLInputElement) =>
         (
-          radio.closest('label')?.textContent ??
-          radio.closest('.el-radio')?.textContent ??
-          radio.parentElement?.textContent ??
+          input.closest('label')?.textContent ??
+          input.closest('.el-radio')?.textContent ??
+          input.parentElement?.textContent ??
           ''
         ).trim();
 
       let target =
-        (document.querySelector(
-          'input[name="projectTypeId"]:checked',
-        ) as HTMLInputElement | null) ?? undefined;
+        inputs.find((input) => input.checked) ??
+        (hint
+          ? inputs.find((input) =>
+              labelOf(input).toLowerCase().includes(hint.toLowerCase()),
+            )
+          : undefined);
 
-      if (!target && radios.length > 0) {
-        if (hint) {
-          const needle = hint.toLowerCase();
-          target = radios.find((radio) =>
-            labelOf(radio).toLowerCase().includes(needle),
-          );
-        }
-        target ??=
-          radios.find(
-            (radio) => radio.value && radio.value !== '0' && !radio.disabled,
-          ) ?? radios[0];
-      }
+      target ??=
+        inputs.find(
+          (input) => input.value && input.value !== '0' && !input.disabled,
+        ) ?? inputs[0];
 
       if (!target) {
         return null;
       }
 
-      for (const radio of radios) {
-        radio.checked = radio === target;
+      for (const input of inputs) {
+        input.checked = input === target;
       }
       target.checked = true;
+      target.setAttribute('checked', 'checked');
       target.dispatchEvent(new Event('change', { bubbles: true }));
       target.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
@@ -504,7 +517,7 @@ async function clickPreWizardNext(
 
       if (typeof save === 'function' && form) {
         save(form);
-        return 'saveProjectType';
+        return `saveProjectType:${target.value}`;
       }
 
       const candidates = [
@@ -672,11 +685,43 @@ export async function advancePreWizardScreen(
   return false;
 }
 
+export async function clearStuckProcessing(page: Page): Promise<boolean> {
+  const stuck = await page.evaluate(() =>
+    /请求正在处理中|please wait|processing your request/i.test(
+      document.body?.innerText ?? '',
+    ),
+  );
+
+  if (!stuck) {
+    return false;
+  }
+
+  await dismissBlockingDialogs(page);
+  await page.waitForTimeout(2_000);
+
+  const stillStuck = await page.evaluate(() =>
+    /请求正在处理中|please wait|processing your request/i.test(
+      document.body?.innerText ?? '',
+    ),
+  );
+
+  if (!stillStuck) {
+    return true;
+  }
+
+  // Frozen overlay from a previous attempt — hard refresh.
+  await page.reload({ waitUntil: 'networkidle', timeout: 60_000 }).catch(() => undefined);
+  await waitForUiReady(page);
+  return true;
+}
+
 export async function advanceThroughPreWizard(
   page: Page,
   programHint?: string,
   { maxSteps = 10 } = {},
 ): Promise<boolean> {
+  await clearStuckProcessing(page);
+
   for (let step = 0; step < maxSteps; step += 1) {
     if (await isMainWizard(page)) {
       return true;
@@ -711,10 +756,16 @@ export async function describeNavigationState(page: Page): Promise<string> {
       return 'unknown';
     })();
 
-    const radios = [
+    const inputs = [
       ...document.querySelectorAll('input[name="projectTypeId"]'),
     ] as HTMLInputElement[];
-    const checked = radios.find((radio) => radio.checked);
+    const checked = inputs.find((input) => input.checked);
+    const inputDump = inputs
+      .map(
+        (input) =>
+          `type=${input.type};value=${input.value};checked=${input.checked};display=${getComputedStyle(input).display}`,
+      )
+      .join(' | ');
     const hasSave =
       typeof (window as unknown as { saveProjectType?: unknown }).saveProjectType ===
       'function';
@@ -730,8 +781,9 @@ export async function describeNavigationState(page: Page): Promise<string> {
 
     return [
       `screen=${screen}`,
-      `radios=${radios.length}`,
+      `radios=${inputs.length}`,
       `checked=${checked ? checked.value : 'none'}`,
+      `inputs=[${inputDump}]`,
       `saveProjectType=${hasSave}`,
       `next=${Boolean(next)}`,
       `form=${Boolean(form)}`,

@@ -3,6 +3,7 @@ import type { StudentProfile } from '@uni-apply/shared';
 import { resolveProgramHint } from './program-hint.js';
 import {
   advanceThroughPreWizard,
+  clearStuckProcessing,
   describeNavigationState,
   detectPreWizardScreen,
   isMainWizard,
@@ -177,6 +178,8 @@ export async function navigateToZzuApplication(
     timeout: 60_000,
     referer: memberUrlFromForm(formUrl),
   });
+
+  await clearStuckProcessing(page);
 
   if (await isWizardStep(page)) {
     return;
