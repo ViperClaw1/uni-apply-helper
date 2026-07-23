@@ -6,36 +6,43 @@ export type PreWizardScreen =
   | 'program_selection';
 
 export async function waitForUiReady(page: Page): Promise<void> {
+  // Dismiss dialogs first — otherwise "请求正在处理中..." never clears and we burn 30s.
+  await dismissBlockingDialogs(page);
+
   await page
     .locator('.window-mask, .el-loading-mask, .datagrid-mask')
     .first()
-    .waitFor({ state: 'hidden', timeout: 20_000 })
+    .waitFor({ state: 'hidden', timeout: 10_000 })
     .catch(() => undefined);
 
-  // 17gz: "提示 你的请求正在处理中..." blocks interaction
   await page
     .waitForFunction(
       () => {
         const text = document.body?.innerText ?? '';
         return !/请求正在处理中|please wait|processing/i.test(text);
       },
-      { timeout: 30_000 },
+      { timeout: 8_000 },
     )
     .catch(() => undefined);
 
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(200);
 }
 
 export async function dismissBlockingDialogs(page: Page): Promise<void> {
-  for (let attempt = 0; attempt < 5; attempt += 1) {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
     const okButton = page
       .locator(
         [
+          'input.okButton',
+          'input[value="Ok"]',
+          'input[value="OK"]',
           '.messager-button .okButton',
           '.messager-button input[value="Ok"]',
           '.messager-button input[value="OK"]',
           '.messager-button a',
+          '.messager-window input.okButton',
           'button:has-text("OK")',
+          'button:has-text("Ok")',
           'button:has-text("Continue")',
           'button:has-text("Accept")',
           'button:has-text("确定")',
@@ -47,11 +54,15 @@ export async function dismissBlockingDialogs(page: Page): Promise<void> {
       break;
     }
 
+    if (!(await okButton.isVisible().catch(() => false))) {
+      break;
+    }
+
     await okButton.click({ force: true }).catch(() => undefined);
     await page.waitForTimeout(400);
   }
 
-  // Force-hide stuck "请求正在处理中..." easyui overlay if it never clears.
+  // Force-hide stuck easyui overlay if Ok never worked.
   await page
     .evaluate(() => {
       const text = document.body?.innerText ?? '';
@@ -60,7 +71,7 @@ export async function dismissBlockingDialogs(page: Page): Promise<void> {
       }
 
       for (const el of document.querySelectorAll(
-        '.window-mask, .datagrid-mask, .messager-window, .panel.window',
+        '.window-mask, .datagrid-mask, .messager-window, .panel.window, .window-shadow',
       )) {
         (el as HTMLElement).style.display = 'none';
       }
@@ -145,20 +156,70 @@ async function getPreWizardSignature(
 }
 
 /**
- * Native label.click() checks the radio via the browser — do NOT set
- * radio.checked manually (easyUI/jQuery click handlers toggle it back).
- * Restored from e1bd557 (last version that passed KMMC program_type).
+ * Prefer Playwright real gestures over page.evaluate click — evaluate
+ * synthetic clicks often don't stick on 17gz/easyUI radios.
  */
 async function pickProjectTypeRadio(
   page: Page,
   programHint?: string,
 ): Promise<boolean> {
-  return page.evaluate((hint) => {
-    const radios = [
+  await dismissBlockingDialogs(page);
+
+  const radios = page.locator('input[type="radio"][name="projectTypeId"]');
+  const count = await radios.count();
+  if (count === 0) {
+    return false;
+  }
+
+  let index = 0;
+  if (programHint) {
+    const needle = programHint.toLowerCase();
+    for (let i = 0; i < count; i += 1) {
+      const radio = radios.nth(i);
+      const labelText = await radio.evaluate((el) => {
+        const input = el as HTMLInputElement;
+        return (
+          input.closest('label')?.textContent ??
+          input.closest('.el-radio')?.textContent ??
+          input.parentElement?.textContent ??
+          ''
+        ).trim();
+      });
+      if (labelText.toLowerCase().includes(needle)) {
+        index = i;
+        break;
+      }
+    }
+  }
+
+  const target = radios.nth(index);
+  const value = await target.getAttribute('value');
+
+  // 1) Playwright check() — real browser gesture
+  await target.check({ force: true }).catch(() => undefined);
+  if (await target.isChecked().catch(() => false)) {
+    return true;
+  }
+
+  // 2) Click associated label / parent text via Playwright
+  if (programHint) {
+    const byText = page
+      .getByText(new RegExp(programHint.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'))
+      .first();
+    if ((await byText.count()) > 0) {
+      await byText.click({ force: true }).catch(() => undefined);
+      if (await target.isChecked().catch(() => false)) {
+        return true;
+      }
+    }
+  }
+
+  // 3) evaluate: label.click() only (no manual checked=true)
+  const clicked = await page.evaluate((hint) => {
+    const list = [
       ...document.querySelectorAll('input[type="radio"][name="projectTypeId"]'),
     ] as HTMLInputElement[];
-
-    if (radios.length === 0) {
+    if (list.length === 0) {
       return false;
     }
 
@@ -170,75 +231,54 @@ async function pickProjectTypeRadio(
         ''
       ).trim();
 
-    let target: HTMLInputElement | undefined;
-    if (hint) {
-      const needle = hint.toLowerCase();
-      target = radios.find((radio) =>
-        labelOf(radio).toLowerCase().includes(needle),
-      );
-    }
+    let targetRadio = hint
+      ? list.find((radio) =>
+          labelOf(radio).toLowerCase().includes(hint.toLowerCase()),
+        )
+      : undefined;
+    targetRadio ??=
+      list.find((radio) => radio.value && radio.value !== '0') ?? list[0];
 
-    target ??=
-      radios.find(
-        (radio) => radio.value && radio.value !== '0' && !radio.disabled,
-      ) ?? radios[0];
-
-    if (!target) {
+    if (!targetRadio) {
       return false;
     }
 
-    const onclick = target.getAttribute('onclick');
-    const fnName = onclick?.match(/^([\w$]+)\(/)?.[1];
-    if (
-      fnName &&
-      typeof (window as unknown as Record<string, unknown>)[fnName] ===
-        'function'
-    ) {
-      (
-        window as unknown as Record<
-          string,
-          (el: HTMLElement, ev: Event) => void
-        >
-      )[fnName](target, new MouseEvent('click'));
-      if (target.checked) {
-        return true;
-      }
-    }
-
-    const elLabel = target
+    const elLabel = targetRadio
       .closest('.el-radio')
       ?.querySelector('.el-radio__label') as HTMLElement | null;
-    if (elLabel) {
-      elLabel.click();
-      if (target.checked) {
-        return true;
-      }
+    elLabel?.click();
+    if (targetRadio.checked) {
+      return true;
     }
 
-    const wrappedLabel = target.closest('label') as HTMLLabelElement | null;
-    if (wrappedLabel) {
-      wrappedLabel.click();
-      if (target.checked) {
-        return true;
-      }
+    targetRadio.closest('label')?.click();
+    if (targetRadio.checked) {
+      return true;
     }
 
-    if (target.id) {
-      const forLabel = document.querySelector(
-        `label[for="${CSS.escape(target.id)}"]`,
-      ) as HTMLLabelElement | null;
-      if (forLabel) {
-        forLabel.click();
-        if (target.checked) {
-          return true;
-        }
-      }
+    if (targetRadio.id) {
+      document
+        .querySelector(`label[for="${CSS.escape(targetRadio.id)}"]`)
+        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     }
 
-    // Last resort: native radio click (not synthetic Event)
-    target.click();
-    return target.checked;
+    return targetRadio.checked;
   }, programHint ?? null);
+
+  if (clicked || (await target.isChecked().catch(() => false))) {
+    return true;
+  }
+
+  // 4) Last resort: set checked without click events, verify immediately
+  await page.evaluate((selectedValue) => {
+    for (const radio of document.querySelectorAll(
+      'input[name="projectTypeId"]',
+    ) as NodeListOf<HTMLInputElement>) {
+      radio.checked = radio.value === selectedValue;
+    }
+  }, value);
+
+  return target.isChecked().catch(() => false);
 }
 
 async function checkAgree(page: Page): Promise<void> {
@@ -435,19 +475,26 @@ async function clickPreWizardNext(
   }
 
   if (screen === 'program_type') {
-    // Label-click selection happens in pickProjectTypeRadio.
-    // Call saveProjectType(form) — do not require input[value="Next"] (KMMC has none).
-    return page.evaluate(() => {
-      const checked = document.querySelector(
+    // HARD GUARD: never call saveProjectType without a checked radio —
+    // empty submit leaves a stuck "请求正在处理中..." overlay.
+    const checked = page.locator('input[name="projectTypeId"]:checked').first();
+    if ((await checked.count()) === 0) {
+      return null;
+    }
+
+    const checkedValue = await checked.getAttribute('value');
+
+    return page.evaluate((selectedValue) => {
+      const selected = document.querySelector(
         'input[name="projectTypeId"]:checked',
       ) as HTMLInputElement | null;
 
-      if (!checked) {
+      if (!selected || selected.value !== selectedValue) {
         return null;
       }
 
       const form =
-        checked.form ??
+        selected.form ??
         (document.querySelector('form') as HTMLFormElement | null);
       const save = (
         window as unknown as {
@@ -457,7 +504,7 @@ async function clickPreWizardNext(
 
       if (typeof save === 'function' && form) {
         save(form);
-        return `saveProjectType:${checked.value}`;
+        return `saveProjectType:${selected.value}`;
       }
 
       const btn = document.querySelector(
@@ -475,7 +522,7 @@ async function clickPreWizardNext(
       }
 
       return null;
-    });
+    }, checkedValue);
   }
 
   if (screen === 'program_selection') {
@@ -562,6 +609,15 @@ export async function advancePreWizardScreen(
   const before = await getPreWizardSignature(page, current);
   await fillPreWizardScreen(page, current, programHint);
   await page.waitForTimeout(400);
+
+  if (current === 'program_type') {
+    const selected = await page
+      .locator('input[name="projectTypeId"]:checked')
+      .count();
+    if (selected === 0) {
+      return false;
+    }
+  }
 
   const clicked = await clickPreWizardNext(page, current, programHint);
   if (!clicked || clicked === 'empty_list') {
