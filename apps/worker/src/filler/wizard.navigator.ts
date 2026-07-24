@@ -91,12 +91,50 @@ export class WizardNavigator {
     if (!advanced) {
       const afterSig = await this.getStepSignature(page);
       if (afterSig === beforeSig) {
+        const validation = await this.collectValidationHints(page);
         throw new Error(
           'Wizard step did not advance after Save and Next (AJAX DOM unchanged). ' +
-            `Still on fields: [${afterSig.split('|').slice(0, 12).join(', ')}]`,
+            `Still on fields: [${afterSig.split('|').slice(0, 12).join(', ')}]` +
+            (validation ? ` Validation: ${validation}` : ''),
         );
       }
     }
+  }
+
+  private async collectValidationHints(page: Page): Promise<string> {
+    return page.evaluate(() => {
+      const texts: string[] = [];
+
+      for (const el of document.querySelectorAll(
+        'span.error:not(:empty), label.error:not(:empty), .error:not(:empty), .tip-error, .validate-error, .messager-body',
+      )) {
+        const t = (el.textContent || '').replace(/\s+/g, ' ').trim();
+        if (t && t.length < 120 && !texts.includes(t)) {
+          texts.push(t);
+        }
+      }
+
+      const emptyRequired: string[] = [];
+      for (const el of document.querySelectorAll(
+        'input[validate*="required"], select[validate*="required"], textarea[validate*="required"]',
+      )) {
+        const input = el as HTMLInputElement | HTMLSelectElement;
+        if (input.type === 'hidden' || input.type === 'checkbox') continue;
+        const val = (input.value || '').trim();
+        if (!val || /^\.+please select/i.test(val)) {
+          emptyRequired.push(input.name || input.id || input.placeholder || '?');
+        }
+      }
+
+      const parts = [
+        texts.slice(0, 8).join(' | '),
+        emptyRequired.length
+          ? `empty required: ${emptyRequired.slice(0, 15).join(', ')}`
+          : '',
+      ].filter(Boolean);
+
+      return parts.join(' || ').slice(0, 800);
+    });
   }
 
   private async getStepSignature(page: Page): Promise<string> {

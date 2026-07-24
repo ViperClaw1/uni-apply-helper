@@ -5,7 +5,9 @@
   "defaultProgram": "Master",
   "session": {
     "loginUrlPattern": "/student/login(?:/|$|\\?)",
-    "expiredIndicators": ["Don't have an account?"]
+    "expiredIndicators": [
+      "Don't have an account?"
+    ]
   },
   "aliases": [
     "Liaoning Petrochemical University",
@@ -30,7 +32,9 @@
       "required": true,
       "wizardStep": 1,
       "labelHint": "Hope Learning Start Time",
-      "options": ["2026-09-01"]
+      "options": [
+        "2026-09-01"
+      ]
     },
     {
       "selector": "input[name=\"apply[duration_end]\"]",
@@ -39,7 +43,9 @@
       "required": true,
       "wizardStep": 1,
       "labelHint": "Hope Learning End Time",
-      "options": ["2029-07-01"]
+      "options": [
+        "2029-07-01"
+      ]
     },
     {
       "selector": "input[name=\"student[last_name]\"]",
@@ -80,7 +86,9 @@
       "required": true,
       "wizardStep": 1,
       "labelHint": "Passport Type",
-      "options": ["Ordinary Passport"]
+      "options": [
+        "Ordinary Passport"
+      ]
     },
     {
       "selector": "input[name=\"student[name]\"]",
@@ -105,7 +113,9 @@
       "required": false,
       "wizardStep": 1,
       "labelHint": "Marital Status",
-      "options": ["single"]
+      "options": [
+        "single"
+      ]
     },
     {
       "selector": "select[name=\"student[nationality_id]\"]",
@@ -130,7 +140,9 @@
       "required": false,
       "wizardStep": 1,
       "labelHint": "Country of Birth",
-      "options": ["KAZAKHSTAN"]
+      "options": [
+        "RUSSIAN FEDERATION"
+      ]
     },
     {
       "selector": "input[name=\"student[birth_place]\"]",
@@ -147,7 +159,9 @@
       "required": false,
       "wizardStep": 1,
       "labelHint": "Native Language",
-      "options": ["Russian"]
+      "options": [
+        "Russian"
+      ]
     },
     {
       "selector": "select[name=\"student[education_id]\"]",
@@ -156,7 +170,9 @@
       "required": false,
       "wizardStep": 1,
       "labelHint": "Highest Level of Education",
-      "options": ["Undergraduate education"]
+      "options": [
+        "Undergraduate education"
+      ]
     },
     {
       "selector": "select[name=\"student[religion]\"]",
@@ -165,7 +181,9 @@
       "required": false,
       "wizardStep": 1,
       "labelHint": "Religion",
-      "options": ["No religion"]
+      "options": [
+        "No religion"
+      ]
     },
     {
       "selector": "select[name=\"student[career_id]\"]",
@@ -174,23 +192,29 @@
       "required": true,
       "wizardStep": 1,
       "labelHint": "Occupation",
-      "options": ["Student"]
+      "options": [
+        "Student"
+      ]
     },
     {
       "selector": "input[name=\"family_address[home_mobile]\"]",
-      "mapsTo": "contact.phone",
+      "mapsTo": "personal.phone",
       "type": "text",
       "required": false,
       "wizardStep": 1,
-      "labelHint": "Home Mobile"
+      "labelHint": "Home Mobile",
+      "options": [
+        "+77000000000"
+      ]
     },
     {
       "selector": "input[name=\"education[0][school_name]\"]",
       "mapsTo": "education.0.institution",
       "type": "text",
-      "required": false,
+      "required": true,
       "wizardStep": 1,
-      "labelHint": "School Name"
+      "labelHint": "School Name",
+      "options": ["University"]
     },
     {
       "selector": "select[name=\"education[0][learning_type]\"]",
@@ -210,22 +234,30 @@
       "selector": "input[name=\"recommend[guarantor_en_name]\"]",
       "mapsTo": "guarantor.name",
       "type": "text",
-      "required": false,
-      "wizardStep": 1
+      "required": true,
+      "wizardStep": 1,
+      "options": [
+        "Guarantor"
+      ]
     },
     {
       "selector": "input[name=\"recommend[guar_mobile]\"]",
       "mapsTo": "guarantor.phone",
       "type": "text",
-      "required": false,
-      "wizardStep": 1
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Guarantor Mobile",
+      "options": ["+77000000000"]
     },
     {
       "selector": "input[name=\"emergency_contact[0][emergency_name]\"]",
       "mapsTo": "emergencyContact.name",
       "type": "text",
-      "required": false,
-      "wizardStep": 1
+      "required": true,
+      "wizardStep": 1,
+      "options": [
+        "Emergency Contact"
+      ]
     },
     {
       "selector": "input[name=\"emergency_contact[0][emergency_mobile]\"]",
@@ -233,6 +265,545 @@
       "type": "text",
       "required": false,
       "wizardStep": 1
+    },
+    {
+      "selector": "input[name=\"student[workplace]\"]",
+      "mapsTo": "personal.currentInstitution",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Employer or Institution Affiliated",
+      "options": [
+        "University"
+      ]
+    },
+    {
+      "selector": "select[name=\"language[language_skill_id]\"]",
+      "mapsTo": null,
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Chinese Proficiency",
+      "options": [
+        "Beginner"
+      ]
+    },
+    {
+      "selector": "select[name=\"language[english_language_skill_id]\"]",
+      "mapsTo": null,
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "English Proficiency",
+      "options": [
+        "good"
+      ]
+    },
+    {
+      "selector": "select[name=\"recommend[guar_source]\"]",
+      "mapsTo": null,
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Source",
+      "options": [
+        "Website"
+      ]
+    },
+    {
+      "selector": "input[name=\"recommend[guar_workplace]\"]",
+      "mapsTo": "guarantor.company",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Guarantor Organization",
+      "options": [
+        "N/A"
+      ]
+    },
+    {
+      "selector": "input[name=\"recommend[guar_phone]\"]",
+      "mapsTo": "guarantor.phone",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Guarantor Phone",
+      "options": [
+        "+77000000000"
+      ]
+    },
+    {
+      "selector": "input[name=\"education[0][start_date]\"]",
+      "mapsTo": "education.0.periodStart",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Year Attended (From)",
+      "options": [
+        "2018"
+      ]
+    },
+    {
+      "selector": "input[name=\"education[0][end_date]\"]",
+      "mapsTo": "education.0.periodEnd",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Year Attended (To)",
+      "options": [
+        "2022"
+      ]
+    },
+    {
+      "selector": "select[name=\"education[0][nationality_id]\"]",
+      "mapsTo": "personal.nationality",
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Education Country",
+      "options": [
+        "RUSSIAN FEDERATION"
+      ]
+    },
+    {
+      "selector": "select[name=\"family[0][member_relationship]\"]",
+      "mapsTo": "familyMembers.0.relationship",
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Family 1 Relationship",
+      "options": [
+        "Father"
+      ]
+    },
+    {
+      "selector": "input[name=\"family[0][member_name]\"]",
+      "mapsTo": "familyMembers.0.fullName",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Family 1 Name",
+      "options": [
+        "Parent One"
+      ]
+    },
+    {
+      "selector": "select[name=\"family[0][nationality_id]\"]",
+      "mapsTo": "familyMembers.0.nationality",
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Family 1 Nationality",
+      "options": [
+        "RUSSIAN FEDERATION"
+      ]
+    },
+    {
+      "selector": "select[name=\"family[0][member_duty]\"]",
+      "mapsTo": "familyMembers.0.position",
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Family 1 Occupation",
+      "options": [
+        "Other"
+      ]
+    },
+    {
+      "selector": "input[name=\"family[0][member_phone]\"]",
+      "mapsTo": "familyMembers.0.phone",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Family 1 Phone",
+      "options": [
+        "+77000000001"
+      ]
+    },
+    {
+      "selector": "input[name=\"family[0][member_email]\"]",
+      "mapsTo": "familyMembers.0.email",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Family 1 Email",
+      "options": [
+        "family1@example.com"
+      ]
+    },
+    {
+      "selector": "select[name=\"family[1][member_relationship]\"]",
+      "mapsTo": "familyMembers.1.relationship",
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Family 2 Relationship",
+      "options": [
+        "Mother"
+      ]
+    },
+    {
+      "selector": "input[name=\"family[1][member_name]\"]",
+      "mapsTo": "familyMembers.1.fullName",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Family 2 Name",
+      "options": [
+        "Parent Two"
+      ]
+    },
+    {
+      "selector": "select[name=\"family[1][nationality_id]\"]",
+      "mapsTo": "familyMembers.1.nationality",
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Family 2 Nationality",
+      "options": [
+        "RUSSIAN FEDERATION"
+      ]
+    },
+    {
+      "selector": "select[name=\"family[1][member_duty]\"]",
+      "mapsTo": "familyMembers.1.position",
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Family 2 Occupation",
+      "options": [
+        "Other"
+      ]
+    },
+    {
+      "selector": "input[name=\"family[1][member_phone]\"]",
+      "mapsTo": "familyMembers.1.phone",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Family 2 Phone",
+      "options": [
+        "+77000000002"
+      ]
+    },
+    {
+      "selector": "input[name=\"family[1][member_email]\"]",
+      "mapsTo": "familyMembers.1.email",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Family 2 Email",
+      "options": [
+        "family2@example.com"
+      ]
+    },
+    {
+      "selector": "input[name=\"guarantee[self_supporter]\"]",
+      "mapsTo": "guarantor.name",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Financial Supporter Name",
+      "options": [
+        "Self"
+      ]
+    },
+    {
+      "selector": "input[name=\"guarantee[self_address]\"]",
+      "mapsTo": "guarantor.homeAddress",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Financial Supporter Address",
+      "options": [
+        "Home address"
+      ]
+    },
+    {
+      "selector": "input[name=\"guarantee[self_phone]\"]",
+      "mapsTo": "guarantor.phone",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Financial Supporter Phone",
+      "options": [
+        "+77000000000"
+      ]
+    },
+    {
+      "selector": "input[name=\"guarantee[ssrelative]\"]",
+      "mapsTo": "guarantor.relationship",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Relationship with Applicant",
+      "options": [
+        "Self"
+      ]
+    },
+    {
+      "selector": "input[name=\"guarantee[self_work]\"]",
+      "mapsTo": "guarantor.company",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Financial Supporter Organization",
+      "options": [
+        "N/A"
+      ]
+    },
+    {
+      "selector": "input[name=\"guarantee[self_email]\"]",
+      "mapsTo": "guarantor.email",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Financial Supporter Email",
+      "options": [
+        "guarantor@example.com"
+      ]
+    },
+    {
+      "selector": "input[name=\"emergency_contact[0][emergency_phone]\"]",
+      "mapsTo": "emergencyContact.phone",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Emergency Phone",
+      "options": [
+        "+77000000000"
+      ]
+    },
+    {
+      "selector": "input[name=\"emergency_contact[0][emergency_email]\"]",
+      "mapsTo": "emergencyContact.email",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Emergency Email",
+      "options": [
+        "emergency@example.com"
+      ]
+    },
+    {
+      "selector": "input[name=\"emergency_contact[0][emergency_workplace]\"]",
+      "mapsTo": "emergencyContact.company",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Emergency Organization",
+      "options": [
+        "N/A"
+      ]
+    },
+    {
+      "selector": "input[name=\"emergency_contact[0][emergency_address]\"]",
+      "mapsTo": "emergencyContact.homeAddress",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Emergency Address",
+      "options": [
+        "Home address"
+      ]
+    },
+    {
+      "selector": "input[name=\"family_address[home_address]\"]",
+      "mapsTo": "personal.permanentAddress",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Home Street Address",
+      "options": [
+        "Home street"
+      ]
+    },
+    {
+      "selector": "input[name=\"family_address[home_phone]\"]",
+      "mapsTo": "personal.phone",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Home Phone",
+      "options": [
+        "+77000000000"
+      ]
+    },
+    {
+      "selector": "input[name=\"family_address[home_city]\"]",
+      "mapsTo": "personal.cityOfBirth",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Home City",
+      "options": [
+        "City"
+      ]
+    },
+    {
+      "selector": "select[name=\"family_address[home_country_id]\"]",
+      "mapsTo": "personal.nationality",
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Home Country",
+      "options": [
+        "RUSSIAN FEDERATION"
+      ]
+    },
+    {
+      "selector": "input[name=\"family_address[home_zip]\"]",
+      "mapsTo": "personal.postCode",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Home Zip",
+      "options": [
+        "000000"
+      ]
+    },
+    {
+      "selector": "input[name=\"family_address[now_address]\"]",
+      "mapsTo": "personal.permanentAddress",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Current Street Address",
+      "options": [
+        "Current street"
+      ]
+    },
+    {
+      "selector": "input[name=\"family_address[now_phone]\"]",
+      "mapsTo": "personal.phone",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Current Phone",
+      "options": [
+        "+77000000000"
+      ]
+    },
+    {
+      "selector": "input[name=\"family_address[now_city]\"]",
+      "mapsTo": "personal.cityOfBirth",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Current City",
+      "options": [
+        "City"
+      ]
+    },
+    {
+      "selector": "input[name=\"family_address[now_mobile]\"]",
+      "mapsTo": "personal.phone",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Current Mobile",
+      "options": [
+        "+77000000000"
+      ]
+    },
+    {
+      "selector": "select[name=\"family_address[now_country_id]\"]",
+      "mapsTo": "personal.nationality",
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Current Country",
+      "options": [
+        "RUSSIAN FEDERATION"
+      ]
+    },
+    {
+      "selector": "input[name=\"family_address[now_zip]\"]",
+      "mapsTo": "personal.postCode",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Current Zip",
+      "options": [
+        "000000"
+      ]
+    },
+    {
+      "selector": "input[type=\"radio\"][name=\"postal_address[receiver_type]\"]",
+      "mapsTo": null,
+      "type": "radio",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Receiving Way",
+      "options": [
+        "1"
+      ]
+    },
+    {
+      "selector": "input[name=\"postal_address[receiver_name]\"]",
+      "mapsTo": "personal.fullName",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Recipient Name",
+      "options": [
+        "Applicant"
+      ]
+    },
+    {
+      "selector": "input[name=\"postal_address[receiver_city]\"]",
+      "mapsTo": "personal.cityOfBirth",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Recipient City",
+      "options": [
+        "City"
+      ]
+    },
+    {
+      "selector": "select[name=\"postal_address[receiver_country_id]\"]",
+      "mapsTo": "personal.nationality",
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Recipient Country",
+      "options": [
+        "RUSSIAN FEDERATION"
+      ]
+    },
+    {
+      "selector": "input[name=\"postal_address[receiver_address]\"]",
+      "mapsTo": "personal.permanentAddress",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Recipient Address",
+      "options": [
+        "Mailing address"
+      ]
+    },
+    {
+      "selector": "input[name=\"postal_address[receiver_mobile]\"]",
+      "mapsTo": "personal.phone",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Recipient Phone",
+      "options": [
+        "+77000000000"
+      ]
+    },
+    {
+      "selector": "input[name=\"postal_address[receiver_zip]\"]",
+      "mapsTo": "personal.postCode",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Recipient Zip",
+      "options": [
+        "000000"
+      ]
     },
     {
       "selector": "input[type=\"checkbox\"][name=\"is_read_the_notice\"]",
@@ -312,5 +883,5 @@
     "submitButtonSelector": "input[value=\"Submit\"], a:has-text(\"Submit\"), button:has-text(\"Submit\")"
   },
   "requiresEssay": false,
-  "notes": "CUCAS (chiwest). Pre-wizard: My Application → APPLY NOW → program list apply_now(id) → apply/start Next → apply_forms. Then apply_attr (uploads) → apply_submit. Session: LNPU_SESSION_STATE_B64. Upload selectors are hidden inputs (#fileupload_N); photo uses student_upload_photo(), others upfile()."
+  "notes": "CUCAS (chiwest). Pre-wizard: My Application → APPLY NOW → program list apply_now(id) → apply/start Next → apply_forms (~74 required fields) → apply_attr (uploads) → apply_submit. Session: LNPU_SESSION_STATE_B64. Upload selectors are hidden inputs (#fileupload_N); photo uses student_upload_photo(), others upfile(). Worker prefers fields from data/university-schemas/lnpu.json over DB."
 }

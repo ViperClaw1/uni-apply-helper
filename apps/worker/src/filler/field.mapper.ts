@@ -17,6 +17,17 @@ export class FieldMapper {
       return this.getUnmappedDefault(field);
     }
 
+    // Virtual path — CUCAS recipient / display name fields.
+    if (field.mapsTo === 'personal.fullName') {
+      const full = [profile.personal.surname, profile.personal.givenName]
+        .filter(Boolean)
+        .join(' ')
+        .trim();
+      if (full) {
+        return full;
+      }
+    }
+
     const mapped = get(profile, field.mapsTo);
     if (mapped !== undefined && mapped !== null && mapped !== '') {
       return mapped;

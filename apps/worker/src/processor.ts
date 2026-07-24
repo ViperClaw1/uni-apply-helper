@@ -303,19 +303,28 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
 
     if (university) {
       const fileSchema = await this.findFileSchema(universityId);
+      // Prefer on-disk schema fields when present — DB seed often lags / proxy dies.
+      const fields = fileSchema?.fields?.length
+        ? fileSchema.fields
+        : this.toFieldConfigArray(university.fields);
+      const requiredDocuments = fileSchema?.requiredDocuments?.length
+        ? fileSchema.requiredDocuments
+        : this.toStringArray(university.requiredDocuments);
+
       return {
         id: university.id,
-        displayName: university.displayName,
-        formUrl: university.formUrl,
-        requiredDocuments: this.toStringArray(university.requiredDocuments),
-        fields: this.toFieldConfigArray(university.fields),
+        displayName: fileSchema?.displayName ?? university.displayName,
+        formUrl: fileSchema?.formUrl || university.formUrl,
+        requiredDocuments,
+        fields,
         wizard: fileSchema?.wizard,
         session: fileSchema?.session,
         agent: fileSchema?.agent,
         defaultProgram: fileSchema?.defaultProgram,
-        requiresEssay: university.requiresEssay,
-        essayPrompt: university.essayPrompt ?? undefined,
-        notes: university.notes ?? undefined,
+        requiresEssay: fileSchema?.requiresEssay ?? university.requiresEssay,
+        essayPrompt:
+          fileSchema?.essayPrompt ?? university.essayPrompt ?? undefined,
+        notes: fileSchema?.notes ?? university.notes ?? undefined,
       };
     }
 

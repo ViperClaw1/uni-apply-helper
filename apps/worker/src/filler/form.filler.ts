@@ -300,20 +300,39 @@ export class FormFiller {
         break;
       case 'radio':
         if (field.selector) {
-          const radio = page
+          const byValue = page
             .locator(`${field.selector}[value="${normalizedValue}"]`)
             .first();
-          if ((await radio.count()) > 0) {
-            await radio.check();
+          if ((await byValue.count()) > 0) {
+            await byValue.check({ force: true });
             break;
           }
         }
 
-        await page
-          .getByRole('radio', { name: normalizedValue, exact: false })
-          .first()
-          .check()
-          .catch(() => locator.check());
+        {
+          const byLabel = page
+            .getByRole('radio', { name: normalizedValue, exact: false })
+            .first();
+          if ((await byLabel.count()) > 0) {
+            await byLabel.check({ force: true }).catch(() => undefined);
+            if (await byLabel.isChecked().catch(() => false)) {
+              break;
+            }
+          }
+        }
+
+        // CUCAS mailing radios often lack useful labels in captures — pick first.
+        await (field.selector
+          ? page.locator(field.selector).first()
+          : locator
+        )
+          .check({ force: true })
+          .catch(async () =>
+            (field.selector
+              ? page.locator(field.selector).first()
+              : locator
+            ).click({ force: true }),
+          );
         break;
       case 'checkbox':
         if (this.toBoolean(value)) {
