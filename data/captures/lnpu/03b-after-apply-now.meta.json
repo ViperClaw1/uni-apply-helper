@@ -1,0 +1,88 @@
+{
+  "finalUrl": "http://lnpu.chiwest.cn/en/student/apply/index",
+  "title": "Study in 辽石化",
+  "bodyText": "1 ENGLISH Select Program Search Criteria Category: ...Please select... Associate Degree Bachelor's Degree Master's Degree Doctoral Degree Language Non-degree General Refresher Degree Higher Education Degree Research scholar Preppy Intercollegiate exchange student Chinese Remedial Degree Short-term student Select Program: -Select- -Select- Search College: -Select- International Education College -Select- Instruction Language: ...Please select... Chinese English Chinese and English Other ...Please select... Major Search: Starting Date: Clear Search Search Results The upper part is to help you select program, you can ignore them if you can't find the program you need, you may just leave them blank and select from the full list. Show 25 50 100 200 entries Major Title College Title Starting Dat",
+  "mainSelector": "form",
+  "applyNow": [
+    {
+      "tag": "DIV",
+      "text": "Select Program\nSearch Criteria\nCategory:\n...Please select...",
+      "href": null,
+      "id": null,
+      "className": "width1024 jxda jxbianji",
+      "onclick": null
+    },
+    {
+      "tag": "DIV",
+      "text": "Search Results\nThe upper part is to help you select program,",
+      "href": null,
+      "id": null,
+      "className": "wap_box p30",
+      "onclick": null
+    },
+    {
+      "tag": "DIV",
+      "text": "Show \n25\n50\n100\n200\n entries\nMajor Title\tCollege Title\tStart",
+      "href": null,
+      "id": null,
+      "className": "list",
+      "onclick": null
+    },
+    {
+      "tag": "DIV",
+      "text": "Show \n25\n50\n100\n200\n entries\nMajor Title\tCollege Title\tStart",
+      "href": null,
+      "id": "example_wrapper",
+      "className": "dataTables_wrapper no-footer",
+      "onclick": null
+    },
+    {
+      "tag": "A",
+      "text": "Apply Now",
+      "href": "javascript:void(0);",
+      "id": null,
+      "className": "",
+      "onclick": "apply_now(13135)"
+    },
+    {
+      "tag": "A",
+      "text": "Apply Now",
+      "href": "javascript:void(0);",
+      "id": null,
+      "className": "",
+      "onclick": "apply_now(13130)"
+    },
+    {
+      "tag": "A",
+      "text": "Apply Now",
+      "href": "javascript:void(0);",
+      "id": null,
+      "className": "",
+      "onclick": "apply_now(12872)"
+    },
+    {
+      "tag": "A",
+      "text": "Apply Now",
+      "href": "javascript:void(0);",
+      "id": null,
+      "className": "",
+      "onclick": "apply_now(12879)"
+    },
+    {
+      "tag": "A",
+      "text": "Apply Now",
+      "href": "javascript:void(0);",
+      "id": null,
+      "className": "",
+      "onclick": "apply_now(13458)"
+    },
+    {
+      "tag": "A",
+      "text": "Apply Now",
+      "href": "javascript:void(0);",
+      "id": null,
+      "className": "",
+      "onclick": "apply_now(13261)"
+    }
+  ]
+}

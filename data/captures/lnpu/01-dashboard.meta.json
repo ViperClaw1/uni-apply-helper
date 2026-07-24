@@ -1,0 +1,20 @@
+{
+  "finalUrl": "http://lnpu.chiwest.cn/en/student/index",
+  "title": "Study in 辽石化",
+  "bodyText": "1 ENGLISH -- RUSSIAN FEDERATION -- Education : -- Major : -- School : -- Notice Reminder Internal message 1 Quick Links My Application Accommodation Scholarship My Application Accommodation Scholarship Powered by CUCAS",
+  "mainSelector": "body",
+  "links": [
+    {
+      "text": "My Application",
+      "href": "/en/student/index/all"
+    },
+    {
+      "text": "My Application",
+      "href": "/en/student/index/all"
+    },
+    {
+      "text": "CUCAS",
+      "href": "https://www.cucas.cn?from=LNPU_apply_sys"
+    }
+  ]
+}

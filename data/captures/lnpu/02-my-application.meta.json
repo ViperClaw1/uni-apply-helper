@@ -1,0 +1,24 @@
+{
+  "finalUrl": "http://lnpu.chiwest.cn/en/student/index/all",
+  "title": "Study in 辽石化",
+  "bodyText": "1 ENGLISH MY APPLICATION APPLY NOW All Unfinished Finished Application Number Apply for major Status Last operation time Review Remarks Progress APPLY NOW \"Materials Submitted For Review\"，this status indicates that your application materials are under review by the school. \"Initial Review Passed\"，this status indicates that your application materials have passed the initial review. \"Returned\"， this status indicates that your application materials are not qualified. You need to follow the prompts ",
+  "mainSelector": "body",
+  "links": [
+    {
+      "text": "APPLY NOW",
+      "href": "/en/student/apply/index"
+    },
+    {
+      "text": "APPLY NOW",
+      "href": "/en/student/apply/index"
+    },
+    {
+      "text": "My Application",
+      "href": "/en/student/index/all"
+    },
+    {
+      "text": "CUCAS",
+      "href": "https://www.cucas.cn?from=LNPU_apply_sys"
+    }
+  ]
+}

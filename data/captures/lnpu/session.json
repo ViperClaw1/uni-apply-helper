@@ -1,0 +1,15 @@
+{
+  "cookies": [
+    {
+      "name": "ci_session",
+      "value": "h5klkksf6jvr99163e32kgsgt9h05k02",
+      "domain": "lnpu.chiwest.cn",
+      "path": "/",
+      "expires": 1784884231.121736,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": []
+}

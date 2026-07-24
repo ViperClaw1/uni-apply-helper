@@ -1,0 +1,29 @@
+<form id="myform" name="myform" action="/en/student/login/do_login?back_url=http%3A%2F%2Fwww.apply.sdu.edu.cn%2Fen%2Fstudent%2Findex" method="post">
+        
+        <ul class="zyj">
+          <li class="urestitle_font">Login</li>
+
+          <li class="mg_b_20">
+			  <input type="text" value="Email/Passport No." class="hideinput_2" onfocus="$('.hideinput_1').show();$('.hideinput_2').hide();$('.hideinput_1').focus();">
+			  <input style="display:none;" class="hideinput_1" type="text" onfocus="if(this.value=='Email/Passport No.'){this.value='';};" onblur="if(this.value==''||this.value=='Email/Passport No.'){this.value='Email/Passport No.';$('.hideinput_2').show();$('.hideinput_1').hide();}" id="email" name="email" validate="required:true">
+          </li>
+          <li class="mg_b_20">
+			<input type="text" value="Password" class="hideinput2" onfocus="$('.hideinput').show();$('.hideinput2').hide();$('.hideinput').focus();">
+            <input style="display:none;" class="hideinput" type="password" onfocus="if(this.value=='Password'){this.value='';};" onblur="if(this.value==''||this.value=='Password'){this.value='Password';$('.hideinput2').show();$('.hideinput').hide();}" id="password" name="password" validate="required:true">
+          </li>
+		   <li id="code_class" class="mg_b_20">
+            <input class="form-ft_12" type="text" autocomplete="off" maxlength="30" id="code" name="code" validate="required:true,remote:'/en/student/register/check_code'" value="Verification Code" onfocus="if(this.value=='Verification Code'){this.value='';};" onblur="if(this.value==''||this.value=='Verification Code'){this.value='Verification Code';}">
+          </li>
+          <li class="Change"> <span><img src="/student/verification/index?1784876854644" alt="Verification Code" class="retina-ready" width="150" height="32" title="Click to change verification code" onclick="$(this).attr('src','/en/student/verification/index?'+ new Date().getTime())" id="virimg"></span><a onclick="$('#virimg').attr('src','/en/student/verification/index?'+ new Date().getTime())" style="display:inline-block; float:left; margin-left:10px; cursor:pointer;">
+            Change            </a> </li>
+		 
+          <li class="mg_b_20 wangjimama">
+			  <a href="/en/student/login/retrieve_password" target="_blank" class="login-remember">Forgot password?</a> </li>
+          <li>
+            <input class="login-btn" id="login_submit" type="button" value=" Login " style="border:none;margin-bottom: 10px;">
+            </li><li class="mg_b_20 wangjimama" style="color: red;font-size: 14px;">
+                Don't have an account? <a href="/en/student/register" target="_blank" class="login-remember" style="color: red;font-size: 13px;">Sign Up</a> </li>
+            <li>
+          </li>
+        </ul>
+      </form>

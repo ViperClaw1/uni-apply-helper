@@ -1,0 +1,36 @@
+<form  id="myform" name="myform" action="/en/student/login/do_login?back_url=http://lnpu.chiwest.cn/en/student/index" method="post">
+                                    <ul class="zyj">
+                                        <div class="usernameDiv" >
+                                            <li class="mg_b_20">
+                                                <input type="text" class="form-control" id="email" name="email" placeholder="Email/Passport No.">
+                                            </li>
+                                        </div>
+                                        <div class="usernameDiv" >
+                                            <li class="mg_b_20">
+                                                <input type="password" class="form-control" id="password" name="password" placeholder="Password">
+                                            </li>
+                                        </div>
+                                        <div class="usernameDiv" >
+                                            <li class="mg_b_20">
+                                                <input type="text" class="form-control" id="code" name="code" validate="required:true,remote:'/en/student/register/check_code'"    value="Verification Code" onfocus="if(this.value=='Verification Code'){this.value='';};" onblur="if(this.value==''||this.value=='Verification Code'){this.value='Verification Code';}">
+                                            </li>
+                                        </div>
+                                        <!-- 验证码 -->
+                                        <div class="yzm">
+                                            <div class="yzm_01">
+                                                <img style="width: 100%;" src="/en/student/verification/index?1784876533" alt="Verification Code" class='retina-ready' width="150" height="32" title="Click to change verification code" onclick="$(this).attr('src','/en/student/verification/index?'+ new Date().getTime())" id="virimg">
+                                            </div>
+                                            <div class="changeCode">
+                                                <a style="color:red; margin: 0; padding: 0;" onclick="$('#virimg').attr('src','/en/student/verification/index?'+ new Date().getTime())" >
+                                                    Change                                                </a>
+                                            </div>
+                                        </div>
+                                        <div class="forgetPwd">
+                                            <a href="/en/student/login/retrieve_password" target="_blank" class="login-remember" style="color: #000;">Forgot password?</a>
+                                        </div>
+                                        <div class="loginBtn" id="login_submit"> Login </div>
+                                        <div class="registerBtn">
+<!--                                            -->                                            <a href="/en/student/register" target="_blank" class="login-remember" style="color: red;font-size: 13px;">Sign Up</a> </li>
+                                        </div>
+                                    </ul>
+                                </form>

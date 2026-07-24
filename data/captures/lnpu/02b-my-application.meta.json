@@ -1,0 +1,72 @@
+{
+  "finalUrl": "http://lnpu.chiwest.cn/en/student/index/all",
+  "title": "Study in 辽石化",
+  "bodyText": "1 ENGLISH MY APPLICATION APPLY NOW All Unfinished Finished Application Number Apply for major Status Last operation time Review Remarks Progress APPLY NOW \"Materials Submitted For Review\"，this status indicates that your application materials are under review by the school. \"Initial Review Passed\"，this status indicates that your application materials have passed the initial review. \"Returned\"， this status indicates that your application materials are not qualified. You need to follow the prompts in the \"Remarks Review\" column and perform the corresponding operations in the \"Operations\" column. \"Refuse\"，this status indicates that your application does not meet the requirements of the school. Please contact the school. \"Conditional Admission\"，this status indicates that your application has be",
+  "mainSelector": "body",
+  "applyNow": [
+    {
+      "tag": "DIV",
+      "text": "MY APPLICATION\nAPPLY NOW\nAll\nUnfinished\nFinished\nApplication",
+      "href": null,
+      "id": null,
+      "className": "width_925 jxsd",
+      "onclick": null
+    },
+    {
+      "tag": "SPAN",
+      "text": "APPLY NOW",
+      "href": null,
+      "id": null,
+      "className": "shenqingbtn",
+      "onclick": null
+    },
+    {
+      "tag": "A",
+      "text": "APPLY NOW",
+      "href": "/en/student/apply/index",
+      "id": null,
+      "className": "",
+      "onclick": null
+    },
+    {
+      "tag": "DIV",
+      "text": "All\nUnfinished\nFinished\nApplication Number\tApply for major\tS",
+      "href": null,
+      "id": null,
+      "className": "web_news",
+      "onclick": null
+    },
+    {
+      "tag": "DIV",
+      "text": "Application Number\tApply for major\tStatus\tLast operation tim",
+      "href": null,
+      "id": null,
+      "className": "connews",
+      "onclick": null
+    },
+    {
+      "tag": "DIV",
+      "text": "Application Number\tApply for major\tStatus\tLast operation tim",
+      "href": null,
+      "id": null,
+      "className": "con_con2",
+      "onclick": null
+    },
+    {
+      "tag": "DIV",
+      "text": "Application Number\tApply for major\tStatus\tLast operation tim",
+      "href": null,
+      "id": "example_wrapper",
+      "className": "dataTables_wrapper no-footer",
+      "onclick": null
+    },
+    {
+      "tag": "A",
+      "text": "APPLY NOW",
+      "href": "/en/student/apply/index",
+      "id": null,
+      "className": "",
+      "onclick": null
+    }
+  ]
+}
