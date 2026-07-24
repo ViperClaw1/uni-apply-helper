@@ -45,6 +45,18 @@ export const DEFAULT_DOCUMENT_TYPES: DocumentTypeOption[] = [
     multiple: true,
   },
   {
+    key: "diploma",
+    label: "Диплом / Diploma",
+    accept: { "application/pdf": [".pdf"], "image/*": [] },
+    parse: false,
+  },
+  {
+    key: "recommendation_letter",
+    label: "Рекомендательное письмо / Recommendation Letter",
+    accept: { "application/pdf": [".pdf"], "image/*": [] },
+    parse: false,
+  },
+  {
     key: "personal_statement",
     label: "Personal Statement / Мотивационное письмо",
     accept: { "application/pdf": [".pdf"], "application/msword": [".doc"], "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"] },
