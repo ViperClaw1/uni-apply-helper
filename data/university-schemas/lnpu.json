@@ -1,0 +1,308 @@
+{
+  "id": "lnpu",
+  "displayName": "Liaoning Petrochemical University",
+  "formUrl": "http://lnpu.chiwest.cn/en/student/apply/index",
+  "defaultProgram": "Master",
+  "session": {
+    "loginUrlPattern": "/student/login",
+    "expiredIndicators": ["Forgot password?", "Don't have an account?", "Sign Up"]
+  },
+  "aliases": [
+    "Liaoning Petrochemical University",
+    "Liaoning Shihua University",
+    "LNPU",
+    "辽石化",
+    "辽宁石油化工大学",
+    "lnpu.chiwest.cn"
+  ],
+  "requiredDocuments": [
+    "photo",
+    "passport",
+    "transcript",
+    "diploma",
+    "recommendation_letter"
+  ],
+  "fields": [
+    {
+      "selector": "input[name=\"apply[duration_start]\"]",
+      "mapsTo": null,
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Hope Learning Start Time"
+    },
+    {
+      "selector": "input[name=\"apply[duration_end]\"]",
+      "mapsTo": null,
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Hope Learning End Time"
+    },
+    {
+      "selector": "input[name=\"student[last_name]\"]",
+      "mapsTo": "personal.surname",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Family Name"
+    },
+    {
+      "selector": "input[name=\"student[first_name]\"]",
+      "mapsTo": "personal.givenName",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Given Name"
+    },
+    {
+      "selector": "input[name=\"passport[number]\"]",
+      "mapsTo": "personal.passportNo",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Passport Number"
+    },
+    {
+      "selector": "input[name=\"passport[due_time]\"]",
+      "mapsTo": "personal.passportExpiry",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Passport Expiration Date"
+    },
+    {
+      "selector": "select[name=\"passport[passport_type]\"]",
+      "mapsTo": null,
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Passport Type",
+      "options": ["Ordinary Passport"]
+    },
+    {
+      "selector": "input[name=\"student[name]\"]",
+      "mapsTo": "personal.chineseName",
+      "type": "text",
+      "required": false,
+      "wizardStep": 1,
+      "labelHint": "Chinese Name"
+    },
+    {
+      "selector": "select[name=\"student[gender]\"]",
+      "mapsTo": "personal.sex",
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Gender"
+    },
+    {
+      "selector": "select[name=\"student[marital_status]\"]",
+      "mapsTo": "personal.maritalStatus",
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Marital Status"
+    },
+    {
+      "selector": "select[name=\"student[nationality_id]\"]",
+      "mapsTo": "personal.nationality",
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Nationality"
+    },
+    {
+      "selector": "input[name=\"student[birthdate]\"]",
+      "mapsTo": "personal.dateOfBirth",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Birth Date"
+    },
+    {
+      "selector": "select[name=\"student[borned_country_id]\"]",
+      "mapsTo": "personal.countryOfBirth",
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Country of Birth"
+    },
+    {
+      "selector": "input[name=\"student[birth_place]\"]",
+      "mapsTo": "personal.cityOfBirth",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Place of Birth"
+    },
+    {
+      "selector": "select[name=\"student[language_id]\"]",
+      "mapsTo": "personal.nativeLanguage",
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Native Language"
+    },
+    {
+      "selector": "select[name=\"student[education_id]\"]",
+      "mapsTo": "education.0.degree",
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Highest Level of Education"
+    },
+    {
+      "selector": "select[name=\"student[religion]\"]",
+      "mapsTo": "personal.religion",
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Religion"
+    },
+    {
+      "selector": "select[name=\"student[career_id]\"]",
+      "mapsTo": null,
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Occupation"
+    },
+    {
+      "selector": "input[name=\"family_address[home_mobile]\"]",
+      "mapsTo": "contact.phone",
+      "type": "text",
+      "required": false,
+      "wizardStep": 1,
+      "labelHint": "Home Mobile"
+    },
+    {
+      "selector": "input[name=\"education[0][school_name]\"]",
+      "mapsTo": "education.0.institution",
+      "type": "text",
+      "required": false,
+      "wizardStep": 1,
+      "labelHint": "School Name"
+    },
+    {
+      "selector": "select[name=\"education[0][learning_type]\"]",
+      "mapsTo": "education.0.degree",
+      "type": "select",
+      "required": false,
+      "wizardStep": 1
+    },
+    {
+      "selector": "input[name=\"education[0][stuhis_major]\"]",
+      "mapsTo": "education.0.major",
+      "type": "text",
+      "required": false,
+      "wizardStep": 1
+    },
+    {
+      "selector": "input[name=\"recommend[guarantor_en_name]\"]",
+      "mapsTo": "guarantor.name",
+      "type": "text",
+      "required": false,
+      "wizardStep": 1
+    },
+    {
+      "selector": "input[name=\"recommend[guar_mobile]\"]",
+      "mapsTo": "guarantor.phone",
+      "type": "text",
+      "required": false,
+      "wizardStep": 1
+    },
+    {
+      "selector": "input[name=\"emergency_contact[0][emergency_name]\"]",
+      "mapsTo": "emergencyContact.name",
+      "type": "text",
+      "required": false,
+      "wizardStep": 1
+    },
+    {
+      "selector": "input[name=\"emergency_contact[0][emergency_mobile]\"]",
+      "mapsTo": "emergencyContact.phone",
+      "type": "text",
+      "required": false,
+      "wizardStep": 1
+    },
+    {
+      "selector": "input[type=\"checkbox\"][name=\"is_read_the_notice\"]",
+      "mapsTo": null,
+      "type": "checkbox",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Declaration"
+    },
+    {
+      "selector": "#fileupload_0",
+      "mapsTo": null,
+      "type": "file",
+      "required": true,
+      "wizardStep": 2,
+      "documentType": "photo",
+      "labelHint": "Personal Photos"
+    },
+    {
+      "selector": "#fileupload_1",
+      "mapsTo": null,
+      "type": "file",
+      "required": true,
+      "wizardStep": 2,
+      "documentType": "passport",
+      "labelHint": "Passport & Passport Blank Page"
+    },
+    {
+      "selector": "#fileupload_2",
+      "mapsTo": null,
+      "type": "file",
+      "required": true,
+      "wizardStep": 2,
+      "documentType": "transcript",
+      "labelHint": "High School Transcript"
+    },
+    {
+      "selector": "#fileupload_3",
+      "mapsTo": null,
+      "type": "file",
+      "required": true,
+      "wizardStep": 2,
+      "documentType": "diploma",
+      "labelHint": "High School Certificate"
+    },
+    {
+      "selector": "#fileupload_4",
+      "mapsTo": null,
+      "type": "file",
+      "required": true,
+      "wizardStep": 2,
+      "documentType": "diploma",
+      "labelHint": "Notarized Bachelor's Degree Certificate"
+    },
+    {
+      "selector": "#fileupload_5",
+      "mapsTo": null,
+      "type": "file",
+      "required": true,
+      "wizardStep": 2,
+      "documentType": "transcript",
+      "labelHint": "Bachelors Degree Transcript"
+    },
+    {
+      "selector": "#fileupload_6",
+      "mapsTo": null,
+      "type": "file",
+      "required": true,
+      "wizardStep": 2,
+      "documentType": "recommendation_letter",
+      "labelHint": "Two letters of recommendation"
+    }
+  ],
+  "wizard": {
+    "totalSteps": 2,
+    "nextButtonSelector": "input[value=\"Next\"]",
+    "submitButtonSelector": "input[value=\"Submit\"], a:has-text(\"Submit\"), button:has-text(\"Submit\")"
+  },
+  "requiresEssay": false,
+  "notes": "CUCAS (chiwest). Pre-wizard: My Application → APPLY NOW → program list apply_now(id) → apply/start Next → apply_forms. Then apply_attr (uploads) → apply_submit. Session: LNPU_SESSION_STATE_B64. Upload selectors are hidden inputs (#fileupload_N); photo uses student_upload_photo(), others upfile()."
+}

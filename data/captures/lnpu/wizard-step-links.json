@@ -1,0 +1,22 @@
+[
+  {
+    "text": "1 Apply Now",
+    "href": "/en/student/apply/start?apply_id=OTg4NDg",
+    "liClass": "d1"
+  },
+  {
+    "text": "2 Application Form",
+    "href": "/en/student/apply_forms/index?apply_id=OTg4NDg",
+    "liClass": "d2"
+  },
+  {
+    "text": "3 Upload Materials",
+    "href": "/en/student/apply_attr?apply_id=OTg4NDg",
+    "liClass": "d3"
+  },
+  {
+    "text": "4 Apply Submit",
+    "href": "/en/student/apply_submit?apply_id=OTg4NDg",
+    "liClass": "d4"
+  }
+]

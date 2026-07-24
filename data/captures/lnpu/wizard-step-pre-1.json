@@ -1,0 +1,22 @@
+{
+  "wizardStep": "pre-1",
+  "wizardStepTitle": "Apply Now",
+  "url": "http://lnpu.chiwest.cn/en/student/apply/start?apply_id=OTg4NDg",
+  "capturedAt": "2026-07-24T08:01:17.597Z",
+  "fields": [
+    {
+      "tag": "input",
+      "inputType": "radio",
+      "name": "is_fee_type",
+      "id": "txtInputBoxZf2",
+      "label": "is_fee_type",
+      "placeholder": null,
+      "required": false,
+      "selector": "input[type=\"radio\"][name=\"is_fee_type\"]"
+    }
+  ],
+  "navigation": {
+    "submitButtonSelector": "input[value=\"Submit\"], a:has-text(\"Submit\"), button:has-text(\"Submit\")"
+  },
+  "bodySnippet": "1 ENGLISH The program you are applying for is Oil-Gas Well Engineering Master's Degree 1 Apply Now 2 Application Form 3 Upload Materials 4 Apply Submit My Application Accommodation Scholarship Powered by CUCAS"
+}

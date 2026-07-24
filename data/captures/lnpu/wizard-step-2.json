@@ -1,0 +1,179 @@
+{
+  "wizardStep": 2,
+  "wizardStepTitle": "Upload Materials",
+  "url": "http://lnpu.chiwest.cn/en/student/apply_attr?apply_id=OTg4NDg",
+  "capturedAt": "2026-07-24T08:01:13.687Z",
+  "fields": [
+    {
+      "tag": "input",
+      "inputType": "file",
+      "name": "files",
+      "id": "fileupload_0",
+      "label": "files",
+      "placeholder": null,
+      "required": false,
+      "selector": "#fileupload_0"
+    },
+    {
+      "tag": "input",
+      "inputType": "file",
+      "name": "files",
+      "id": "fileupload_1",
+      "label": "files",
+      "placeholder": null,
+      "required": false,
+      "selector": "#fileupload_1"
+    },
+    {
+      "tag": "textarea",
+      "inputType": "textarea",
+      "name": "text_content[1]",
+      "id": null,
+      "label": "text_content[1]",
+      "placeholder": null,
+      "required": false,
+      "selector": "textarea[name=\"text_content[1]\"]"
+    },
+    {
+      "tag": "input",
+      "inputType": "file",
+      "name": "files",
+      "id": "fileupload_2",
+      "label": "files",
+      "placeholder": null,
+      "required": false,
+      "selector": "#fileupload_2"
+    },
+    {
+      "tag": "textarea",
+      "inputType": "textarea",
+      "name": "text_content[2]",
+      "id": null,
+      "label": "text_content[2]",
+      "placeholder": null,
+      "required": false,
+      "selector": "textarea[name=\"text_content[2]\"]"
+    },
+    {
+      "tag": "input",
+      "inputType": "file",
+      "name": "files",
+      "id": "fileupload_3",
+      "label": "files",
+      "placeholder": null,
+      "required": false,
+      "selector": "#fileupload_3"
+    },
+    {
+      "tag": "textarea",
+      "inputType": "textarea",
+      "name": "text_content[3]",
+      "id": null,
+      "label": "text_content[3]",
+      "placeholder": null,
+      "required": false,
+      "selector": "textarea[name=\"text_content[3]\"]"
+    },
+    {
+      "tag": "input",
+      "inputType": "file",
+      "name": "files",
+      "id": "fileupload_4",
+      "label": "files",
+      "placeholder": null,
+      "required": false,
+      "selector": "#fileupload_4"
+    },
+    {
+      "tag": "textarea",
+      "inputType": "textarea",
+      "name": "text_content[4]",
+      "id": null,
+      "label": "text_content[4]",
+      "placeholder": null,
+      "required": false,
+      "selector": "textarea[name=\"text_content[4]\"]"
+    },
+    {
+      "tag": "input",
+      "inputType": "file",
+      "name": "files",
+      "id": "fileupload_5",
+      "label": "files",
+      "placeholder": null,
+      "required": false,
+      "selector": "#fileupload_5"
+    },
+    {
+      "tag": "textarea",
+      "inputType": "textarea",
+      "name": "text_content[5]",
+      "id": null,
+      "label": "text_content[5]",
+      "placeholder": null,
+      "required": false,
+      "selector": "textarea[name=\"text_content[5]\"]"
+    },
+    {
+      "tag": "input",
+      "inputType": "file",
+      "name": "files",
+      "id": "fileupload_6",
+      "label": "files",
+      "placeholder": null,
+      "required": false,
+      "selector": "#fileupload_6"
+    },
+    {
+      "tag": "textarea",
+      "inputType": "textarea",
+      "name": "text_content[6]",
+      "id": null,
+      "label": "text_content[6]",
+      "placeholder": null,
+      "required": false,
+      "selector": "textarea[name=\"text_content[6]\"]"
+    }
+  ],
+  "fileInputs": [
+    {
+      "label": "Personal Photos",
+      "selector": "#fileupload_0",
+      "required": true
+    },
+    {
+      "label": "Passport & Passport Blank Page",
+      "selector": "#fileupload_1",
+      "required": true
+    },
+    {
+      "label": "High School Transcript",
+      "selector": "#fileupload_2",
+      "required": true
+    },
+    {
+      "label": "High School Certificate",
+      "selector": "#fileupload_3",
+      "required": true
+    },
+    {
+      "label": "Notarized Bachelor's Degree Certificate",
+      "selector": "#fileupload_4",
+      "required": true
+    },
+    {
+      "label": "Bachelors Degree Transcript",
+      "selector": "#fileupload_5",
+      "required": true
+    },
+    {
+      "label": "Two letters of recommendation",
+      "selector": "#fileupload_6",
+      "required": true
+    }
+  ],
+  "navigation": {
+    "submitButtonSelector": "input[value=\"Submit\"], a:has-text(\"Submit\"), button:has-text(\"Submit\")"
+  },
+  "bodySnippet": "1 ENGLISH The program you are applying for is Oil-Gas Well Engineering Master's Degree 1 Apply Now 2 Application Form 3 Upload Materials 4 Apply Submit Notice 1.To avoid delays in admission, please upload each document according to the description in the left column. 2.Please make sure the scanned or photographed documents are clearly readable and printable. 3.The system only accepts the following"
+}

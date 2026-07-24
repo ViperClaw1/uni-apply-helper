@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { UniversityNavigator } from './university-navigator.js';
+import { CucasNavigator } from './cucas.navigator.js';
 import { GenericNavigator } from './generic.navigator.js';
 import { SduNavigator } from './sdu.navigator.js';
 import { ZzuNavigator } from './zzu.navigator.js';
@@ -9,6 +10,7 @@ export class NavigationRegistry {
   constructor(
     private readonly zzuNavigator: ZzuNavigator,
     private readonly sduNavigator: SduNavigator,
+    private readonly cucasNavigator: CucasNavigator,
     private readonly genericNavigator: GenericNavigator,
   ) {}
 
@@ -16,6 +18,7 @@ export class NavigationRegistry {
     const navigators = [
       this.zzuNavigator,
       this.sduNavigator,
+      this.cucasNavigator,
       this.genericNavigator,
     ];
 

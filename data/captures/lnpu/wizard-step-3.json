@@ -1,0 +1,11 @@
+{
+  "wizardStep": 3,
+  "wizardStepTitle": "Apply Submit",
+  "url": "http://lnpu.chiwest.cn/en/student/apply_submit?apply_id=OTg4NDg",
+  "capturedAt": "2026-07-24T08:01:15.683Z",
+  "fields": [],
+  "navigation": {
+    "submitButtonSelector": "input[value=\"Submit\"], a:has-text(\"Submit\"), button:has-text(\"Submit\")"
+  },
+  "bodySnippet": "1 ENGLISH The program you are applying for is Oil-Gas Well Engineering Master's Degree 1 Apply Now 2 Application Form 3 Upload Materials 4 Apply Submit Form incompleteContinue Materials incompleteContinue After you finished filling the application form and uploaded the documents, click SAVE. If your application status remains \"Incompleted\", please click NEXT to modify the status. Address: 辽宁省抚顺市望花"
+}

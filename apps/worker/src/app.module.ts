@@ -7,6 +7,7 @@ import { GeminiClient } from './agent/gemini/gemini.client.js';
 import { PageObserver } from './agent/observe/page.observer.js';
 import { AgentPlanner } from './agent/think/agent.planner.js';
 import { BrowserService } from './browser/browser.service.js';
+import { CucasNavigator } from './browser/navigation/cucas.navigator.js';
 import { GenericNavigator } from './browser/navigation/generic.navigator.js';
 import { NavigationRegistry } from './browser/navigation/navigation-registry.service.js';
 import { SduNavigator } from './browser/navigation/sdu.navigator.js';
@@ -36,6 +37,7 @@ import { ScreenshotService } from './screenshot/screenshot.service.js';
     PreWizardNavigator,
     ZzuNavigator,
     SduNavigator,
+    CucasNavigator,
     GenericNavigator,
     NavigationRegistry,
     ScreenshotService,

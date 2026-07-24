@@ -1,0 +1,6 @@
+[
+  {
+    "className": "list_title steps_4",
+    "html": "<div class=\"list_title steps_4\">\n<style type=\"text/css\">\n\t.applyonline-main { width: 1100px; }\n\t.fl_zl { width: 380px; }\n\t.fr_sq { margin-top: 10px; }\n\t.list_title ul li em {\n\t    float: left;\n\t    display: block;\n\t    word-wrap: break-word;\n\t    word-break: normal;\n\t    width: 80%;\n\t  /*  line-height: 1.2; */\n\t  /*  padding-top: 6px; */\n\t   display: flex;\n\t           align-items: center;\n\t          justify-content: center;\n\t          flex-direction: column;\n\t\t\t  height: 40px;\n\t\t\t  line-height: 1.2;\n\t}\n</style>\n<ul class=\"c2\">\n\t<li class=\"d1\">\n                    <a href=\"/en/student/apply/start?apply_id=OTg4NDg\">\n                \n            <span>1</span>\n            <em>Apply Now</em>\n        </a>\n    </li>\n\n\n\t<li class=\"d2\">\n                    <a href=\"/en/student/apply_forms/index?ap"
+  }
+]

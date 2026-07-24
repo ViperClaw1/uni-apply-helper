@@ -1,0 +1,135 @@
+{
+  "capturedAt": "2026-07-24T07:56:05.241Z",
+  "url": "http://lnpu.chiwest.cn/en/student/apply_attr?apply_id=OTg4NDg",
+  "title": "Study in 辽石化",
+  "body": "1 ENGLISH The program you are applying for is Oil-Gas Well Engineering Master's Degree 1 Apply Now 2 Application Form 3 Upload Materials 4 Apply Submit Notice 1.To avoid delays in admission, please upload each document according to the description in the left column. 2.Please make sure the scanned or photographed documents are clearly readable and printable. 3.The system only accepts the following format: RAR, PDF, JPG, PNG, GIF, DOC, DOCX. 4.Each uploaded file cannot exceed 20M Upload Materials",
+  "fileInputs": [
+    {
+      "kind": "file",
+      "name": "files",
+      "id": "fileupload_0",
+      "accept": ""
+    },
+    {
+      "kind": "file",
+      "name": "files",
+      "id": "fileupload_1",
+      "accept": ""
+    },
+    {
+      "kind": "file",
+      "name": "files",
+      "id": "fileupload_2",
+      "accept": ""
+    },
+    {
+      "kind": "file",
+      "name": "files",
+      "id": "fileupload_3",
+      "accept": ""
+    },
+    {
+      "kind": "file",
+      "name": "files",
+      "id": "fileupload_4",
+      "accept": ""
+    },
+    {
+      "kind": "file",
+      "name": "files",
+      "id": "fileupload_5",
+      "accept": ""
+    },
+    {
+      "kind": "file",
+      "name": "files",
+      "id": "fileupload_6",
+      "accept": ""
+    }
+  ],
+  "fieldCount": 13,
+  "fieldsSample": [
+    {
+      "name": "files",
+      "type": "file",
+      "id": "fileupload_0"
+    },
+    {
+      "name": "files",
+      "type": "file",
+      "id": "fileupload_1"
+    },
+    {
+      "name": "text_content[1]",
+      "type": "textarea",
+      "id": ""
+    },
+    {
+      "name": "files",
+      "type": "file",
+      "id": "fileupload_2"
+    },
+    {
+      "name": "text_content[2]",
+      "type": "textarea",
+      "id": ""
+    },
+    {
+      "name": "files",
+      "type": "file",
+      "id": "fileupload_3"
+    },
+    {
+      "name": "text_content[3]",
+      "type": "textarea",
+      "id": ""
+    },
+    {
+      "name": "files",
+      "type": "file",
+      "id": "fileupload_4"
+    },
+    {
+      "name": "text_content[4]",
+      "type": "textarea",
+      "id": ""
+    },
+    {
+      "name": "files",
+      "type": "file",
+      "id": "fileupload_5"
+    },
+    {
+      "name": "text_content[5]",
+      "type": "textarea",
+      "id": ""
+    },
+    {
+      "name": "files",
+      "type": "file",
+      "id": "fileupload_6"
+    },
+    {
+      "name": "text_content[6]",
+      "type": "textarea",
+      "id": ""
+    }
+  ],
+  "nextButtons": [
+    {
+      "tag": "A",
+      "text": "3\n\t\t\tUpload Materials",
+      "href": "/en/student/apply_attr?apply_id=OTg4NDg"
+    },
+    {
+      "tag": "A",
+      "text": "4\n\t\t\tApply Submit",
+      "href": "/en/student/apply_submit?apply_id=OTg4NDg"
+    },
+    {
+      "tag": "A",
+      "text": "Next",
+      "href": "javascript:;"
+    }
+  ]
+}

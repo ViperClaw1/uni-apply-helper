@@ -1,0 +1,134 @@
+{
+  "capturedAt": "2026-07-24T07:56:00.606Z",
+  "url": "http://lnpu.chiwest.cn/en/student/apply_forms/index?apply_id=OTg4NDg",
+  "title": "Study in 辽石化",
+  "body": "1 ENGLISH The program you are applying for is Oil-Gas Well Engineering Master's Degree 1 Apply Now 2 Application Form 3 Upload Materials 4 Apply Submit 如果刷新页面或切换语言，请先点击底部保存按钮后操作. If you refresh the page or switch the language, please click the Save button at the bottom first. Personal Information References Education Experience Work Experience Family Members Financial Supporter Emergency Contact Person Home Country Address Mailing Address Declaration Personal Information Basic Information *Famil",
+  "fileInputs": [],
+  "fieldCount": 136,
+  "fieldsSample": [
+    {
+      "name": "apply[duration_start]",
+      "type": "text",
+      "id": ""
+    },
+    {
+      "name": "apply[duration_end]",
+      "type": "text",
+      "id": ""
+    },
+    {
+      "name": "student[last_name]",
+      "type": "text",
+      "id": "apply_right_basic_last_name"
+    },
+    {
+      "name": "student[first_name]",
+      "type": "text",
+      "id": "apply_right_basic_first_name"
+    },
+    {
+      "name": "passport[number]",
+      "type": "text",
+      "id": "apply_right_basic_passport"
+    },
+    {
+      "name": "passport[due_time]",
+      "type": "text",
+      "id": ""
+    },
+    {
+      "name": "passport[passport_type]",
+      "type": "select-one",
+      "id": ""
+    },
+    {
+      "name": "passport[type_other_name]",
+      "type": "text",
+      "id": ""
+    },
+    {
+      "name": "student[name]",
+      "type": "text",
+      "id": ""
+    },
+    {
+      "name": "student[gender]",
+      "type": "select-one",
+      "id": ""
+    },
+    {
+      "name": "student[marital_status]",
+      "type": "select-one",
+      "id": ""
+    },
+    {
+      "name": "student[nationality_id]",
+      "type": "select-one",
+      "id": ""
+    },
+    {
+      "name": "student[birthdate]",
+      "type": "text",
+      "id": ""
+    },
+    {
+      "name": "student[borned_country_id]",
+      "type": "select-one",
+      "id": ""
+    },
+    {
+      "name": "student[birth_place]",
+      "type": "text",
+      "id": ""
+    },
+    {
+      "name": "student[language_id]",
+      "type": "select-one",
+      "id": ""
+    },
+    {
+      "name": "student[education_id]",
+      "type": "select-one",
+      "id": ""
+    },
+    {
+      "name": "student[religion]",
+      "type": "select-one",
+      "id": ""
+    },
+    {
+      "name": "student[religion_other]",
+      "type": "text",
+      "id": ""
+    },
+    {
+      "name": "student[years_attended]",
+      "type": "text",
+      "id": ""
+    }
+  ],
+  "nextButtons": [
+    {
+      "tag": "A",
+      "text": "3\n\t\t\tUpload Materials",
+      "href": "/en/student/apply_attr?apply_id=OTg4NDg"
+    },
+    {
+      "tag": "A",
+      "text": "4\n\t\t\tApply Submit",
+      "href": "/en/student/apply_submit?apply_id=OTg4NDg"
+    },
+    {
+      "tag": "INPUT",
+      "value": "Save",
+      "text": "",
+      "href": null
+    },
+    {
+      "tag": "INPUT",
+      "value": "Next",
+      "text": "",
+      "href": null
+    }
+  ]
+}

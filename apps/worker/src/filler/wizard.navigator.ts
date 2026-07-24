@@ -58,20 +58,25 @@ export class WizardNavigator {
         .catch(() => undefined);
     }
 
-    // Always wait until apply* field set changes (AJAX DOM swap)
+    // Wait until step signature changes (AJAX DOM swap or full navigation).
+    // CUCAS uses separate URLs per step — pathname must be part of the sig.
     const advanced = await page
       .waitForFunction(
         (before) => {
           const names = [
             ...document.querySelectorAll(
-              'input[name], select[name], textarea[name]',
+              'input[name], select[name], textarea[name], input[type="file"]',
             ),
           ]
-            .map((el) => (el as HTMLInputElement).name)
-            .filter((name) => name.startsWith('apply'))
+            .map((el) => {
+              const input = el as HTMLInputElement;
+              return input.name || input.id || '';
+            })
+            .filter(Boolean)
             .slice(0, 40)
             .join('|');
-          return names.length > 0 && names !== before;
+          const sig = `${location.pathname}${location.search}|${names}`;
+          return sig !== before;
         },
         beforeSig,
         { timeout: 20_000 },
@@ -95,17 +100,22 @@ export class WizardNavigator {
   }
 
   private async getStepSignature(page: Page): Promise<string> {
-    return page.evaluate(() =>
-      [
+    return page.evaluate(() => {
+      const names = [
         ...document.querySelectorAll(
-          'input[name], select[name], textarea[name]',
+          'input[name], select[name], textarea[name], input[type="file"]',
         ),
       ]
-        .map((el) => (el as HTMLInputElement).name)
-        .filter((name) => name.startsWith('apply'))
+        .map((el) => {
+          const input = el as HTMLInputElement;
+          return input.name || input.id || '';
+        })
+        .filter(Boolean)
         .slice(0, 40)
-        .join('|'),
-    );
+        .join('|');
+
+      return `${location.pathname}${location.search}|${names}`;
+    });
   }
 
   private async resolveNextButton(page: Page, selector: string) {

@@ -120,10 +120,14 @@ export class FormFiller {
         }
       },
       {
-        markerForStep: (step) =>
-          this.wizardFieldGroups
-            .fieldsForStep(university, step)
-            .find((field) => field.selector && field.type !== 'file')?.selector,
+        markerForStep: (step) => {
+          const fields = this.wizardFieldGroups.fieldsForStep(university, step);
+          return (
+            fields.find((field) => field.selector && field.type !== 'file')
+              ?.selector ??
+            fields.find((field) => field.selector)?.selector
+          );
+        },
       },
     );
 

@@ -1,0 +1,55 @@
+{
+  "body": "1 ENGLISH The program you are applying for is Oil-Gas Well Engineering Master's Degree 1 Apply Now 2 Application Form 3 Upload Materials 4 Apply Submit Notice 1.To avoid delays in admission, please upload each document according to the description in the left column. 2.Please make sure the scanned or photographed documents are clearly readable and printable. 3.The system only accepts the following format: RAR, PDF, JPG, PNG, GIF, DOC, DOCX. 4.Each uploaded file cannot exceed 20M Upload Materials * 1. Personal Photos Photo requirements: color standard photos, the size is not more than 200kb, support *.jpg, *.jpeg, *.png as the suffix of the picture, pixels greater than 295 * 413. * 2.Passport & Passport Blank Page Scanned electronic copy of the entire passport，include blank page * 3.High School Transcript （High school transcript） * 4.High School Certificate * 5.Notarized Bachelor‘s Degree Certificate Please upload notarized Bachelor‘s Degree Certificate. They can be in Chinese or English, but must be attached with notarized English translations if they are in foreign languages other than Chinese or English * 6.Bachelors Degree Transcript Please upload Academic transcripts. They can be in Chinese or English, but must be attached with notarized English translations if they are in foreign languages other than Chinese or English * 7.Two letters of recommendation. The referee should be a professor or associate professor title. Prev Next My Application Accommodation Scholarship Powe",
+  "files": [
+    {
+      "id": "fileupload_0",
+      "name": "files",
+      "label": "* 1. Personal Photos",
+      "parentClass": "",
+      "outer": "<div class=\"applyonline-3-right-right\" style=\"max-width:260px;\">\n\t\t\t\t\t\t\t\n                                                            <div style=\"width: 125px; height: 125px; float: left;margin-left: 10px\" data-attid=\"0\">\n                                    <a href=\"javascript:void(0);\" onclick=\"student_upload_photo()\" id=\"fileupload_0_a\"><img alt=\"\" src=\"/resource/home/images/user/applyonline-3-right-plus.png\"></a>\n                                    <input type=\"file\" style=\"display: none;\" nam"
+    },
+    {
+      "id": "fileupload_1",
+      "name": "files",
+      "label": "* 2.Passport & Passport Blank Page",
+      "parentClass": "",
+      "outer": "<div class=\"applyonline-3-right-right\" style=\"max-width:260px;\">\n\t\t\t\t\t\t\t\t\t<div id=\"atta_atta-1\">\n\t\t\t\t\t\t\t\t\t\n                                                                                    <div style=\"width: 125px; height: 125px; float: left;margin-left: 10px\" data-attid=\"1\">\n                                                                                                    <a href=\"javascript:void(0);\" class=\"FPUploadBtn\" id=\"FpUpload_1\" onclick=\"upfile(this,1,10);\"><img alt=\"\" src=\"/resource"
+    },
+    {
+      "id": "fileupload_2",
+      "name": "files",
+      "label": "* 3.High School Transcript",
+      "parentClass": "",
+      "outer": "<div class=\"applyonline-3-right-right\" style=\"max-width:260px;\">\n\t\t\t\t\t\t\t\t\t<div id=\"atta_atta-2\">\n\t\t\t\t\t\t\t\t\t\n                                                                                    <div style=\"width: 125px; height: 125px; float: left;margin-left: 10px\" data-attid=\"2\">\n                                                                                                    <a href=\"javascript:void(0);\" class=\"FPUploadBtn\" id=\"FpUpload_2\" onclick=\"upfile(this,2,10);\"><img alt=\"\" src=\"/resource"
+    },
+    {
+      "id": "fileupload_3",
+      "name": "files",
+      "label": "* 4.High School Certificate",
+      "parentClass": "",
+      "outer": "<div class=\"applyonline-3-right-right\" style=\"max-width:260px;\">\n\t\t\t\t\t\t\t\t\t<div id=\"atta_atta-3\">\n\t\t\t\t\t\t\t\t\t\n                                                                                    <div style=\"width: 125px; height: 125px; float: left;margin-left: 10px\" data-attid=\"3\">\n                                                                                                    <a href=\"javascript:void(0);\" class=\"FPUploadBtn\" id=\"FpUpload_3\" onclick=\"upfile(this,3,10);\"><img alt=\"\" src=\"/resource"
+    },
+    {
+      "id": "fileupload_4",
+      "name": "files",
+      "label": "* 5.Notarized Bachelor‘s Degree Certificate",
+      "parentClass": "",
+      "outer": "<div class=\"applyonline-3-right-right\" style=\"max-width:260px;\">\n\t\t\t\t\t\t\t\t\t<div id=\"atta_atta-4\">\n\t\t\t\t\t\t\t\t\t\n                                                                                    <div style=\"width: 125px; height: 125px; float: left;margin-left: 10px\" data-attid=\"4\">\n                                                                                                    <a href=\"javascript:void(0);\" class=\"FPUploadBtn\" id=\"FpUpload_4\" onclick=\"upfile(this,4,10);\"><img alt=\"\" src=\"/resource"
+    },
+    {
+      "id": "fileupload_5",
+      "name": "files",
+      "label": "* 6.Bachelors Degree Transcript",
+      "parentClass": "",
+      "outer": "<div class=\"applyonline-3-right-right\" style=\"max-width:260px;\">\n\t\t\t\t\t\t\t\t\t<div id=\"atta_atta-5\">\n\t\t\t\t\t\t\t\t\t\n                                                                                    <div style=\"width: 125px; height: 125px; float: left;margin-left: 10px\" data-attid=\"5\">\n                                                                                                    <a href=\"javascript:void(0);\" class=\"FPUploadBtn\" id=\"FpUpload_5\" onclick=\"upfile(this,5,10);\"><img alt=\"\" src=\"/resource"
+    },
+    {
+      "id": "fileupload_6",
+      "name": "files",
+      "label": "* 7.Two letters of recommendation.",
+      "parentClass": "",
+      "outer": "<div class=\"applyonline-3-right-right\" style=\"max-width:260px;\">\n\t\t\t\t\t\t\t\t\t<div id=\"atta_atta-6\">\n\t\t\t\t\t\t\t\t\t\n                                                                                    <div style=\"width: 125px; height: 125px; float: left;margin-left: 10px\" data-attid=\"6\">\n                                                                                                    <a href=\"javascript:void(0);\" class=\"FPUploadBtn\" id=\"FpUpload_6\" onclick=\"upfile(this,6,10);\"><img alt=\"\" src=\"/resource"
+    }
+  ],
+  "fileCount": 7
+}

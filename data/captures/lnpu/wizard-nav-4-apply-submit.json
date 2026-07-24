@@ -1,0 +1,26 @@
+{
+  "capturedAt": "2026-07-24T07:56:07.808Z",
+  "url": "http://lnpu.chiwest.cn/en/student/apply_submit?apply_id=OTg4NDg",
+  "title": "Study in 辽石化",
+  "body": "1 ENGLISH The program you are applying for is Oil-Gas Well Engineering Master's Degree 1 Apply Now 2 Application Form 3 Upload Materials 4 Apply Submit Form incompleteContinue Materials incompleteContinue After you finished filling the application form and uploaded the documents, click SAVE. If your application status remains \"Incompleted\", please click NEXT to modify the status. Address: 辽宁省抚顺市望花区丹东路西段1号 Zip Code: 113001 Tel：86-02456863926 Fax: E-mail: shihuadaxue2008@163.com Website: http://ln",
+  "fileInputs": [],
+  "fieldCount": 0,
+  "fieldsSample": [],
+  "nextButtons": [
+    {
+      "tag": "A",
+      "text": "3\n\t\t\tUpload Materials",
+      "href": "/en/student/apply_attr?apply_id=OTg4NDg"
+    },
+    {
+      "tag": "A",
+      "text": "4\n\t\t\tApply Submit",
+      "href": "/en/student/apply_submit?apply_id=OTg4NDg"
+    },
+    {
+      "tag": "A",
+      "text": "Submit",
+      "href": "javascript:;"
+    }
+  ]
+}
