@@ -1,11 +1,28 @@
-/**
- * Headed LNPU capture: you solve captcha + login, script dumps post-login HTML.
- * Usage: node scripts/capture-lnpu-postlogin.mjs
- */
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { chromium } from './stealth-browser.mjs';
+import {
+  getSessionPaths,
+  persistUniversitySession,
+  printSessionArtifacts,
+  saveSessionMeta,
+} from './browser-session.mjs';
+import {
+  canPushToRailway,
+  loadWorkerEnvFile,
+  pushSessionToRailway,
+} from './push-session-to-railway.mjs';
 
+loadWorkerEnvFile();
+
+/**
+ * Headed LNPU capture: captcha + login → persist browser-sessions/lnpu.json(.b64).
+ *
+ * Usage:
+ *   pnpm --filter worker capture:lnpu-session
+ *   pnpm --filter worker capture:session -- --university=lnpu
+ */
+const UNIVERSITY_ID = 'lnpu';
 const OUT = resolve(process.cwd(), '../../data/captures/lnpu');
 mkdirSync(OUT, { recursive: true });
 
@@ -26,7 +43,6 @@ const page = await context.newPage();
 
 await page.goto(LOGIN, { waitUntil: 'domcontentloaded', timeout: 60_000 });
 
-// Login form (public)
 const loginForm = await page.evaluate(() => {
   const form = document.querySelector('#myform, form[name="myform"], form');
   return form ? form.outerHTML : null;
@@ -36,10 +52,14 @@ if (loginForm) {
   console.log('saved login-form.outer.html', loginForm.length);
 }
 
-console.log('\n=== LOGIN NOW (captcha) — waiting up to 5 min for /student/ (not login) ===\n');
+console.log(
+  '\n=== LOGIN NOW (captcha) — waiting up to 5 min for /student/ (not login) ===\n',
+);
 
 await page.waitForURL(
-  (url) => /\/en\/student\//i.test(url.pathname) && !/login|register/i.test(url.pathname),
+  (url) =>
+    /\/en\/student\//i.test(url.pathname) &&
+    !/login|register/i.test(url.pathname),
   { timeout: 5 * 60_000 },
 );
 
@@ -64,75 +84,88 @@ async function dump(label, url) {
     };
 
     const main =
-      pick(
-        '.main',
-        '#main',
-        '.content',
-        '.container',
-        '.student-main',
-        '#content',
-        'form',
-      ) || { selector: 'body', html: document.body.outerHTML };
+      pick('.main', '#main', '.content', '.container', 'form') || {
+        selector: 'body',
+        html: document.body.outerHTML,
+      };
 
     return {
       pageHtml: document.documentElement.outerHTML,
       main,
       links: [...document.querySelectorAll('a[href]')]
-        .map((a) => ({ text: (a.innerText || '').trim().slice(0, 80), href: a.getAttribute('href') }))
-        .filter((x) => /apply|application|program|major|agree|next/i.test(`${x.text} ${x.href}`))
+        .map((a) => ({
+          text: (a.innerText || '').trim().slice(0, 80),
+          href: a.getAttribute('href'),
+        }))
+        .filter((x) =>
+          /apply|application|program|major|agree|next/i.test(
+            `${x.text} ${x.href}`,
+          ),
+        )
         .slice(0, 40),
     };
   });
 
   writeFileSync(resolve(OUT, `${label}.page.html`), payload.pageHtml, 'utf-8');
-  writeFileSync(resolve(OUT, `${label}.main.outer.html`), payload.main.html, 'utf-8');
   writeFileSync(
-    resolve(OUT, `${label}.meta.json`),
-    JSON.stringify({ finalUrl, title, bodyText, mainSelector: payload.main.selector, links: payload.links }, null, 2),
+    resolve(OUT, `${label}.main.outer.html`),
+    payload.main.html,
     'utf-8',
   );
-  console.log(`saved ${label}.* url=${finalUrl} main=${payload.main.selector} len=${payload.main.html.length}`);
+  writeFileSync(
+    resolve(OUT, `${label}.meta.json`),
+    JSON.stringify(
+      {
+        finalUrl,
+        title,
+        bodyText,
+        mainSelector: payload.main.selector,
+        links: payload.links,
+      },
+      null,
+      2,
+    ),
+    'utf-8',
+  );
+  console.log(
+    `saved ${label}.* url=${finalUrl} main=${payload.main.selector} len=${payload.main.html.length}`,
+  );
 }
 
 await dump('01-dashboard', DASHBOARD);
 await dump('02-my-application', MY_APP);
 
-// If APPLY NOW visible — click and dump next screen (program search / agreement)
-const applyClicked = await page.evaluate(() => {
-  const candidates = [...document.querySelectorAll('a, button, div, span, input')];
-  const el = candidates.find((n) => /apply\s*now/i.test((n.innerText || n.value || '').trim()));
-  if (!el) return false;
-  el.click();
-  return true;
+const userAgent = await page.evaluate(() => navigator.userAgent);
+saveSessionMeta(UNIVERSITY_ID, {
+  userAgent,
+  capturedAt: new Date().toISOString(),
+  mode: 'storageState',
+  universityId: UNIVERSITY_ID,
+  platform: 'cucas',
 });
 
-if (applyClicked) {
-  await page.waitForTimeout(2500);
-  await page.waitForLoadState('domcontentloaded').catch(() => undefined);
-  const label = '03-after-apply-now';
-  const payload = await page.evaluate(() => {
-    const el =
-      document.querySelector('.main, #main, .content, .container, form') ||
-      document.body;
-    return {
-      url: location.href,
-      html: el.outerHTML,
-      body: (document.body.innerText || '').replace(/\s+/g, ' ').slice(0, 500),
-    };
-  });
-  writeFileSync(resolve(OUT, `${label}.main.outer.html`), payload.html, 'utf-8');
-  writeFileSync(
-    resolve(OUT, `${label}.meta.json`),
-    JSON.stringify({ finalUrl: payload.url, bodyText: payload.body }, null, 2),
-    'utf-8',
-  );
-  console.log(`saved ${label} url=${payload.url} len=${payload.html.length}`);
+await persistUniversitySession(UNIVERSITY_ID, context);
+
+const { sessionFile, b64File } = getSessionPaths(UNIVERSITY_ID);
+writeFileSync(resolve(OUT, 'session.json'), readFileSync(sessionFile));
+writeFileSync(resolve(OUT, 'session.json.b64'), readFileSync(b64File));
+printSessionArtifacts(UNIVERSITY_ID);
+
+if (canPushToRailway()) {
+  console.log('\nПушим LNPU_SESSION_STATE_B64 в Railway…');
+  try {
+    await pushSessionToRailway(UNIVERSITY_ID);
+  } catch (error) {
+    console.error(
+      `Railway push failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
 } else {
-  console.log('APPLY NOW not found on My Application — dump stops at 02');
+  console.log(
+    '\nRailway push пропущен — нет RAILWAY_* в apps/worker/.env. Залей browser-sessions/lnpu.json.b64 вручную.',
+  );
 }
 
-await context.storageState({ path: resolve(OUT, 'session.json') });
-console.log('saved session.json');
-console.log('\nDone. Browser stays open 30s — close when ready.');
-await page.waitForTimeout(30_000);
+console.log('\nDone. Browser stays open 20s.');
+await page.waitForTimeout(20_000);
 await browser.close();

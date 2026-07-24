@@ -20,6 +20,13 @@ export const UNIVERSITIES = {
     formUrl: 'http://www.apply.sdu.edu.cn/en/student/apply/create',
     platform: 'cucas',
   },
+  lnpu: {
+    id: 'lnpu',
+    displayName: 'Liaoning Petrochemical University (LNPU)',
+    loginUrl: 'http://lnpu.chiwest.cn/en/student/login',
+    formUrl: 'http://lnpu.chiwest.cn/en/student/apply/index',
+    platform: 'cucas',
+  },
 };
 
 export function resolveUniversityId(argv = process.argv.slice(2)) {

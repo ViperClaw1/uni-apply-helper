@@ -317,17 +317,98 @@ export class FormFiller {
         break;
       case 'checkbox':
         if (this.toBoolean(value)) {
-          await locator.check();
+          await locator
+            .check({ force: true })
+            .catch(async () => locator.click({ force: true }));
         }
         break;
       case 'textarea':
       case 'essay':
       case 'number':
       case 'text':
-        await locator.fill(normalizedValue);
+        await this.fillTextControl(page, field, locator, normalizedValue);
         break;
       case 'file':
         break;
+    }
+  }
+
+  /**
+   * Native fill() requires visibility — CUCAS date-pickers / Chosen twins often
+   * keep the named input in DOM but not actionable. Fall back to force + JS.
+   */
+  private async fillTextControl(
+    page: Page,
+    field: FieldConfig,
+    locator: Locator,
+    value: string,
+  ): Promise<void> {
+    await locator.scrollIntoViewIfNeeded().catch(() => undefined);
+
+    const visible = await locator.isVisible().catch(() => false);
+    if (visible) {
+      try {
+        await locator.fill(value, { timeout: 5_000 });
+        return;
+      } catch {
+        // fall through
+      }
+    }
+
+    try {
+      await locator.fill(value, { force: true, timeout: 5_000 });
+      return;
+    } catch {
+      // fall through to JS
+    }
+
+    if (!field.selector) {
+      throw new Error(`Cannot fill hidden field without selector: ${value}`);
+    }
+
+    const ok = await page.evaluate(
+      ({ selector, nextValue }) => {
+        const el = document.querySelector(selector) as HTMLInputElement | null;
+        if (!el) {
+          return false;
+        }
+
+        el.focus();
+        el.value = nextValue;
+        el.setAttribute('value', nextValue);
+
+        const jq = (
+          window as unknown as {
+            jQuery?: (el: Element) => {
+              val: (v: string) => {
+                trigger: (e: string) => unknown;
+              };
+            };
+          }
+        ).jQuery;
+
+        if (typeof jq === 'function') {
+          try {
+            jq(el).val(nextValue).trigger('input');
+            jq(el).val(nextValue).trigger('change');
+            jq(el).val(nextValue).trigger('blur');
+          } catch {
+            // ignore
+          }
+        }
+
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        el.dispatchEvent(new Event('blur', { bubbles: true }));
+        return true;
+      },
+      { selector: field.selector, nextValue: value },
+    );
+
+    if (!ok) {
+      throw new Error(
+        `Failed to fill ${field.selector}${field.labelHint ? ` ("${field.labelHint}")` : ''} via JS fallback`,
+      );
     }
   }
 

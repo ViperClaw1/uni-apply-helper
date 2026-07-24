@@ -1,7 +1,7 @@
 {
   "finalUrl": "http://lnpu.chiwest.cn/en/student/index/all",
   "title": "Study in 辽石化",
-  "bodyText": "1 ENGLISH MY APPLICATION APPLY NOW All Unfinished Finished Application Number Apply for major Status Last operation time Review Remarks Progress APPLY NOW \"Materials Submitted For Review\"，this status indicates that your application materials are under review by the school. \"Initial Review Passed\"，this status indicates that your application materials have passed the initial review. \"Returned\"， this status indicates that your application materials are not qualified. You need to follow the prompts ",
+  "bodyText": "1 ENGLISH MY APPLICATION APPLY NOW All Unfinished Finished Application Number Apply for major Status Last operation time Review Remarks Progress Master's Degree Oil-Gas Well Engineering Application Deadline:2026-08-01 Application not completed 2026-07-24 17:37 Form not completed continue Attachment not completed continue Application not submittedcontinue Delete \"Materials Submitted For Review\"，this status indicates that your application materials are under review by the school. \"Initial Review P",
   "mainSelector": "body",
   "links": [
     {
@@ -9,8 +9,16 @@
       "href": "/en/student/apply/index"
     },
     {
-      "text": "APPLY NOW",
-      "href": "/en/student/apply/index"
+      "text": "continue",
+      "href": "/en/student/apply_forms?apply_id=OTg4NTI&is_show=2"
+    },
+    {
+      "text": "continue",
+      "href": "/en/student/apply_attr?apply_id=OTg4NTI&is_show=2"
+    },
+    {
+      "text": "continue",
+      "href": "/en/student/apply_submit/index?apply_id=OTg4NTI"
     },
     {
       "text": "My Application",

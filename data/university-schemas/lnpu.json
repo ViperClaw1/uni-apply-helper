@@ -4,8 +4,8 @@
   "formUrl": "http://lnpu.chiwest.cn/en/student/apply/index",
   "defaultProgram": "Master",
   "session": {
-    "loginUrlPattern": "/student/login",
-    "expiredIndicators": ["Forgot password?", "Don't have an account?", "Sign Up"]
+    "loginUrlPattern": "/student/login(?:/|$|\\?)",
+    "expiredIndicators": ["Don't have an account?"]
   },
   "aliases": [
     "Liaoning Petrochemical University",

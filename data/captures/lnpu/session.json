@@ -2,24 +2,14 @@
   "cookies": [
     {
       "name": "ci_session",
-      "value": "ja7ehbm3j8974alq8eufb92vetgu9rj7",
+      "value": "rhi4blhm7s1j9cm3025aimjses0jdkvp",
       "domain": "lnpu.chiwest.cn",
       "path": "/",
-      "expires": 1784887276.653476,
+      "expires": 1784895251.778478,
       "httpOnly": true,
       "secure": false,
       "sameSite": "Lax"
     }
   ],
-  "origins": [
-    {
-      "origin": "http://lnpu.chiwest.cn",
-      "localStorage": [
-        {
-          "name": "DataTables_example_/en/student/apply/index",
-          "value": "{\"time\":1784879310236,\"start\":0,\"length\":25,\"order\":[[0,\"desc\"]],\"search\":{\"search\":\"\",\"smart\":true,\"regex\":false,\"caseInsensitive\":true},\"columns\":[{\"visible\":true,\"search\":{\"search\":\"\",\"smart\":true,\"regex\":false,\"caseInsensitive\":true}},{\"visible\":true,\"search\":{\"search\":\"\",\"smart\":true,\"regex\":false,\"caseInsensitive\":true}},{\"visible\":true,\"search\":{\"search\":\"\",\"smart\":true,\"regex\":false,\"caseInsensitive\":true}},{\"visible\":true,\"search\":{\"search\":\"\",\"smart\":true,\"regex\":false,\"caseInsensitive\":true}},{\"visible\":true,\"search\":{\"search\":\"\",\"smart\":true,\"regex\":false,\"caseInsensitive\":true}},{\"visible\":true,\"search\":{\"search\":\"\",\"smart\":true,\"regex\":false,\"caseInsensitive\":true}},{\"visible\":true,\"search\":{\"search\":\"\",\"smart\":true,\"regex\":false,\"caseInsensitive\":true}},{\"visible\":true,\"search\":{\"search\":\"\",\"smart\":true,\"regex\":false,\"caseInsensitive\":true}},{\"visible\":true,\"search\":{\"search\":\"\",\"smart\":true,\"regex\":false,\"caseInsensitive\":true}}]}"
-        }
-      ]
-    }
-  ]
+  "origins": []
 }

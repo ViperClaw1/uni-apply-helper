@@ -5,9 +5,19 @@ export async function resolveFieldLocator(
   page: Page,
   field: FieldConfig,
 ): Promise<Locator | null> {
-  const cssLocator = page.locator(field.selector).first();
-  if ((await cssLocator.count()) > 0) {
-    return cssLocator;
+  const matches = page.locator(field.selector);
+  const count = await matches.count();
+
+  if (count > 0) {
+    // Prefer a visible twin when CUCAS keeps a hidden date-picker input.
+    for (let i = 0; i < count; i += 1) {
+      const candidate = matches.nth(i);
+      if (await candidate.isVisible().catch(() => false)) {
+        return candidate;
+      }
+    }
+
+    return matches.first();
   }
 
   if (field.labelHint) {
