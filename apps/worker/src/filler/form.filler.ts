@@ -176,8 +176,16 @@ export class FormFiller {
       );
 
       if (value === undefined || value === null || value === '') {
-        if (field.required) {
+        if (field.required && field.mapsTo) {
           throw new Error(`Missing required profile value: ${field.mapsTo}`);
+        }
+
+        if (field.required && !field.mapsTo) {
+          throw new Error(
+            `Missing required static value for ${field.selector}` +
+              `${field.labelHint ? ` ("${field.labelHint}")` : ''}` +
+              ' — set field.options[0] or mapsTo in university schema.',
+          );
         }
 
         continue;

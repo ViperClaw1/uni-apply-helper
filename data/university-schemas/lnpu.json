@@ -29,7 +29,8 @@
       "type": "text",
       "required": true,
       "wizardStep": 1,
-      "labelHint": "Hope Learning Start Time"
+      "labelHint": "Hope Learning Start Time",
+      "options": ["2026-09-01"]
     },
     {
       "selector": "input[name=\"apply[duration_end]\"]",
@@ -37,7 +38,8 @@
       "type": "text",
       "required": true,
       "wizardStep": 1,
-      "labelHint": "Hope Learning End Time"
+      "labelHint": "Hope Learning End Time",
+      "options": ["2029-07-01"]
     },
     {
       "selector": "input[name=\"student[last_name]\"]",
@@ -100,9 +102,10 @@
       "selector": "select[name=\"student[marital_status]\"]",
       "mapsTo": "personal.maritalStatus",
       "type": "select",
-      "required": true,
+      "required": false,
       "wizardStep": 1,
-      "labelHint": "Marital Status"
+      "labelHint": "Marital Status",
+      "options": ["single"]
     },
     {
       "selector": "select[name=\"student[nationality_id]\"]",
@@ -124,9 +127,10 @@
       "selector": "select[name=\"student[borned_country_id]\"]",
       "mapsTo": "personal.countryOfBirth",
       "type": "select",
-      "required": true,
+      "required": false,
       "wizardStep": 1,
-      "labelHint": "Country of Birth"
+      "labelHint": "Country of Birth",
+      "options": ["KAZAKHSTAN"]
     },
     {
       "selector": "input[name=\"student[birth_place]\"]",
@@ -140,25 +144,28 @@
       "selector": "select[name=\"student[language_id]\"]",
       "mapsTo": "personal.nativeLanguage",
       "type": "select",
-      "required": true,
+      "required": false,
       "wizardStep": 1,
-      "labelHint": "Native Language"
+      "labelHint": "Native Language",
+      "options": ["Russian"]
     },
     {
       "selector": "select[name=\"student[education_id]\"]",
       "mapsTo": "education.0.degree",
       "type": "select",
-      "required": true,
+      "required": false,
       "wizardStep": 1,
-      "labelHint": "Highest Level of Education"
+      "labelHint": "Highest Level of Education",
+      "options": ["Undergraduate education"]
     },
     {
       "selector": "select[name=\"student[religion]\"]",
       "mapsTo": "personal.religion",
       "type": "select",
-      "required": true,
+      "required": false,
       "wizardStep": 1,
-      "labelHint": "Religion"
+      "labelHint": "Religion",
+      "options": ["No religion"]
     },
     {
       "selector": "select[name=\"student[career_id]\"]",
@@ -166,7 +173,8 @@
       "type": "select",
       "required": true,
       "wizardStep": 1,
-      "labelHint": "Occupation"
+      "labelHint": "Occupation",
+      "options": ["Student"]
     },
     {
       "selector": "input[name=\"family_address[home_mobile]\"]",
