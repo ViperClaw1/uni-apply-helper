@@ -1,0 +1,16 @@
+{
+  "title": "Study in 辽石化",
+  "body": "1 ENGLISH NOTICE RETURN Please be noted that: Available for applying once each semester, please contact the International Students Admissions Office if you want to change your program or re-submit your application. My Application Accommodation Scholarship Powered by CUCAS",
+  "buttons": [
+    {
+      "tag": "SPAN",
+      "text": "RETURN",
+      "href": null,
+      "onclick": null,
+      "id": "",
+      "className": "shenqingbtn"
+    }
+  ],
+  "checkboxes": [],
+  "forms": []
+}
