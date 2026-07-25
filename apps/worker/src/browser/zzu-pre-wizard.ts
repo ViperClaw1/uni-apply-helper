@@ -441,14 +441,22 @@ async function isProgramSelectionEmpty(page: Page): Promise<boolean> {
 }
 
 async function selectStudyPlanRow(page: Page): Promise<string | null> {
-  // KMMC/PKU Apply links are often below the fold — isVisible() falsely fails.
-  await page.evaluate(() => {
-    const table =
-      document.querySelector('table.datagrid-btable, .datagrid-view table, table') ??
-      null;
-    table?.scrollIntoView({ block: 'start' });
-  });
-  await page.waitForTimeout(300);
+  // Study Plan table often lazy-loads Apply rows after AJAX (PKU Total:N shown
+  // before links exist). Wait for at least one Apply / bind link in DOM.
+  await page
+    .waitForSelector(
+      [
+        'a[onclick*="saveChooseProjectBind"]',
+        'a[onclick*="StudyPlan"]',
+        'a[onclick*="choose"]',
+        'a[onclick*="ChooseProject"]',
+        'a[onclick*="saveChoose"]',
+        'td a',
+      ].join(', '),
+      { state: 'attached', timeout: 15_000 },
+    )
+    .catch(() => undefined);
+  await page.waitForTimeout(500);
 
   // Prefer DOM dispatchEvent: PKU onclick is
   //   saveChooseProjectBind(this, arguments[0], 'ID')
