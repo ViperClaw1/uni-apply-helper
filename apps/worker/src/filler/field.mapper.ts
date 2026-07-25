@@ -28,6 +28,13 @@ export class FieldMapper {
       }
     }
 
+    if (field.mapsTo === 'personal.sex') {
+      const sex = get(profile, 'personal.sex');
+      if (sex !== undefined && sex !== null && sex !== '') {
+        return this.normalizeSex(String(sex));
+      }
+    }
+
     const mapped = get(profile, field.mapsTo);
     if (mapped !== undefined && mapped !== null && mapped !== '') {
       return mapped;
@@ -70,6 +77,23 @@ export class FieldMapper {
         !/^please select/i.test(option) &&
         !/^-+select-*$/i.test(option),
     );
+  }
+
+  private normalizeSex(value: string): string {
+    const v = value.trim().toLowerCase();
+    if (
+      ['f', 'female', 'woman', 'ж', 'жен', 'женский'].includes(v) ||
+      v.startsWith('fem')
+    ) {
+      return 'Female';
+    }
+    if (
+      ['m', 'male', 'man', 'м', 'муж', 'мужской'].includes(v) ||
+      v.startsWith('mal')
+    ) {
+      return 'Male';
+    }
+    return value;
   }
 }
 

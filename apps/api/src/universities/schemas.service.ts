@@ -4,7 +4,11 @@ import {
   normalizeUniversityName,
 } from './lib/university-name-matcher.js';
 import { Prisma } from '@uni-apply/database';
-import type { FieldConfig, WizardConfig } from '@uni-apply/shared';
+import type {
+  FieldConfig,
+  NavigationHints,
+  WizardConfig,
+} from '@uni-apply/shared';
 import { createHash } from 'node:crypto';
 import { readdir, readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
@@ -217,6 +221,7 @@ export class SchemasService {
         typeof parsed.defaultProgram === 'string'
           ? parsed.defaultProgram
           : undefined,
+      navigationHints: this.parseNavigationHints(parsed.navigationHints),
       requiresEssay: parsed.requiresEssay ?? false,
       essayPrompt: parsed.essayPrompt,
       notes: parsed.notes,
@@ -236,6 +241,7 @@ export class SchemasService {
       session: schema.session,
       agent: schema.agent,
       defaultProgram: schema.defaultProgram,
+      navigationHints: schema.navigationHints,
       requiresEssay: schema.requiresEssay,
       essayPrompt: schema.essayPrompt,
       notes: schema.notes,
@@ -265,6 +271,24 @@ export class SchemasService {
       nextButtonSelector: wizard.nextButtonSelector,
       submitButtonSelector: wizard.submitButtonSelector,
     };
+  }
+
+  private parseNavigationHints(value: unknown): NavigationHints | undefined {
+    if (!value || typeof value !== 'object') {
+      return undefined;
+    }
+
+    const hints = value as Partial<NavigationHints>;
+    const programText =
+      typeof hints.programText === 'string' ? hints.programText : undefined;
+    const language =
+      typeof hints.language === 'string' ? hints.language : undefined;
+
+    if (!programText && !language) {
+      return undefined;
+    }
+
+    return { programText, language };
   }
 
   private hashSchema(schema: UniversitySchemaFile): string {

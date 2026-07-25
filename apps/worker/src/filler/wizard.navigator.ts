@@ -35,20 +35,13 @@ export class WizardNavigator {
     await next.scrollIntoViewIfNeeded().catch(() => undefined);
     await next.waitFor({ state: 'attached', timeout: 15_000 });
 
-    // 17gz Save and Next is XHR (saveBase.do) — no navigation. Track field signature.
     const beforeSig = await this.getStepSignature(page);
+    const beforeUrl = page.url();
 
-    const onclick = await next.getAttribute('onclick');
-    if (onclick) {
-      await next.evaluate((btn, handler) => {
-        const run = new Function('btn', handler.replace(/\bthis\b/g, 'btn'));
-        run(btn);
-      }, onclick);
-    } else {
-      await next.click({ force: true });
-    }
+    // Prefer a real user click — CUCAS Next is type=submit; synthetic onclick
+    // eval breaks HTML form validation / jQuery handlers.
+    await next.click({ force: true });
 
-    // Prefer waiting for a known next-step field when available
     if (nextStepMarker) {
       await page
         .waitForSelector(nextStepMarker, {
@@ -58,31 +51,36 @@ export class WizardNavigator {
         .catch(() => undefined);
     }
 
-    // Wait until step signature changes (AJAX DOM swap or full navigation).
-    // CUCAS uses separate URLs per step — pathname must be part of the sig.
-    const advanced = await page
-      .waitForFunction(
-        (before) => {
-          const names = [
-            ...document.querySelectorAll(
-              'input[name], select[name], textarea[name], input[type="file"]',
-            ),
-          ]
-            .map((el) => {
-              const input = el as HTMLInputElement;
-              return input.name || input.id || '';
-            })
-            .filter(Boolean)
-            .slice(0, 40)
-            .join('|');
-          const sig = `${location.pathname}${location.search}|${names}`;
-          return sig !== before;
-        },
-        beforeSig,
-        { timeout: 20_000 },
-      )
-      .then(() => true)
-      .catch(() => false);
+    // CUCAS steps are separate URLs (apply_forms → apply_attr).
+    const advanced = await Promise.race([
+      page
+        .waitForURL((url) => url.toString() !== beforeUrl, { timeout: 20_000 })
+        .then(() => true)
+        .catch(() => false),
+      page
+        .waitForFunction(
+          (before) => {
+            const names = [
+              ...document.querySelectorAll(
+                'input[name], select[name], textarea[name], input[type="file"]',
+              ),
+            ]
+              .map((el) => {
+                const input = el as HTMLInputElement;
+                return input.name || input.id || '';
+              })
+              .filter(Boolean)
+              .slice(0, 40)
+              .join('|');
+            const sig = `${location.pathname}${location.search}|${names}`;
+            return sig !== before;
+          },
+          beforeSig,
+          { timeout: 20_000 },
+        )
+        .then(() => true)
+        .catch(() => false),
+    ]);
 
     await this.waitForUiReady(page);
     await this.dismissBlockingDialogs(page);
@@ -93,7 +91,7 @@ export class WizardNavigator {
       if (afterSig === beforeSig) {
         const validation = await this.collectValidationHints(page);
         throw new Error(
-          'Wizard step did not advance after Save and Next (AJAX DOM unchanged). ' +
+          'Wizard step did not advance after Next (DOM/URL unchanged). ' +
             `Still on fields: [${afterSig.split('|').slice(0, 12).join(', ')}]` +
             (validation ? ` Validation: ${validation}` : ''),
         );
@@ -119,9 +117,32 @@ export class WizardNavigator {
         'input[validate*="required"], select[validate*="required"], textarea[validate*="required"]',
       )) {
         const input = el as HTMLInputElement | HTMLSelectElement;
-        if (input.type === 'hidden' || input.type === 'checkbox') continue;
+        if (input.type === 'hidden') continue;
+
+        if (input.type === 'checkbox') {
+          if (!(input as HTMLInputElement).checked) {
+            emptyRequired.push(input.name || input.id || '?');
+          }
+          continue;
+        }
+
+        if (input.type === 'radio') {
+          const name = input.name;
+          if (!name) continue;
+          const group = document.querySelectorAll(
+            `input[type="radio"][name="${CSS.escape(name)}"]`,
+          );
+          const anyChecked = [...group].some(
+            (r) => (r as HTMLInputElement).checked,
+          );
+          if (!anyChecked && !emptyRequired.includes(name)) {
+            emptyRequired.push(name);
+          }
+          continue;
+        }
+
         const val = (input.value || '').trim();
-        if (!val || /^\.+please select/i.test(val)) {
+        if (!val || /please select/i.test(val)) {
           emptyRequired.push(input.name || input.id || input.placeholder || '?');
         }
       }
@@ -157,14 +178,27 @@ export class WizardNavigator {
   }
 
   private async resolveNextButton(page: Page, selector: string) {
+    // Never pick Save — CUCAS has both Save (button) and Next (submit).
+    const preferred = page.locator('input[type="submit"][value="Next"]').first();
+    if ((await preferred.count()) > 0) {
+      return preferred;
+    }
+
+    const byValue = page.locator('input[value="Next"]').first();
+    if ((await byValue.count()) > 0) {
+      return byValue;
+    }
+
     const cssButton = page.locator(selector).first();
     if ((await cssButton.count()) > 0) {
-      return cssButton;
+      const value = await cssButton.getAttribute('value');
+      if (!value || !/^save$/i.test(value.trim())) {
+        return cssButton;
+      }
     }
 
     const fallbacks = [
       'input[value="Save and Next"]',
-      'input[value="Next"]',
       'input[value="下一步"]',
       'input[value="保存并下一步"]',
       'button:has-text("Save and Next")',
@@ -180,13 +214,13 @@ export class WizardNavigator {
     }
 
     const semanticButton = page
-      .getByRole('button', { name: /save and next|next|下一步|保存并下一步/i })
+      .getByRole('button', { name: /save and next|^(next|下一步|保存并下一步)$/i })
       .first();
     if ((await semanticButton.count()) > 0) {
       return semanticButton;
     }
 
-    return cssButton;
+    return preferred;
   }
 
   private async dismissBlockingDialogs(page: Page): Promise<void> {

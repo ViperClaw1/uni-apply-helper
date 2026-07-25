@@ -321,6 +321,7 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
         session: fileSchema?.session,
         agent: fileSchema?.agent,
         defaultProgram: fileSchema?.defaultProgram,
+        navigationHints: fileSchema?.navigationHints,
         requiresEssay: fileSchema?.requiresEssay ?? university.requiresEssay,
         essayPrompt:
           fileSchema?.essayPrompt ?? university.essayPrompt ?? undefined,
@@ -365,6 +366,7 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
           session: schema.session,
           agent: schema.agent,
           defaultProgram: schema.defaultProgram,
+          navigationHints: schema.navigationHints,
           requiresEssay: schema.requiresEssay ?? false,
           essayPrompt: schema.essayPrompt,
           notes: schema.notes,

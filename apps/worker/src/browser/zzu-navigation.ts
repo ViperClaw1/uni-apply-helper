@@ -177,9 +177,11 @@ export async function navigateToZzuApplication(
   profile?: StudentProfile,
   universityId = 'zhengzhou-university',
   defaultProgram?: string,
+  programTextHint?: string,
 ): Promise<void> {
   const programHint =
     (profile ? resolveProgramHint(profile, universityId) : undefined) ??
+    programTextHint ??
     defaultProgram;
 
   await page.goto(formUrl, {

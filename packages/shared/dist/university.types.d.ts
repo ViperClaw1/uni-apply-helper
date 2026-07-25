@@ -20,6 +20,13 @@ export interface WizardConfig {
     nextButtonSelector: string;
     submitButtonSelector: string;
 }
+/** Pre-wizard navigation hints for portals that share a platform (e.g. 17gz). */
+export interface NavigationHints {
+    /** Label fragment to match on program-type radios, e.g. "Research Scholar" */
+    programText?: string;
+    /** Preferred language option when the portal asks, e.g. "English" */
+    language?: string;
+}
 export interface UniversitySchema {
     id: string;
     displayName: string;
@@ -29,6 +36,9 @@ export interface UniversitySchema {
     wizard?: WizardConfig;
     session?: SessionConfig;
     agent?: AgentConfig;
+    /** Pre-wizard program type label, e.g. "Self-supporting Program" */
+    defaultProgram?: string;
+    navigationHints?: NavigationHints;
     requiresEssay: boolean;
     essayPrompt?: string;
     notes?: string;

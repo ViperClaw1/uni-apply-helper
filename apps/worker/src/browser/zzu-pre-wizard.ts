@@ -415,17 +415,23 @@ async function fillProgramSelection(page: Page): Promise<void> {
   // chosen-select hides the native <select> — Playwright selectOption times out.
   await setHiddenSelectByName(page, 'collegeId', 1);
 
-  await page.waitForTimeout(1500);
-  await page
-    .waitForFunction(() => {
-      const major = document.querySelector(
-        'select[name="majorId"]',
-      ) as HTMLSelectElement | null;
-      return Boolean(major && major.options.length > 1);
-    }, { timeout: 15_000 })
-    .catch(() => undefined);
+  const hasMajor = await page.evaluate(
+    () => Boolean(document.querySelector('select[name="majorId"]')),
+  );
+  if (hasMajor) {
+    await page.waitForTimeout(1500);
+    await page
+      .waitForFunction(() => {
+        const major = document.querySelector(
+          'select[name="majorId"]',
+        ) as HTMLSelectElement | null;
+        return Boolean(major && major.options.length > 1);
+      }, { timeout: 15_000 })
+      .catch(() => undefined);
 
-  await setHiddenSelectByName(page, 'majorId', 1);
+    await setHiddenSelectByName(page, 'majorId', 1);
+  }
+
   await setHiddenSelectByName(page, 'teachLanguage', 1);
   await page.waitForTimeout(500);
 }

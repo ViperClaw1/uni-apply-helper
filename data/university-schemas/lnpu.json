@@ -104,13 +104,17 @@
       "type": "select",
       "required": true,
       "wizardStep": 1,
-      "labelHint": "Gender"
+      "labelHint": "Gender",
+      "options": [
+        "Female",
+        "Male"
+      ]
     },
     {
       "selector": "select[name=\"student[marital_status]\"]",
       "mapsTo": "personal.maritalStatus",
       "type": "select",
-      "required": false,
+      "required": true,
       "wizardStep": 1,
       "labelHint": "Marital Status",
       "options": [
@@ -123,7 +127,10 @@
       "type": "select",
       "required": true,
       "wizardStep": 1,
-      "labelHint": "Nationality"
+      "labelHint": "Nationality",
+      "options": [
+        "RUSSIAN FEDERATION"
+      ]
     },
     {
       "selector": "input[name=\"student[birthdate]\"]",
@@ -137,7 +144,7 @@
       "selector": "select[name=\"student[borned_country_id]\"]",
       "mapsTo": "personal.countryOfBirth",
       "type": "select",
-      "required": false,
+      "required": true,
       "wizardStep": 1,
       "labelHint": "Country of Birth",
       "options": [
@@ -150,13 +157,16 @@
       "type": "text",
       "required": true,
       "wizardStep": 1,
-      "labelHint": "Place of Birth"
+      "labelHint": "Place of Birth",
+      "options": [
+        "City"
+      ]
     },
     {
       "selector": "select[name=\"student[language_id]\"]",
       "mapsTo": "personal.nativeLanguage",
       "type": "select",
-      "required": false,
+      "required": true,
       "wizardStep": 1,
       "labelHint": "Native Language",
       "options": [
@@ -167,7 +177,7 @@
       "selector": "select[name=\"student[education_id]\"]",
       "mapsTo": "education.0.degree",
       "type": "select",
-      "required": false,
+      "required": true,
       "wizardStep": 1,
       "labelHint": "Highest Level of Education",
       "options": [
@@ -178,7 +188,7 @@
       "selector": "select[name=\"student[religion]\"]",
       "mapsTo": "personal.religion",
       "type": "select",
-      "required": false,
+      "required": true,
       "wizardStep": 1,
       "labelHint": "Religion",
       "options": [
@@ -200,11 +210,11 @@
       "selector": "input[name=\"family_address[home_mobile]\"]",
       "mapsTo": "personal.phone",
       "type": "text",
-      "required": false,
+      "required": true,
       "wizardStep": 1,
       "labelHint": "Home Mobile",
       "options": [
-        "+77000000000"
+        "13800138000"
       ]
     },
     {
@@ -214,21 +224,29 @@
       "required": true,
       "wizardStep": 1,
       "labelHint": "School Name",
-      "options": ["University"]
+      "options": [
+        "University"
+      ]
     },
     {
       "selector": "select[name=\"education[0][learning_type]\"]",
-      "mapsTo": "education.0.degree",
+      "mapsTo": null,
       "type": "select",
-      "required": false,
-      "wizardStep": 1
+      "required": true,
+      "wizardStep": 1,
+      "options": [
+        "Undergraduate education"
+      ]
     },
     {
       "selector": "input[name=\"education[0][stuhis_major]\"]",
       "mapsTo": "education.0.major",
       "type": "text",
-      "required": false,
-      "wizardStep": 1
+      "required": true,
+      "wizardStep": 1,
+      "options": [
+        "Computer Science"
+      ]
     },
     {
       "selector": "input[name=\"recommend[guarantor_en_name]\"]",
@@ -247,7 +265,9 @@
       "required": true,
       "wizardStep": 1,
       "labelHint": "Guarantor Mobile",
-      "options": ["+77000000000"]
+      "options": [
+        "13800138000"
+      ]
     },
     {
       "selector": "input[name=\"emergency_contact[0][emergency_name]\"]",
@@ -263,8 +283,11 @@
       "selector": "input[name=\"emergency_contact[0][emergency_mobile]\"]",
       "mapsTo": "emergencyContact.phone",
       "type": "text",
-      "required": false,
-      "wizardStep": 1
+      "required": true,
+      "wizardStep": 1,
+      "options": [
+        "13800138000"
+      ]
     },
     {
       "selector": "input[name=\"student[workplace]\"]",
@@ -329,7 +352,18 @@
       "wizardStep": 1,
       "labelHint": "Guarantor Phone",
       "options": [
-        "+77000000000"
+        "13800138000"
+      ]
+    },
+    {
+      "selector": "input[name=\"recommend[guar_email]\"]",
+      "mapsTo": "guarantor.email",
+      "type": "text",
+      "required": false,
+      "wizardStep": 1,
+      "labelHint": "Guarantor Email",
+      "options": [
+        "guarantor@example.com"
       ]
     },
     {
@@ -417,7 +451,7 @@
       "wizardStep": 1,
       "labelHint": "Family 1 Phone",
       "options": [
-        "+77000000001"
+        "13800138000"
       ]
     },
     {
@@ -483,7 +517,7 @@
       "wizardStep": 1,
       "labelHint": "Family 2 Phone",
       "options": [
-        "+77000000002"
+        "13800138000"
       ]
     },
     {
@@ -527,7 +561,7 @@
       "wizardStep": 1,
       "labelHint": "Financial Supporter Phone",
       "options": [
-        "+77000000000"
+        "13800138000"
       ]
     },
     {
@@ -571,7 +605,7 @@
       "wizardStep": 1,
       "labelHint": "Emergency Phone",
       "options": [
-        "+77000000000"
+        "13800138000"
       ]
     },
     {
@@ -626,7 +660,7 @@
       "wizardStep": 1,
       "labelHint": "Home Phone",
       "options": [
-        "+77000000000"
+        "13800138000"
       ]
     },
     {
@@ -681,7 +715,7 @@
       "wizardStep": 1,
       "labelHint": "Current Phone",
       "options": [
-        "+77000000000"
+        "13800138000"
       ]
     },
     {
@@ -703,7 +737,7 @@
       "wizardStep": 1,
       "labelHint": "Current Mobile",
       "options": [
-        "+77000000000"
+        "13800138000"
       ]
     },
     {
@@ -791,7 +825,7 @@
       "wizardStep": 1,
       "labelHint": "Recipient Phone",
       "options": [
-        "+77000000000"
+        "13800138000"
       ]
     },
     {
@@ -879,7 +913,7 @@
   ],
   "wizard": {
     "totalSteps": 2,
-    "nextButtonSelector": "input[value=\"Next\"]",
+    "nextButtonSelector": "input[type=\"submit\"][value=\"Next\"]",
     "submitButtonSelector": "input[value=\"Submit\"], a:has-text(\"Submit\"), button:has-text(\"Submit\")"
   },
   "requiresEssay": false,

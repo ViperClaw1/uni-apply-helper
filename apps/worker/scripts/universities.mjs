@@ -27,6 +27,13 @@ export const UNIVERSITIES = {
     formUrl: 'http://lnpu.chiwest.cn/en/student/apply/index',
     platform: 'cucas',
   },
+  pku: {
+    id: 'pku',
+    displayName: 'Peking University (PKU)',
+    loginUrl: 'https://pku.17gz.org/member/login.do',
+    formUrl: 'https://pku.17gz.org/apply/index.do',
+    platform: '17gz',
+  },
 };
 
 export function resolveUniversityId(argv = process.argv.slice(2)) {

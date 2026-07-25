@@ -1,0 +1,39 @@
+{
+  "url": "http://lnpu.chiwest.cn/en/student/apply_forms?apply_id=OTg4NTU&is_show=2",
+  "title": "Study in 辽石化",
+  "buttons": [
+    {
+      "tag": "INPUT",
+      "type": "button",
+      "value": "Save",
+      "text": "",
+      "id": "save_temp",
+      "className": "appBtnSN",
+      "name": "",
+      "onclick": "",
+      "visible": true
+    },
+    {
+      "tag": "INPUT",
+      "type": "submit",
+      "value": "Next",
+      "text": "",
+      "id": "",
+      "className": "appBtnSN",
+      "name": "",
+      "onclick": "",
+      "visible": true
+    }
+  ],
+  "emptyRequired": [
+    {
+      "name": "passport[due_time]",
+      "type": "text",
+      "validate": "required:true",
+      "value": ""
+    }
+  ],
+  "hasLastName": true,
+  "durationStart": "2026-09-01",
+  "noticeChecked": true
+}

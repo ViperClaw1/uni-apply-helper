@@ -244,59 +244,14 @@ export class FormFiller {
     value: unknown,
   ) {
     const normalizedValue = String(value);
+    const valueForControl =
+      field.type === 'text' || field.type === 'number'
+        ? this.normalizeTextValue(field, normalizedValue)
+        : normalizedValue;
 
     switch (field.type) {
       case 'select':
-        try {
-          await locator.selectOption({ label: normalizedValue });
-        } catch {
-          try {
-            await locator.selectOption(normalizedValue);
-          } catch {
-            // Chosen / custom UI hides native <select>
-            await page.evaluate(
-              ({ selector, value }) => {
-                const sel = document.querySelector(
-                  selector,
-                ) as HTMLSelectElement | null;
-                if (!sel) {
-                  return;
-                }
-
-                const opt = [...sel.options].find(
-                  (option) =>
-                    option.text.trim() === value ||
-                    option.value === value ||
-                    option.text.trim().toLowerCase().includes(value.toLowerCase()),
-                );
-                if (!opt) {
-                  return;
-                }
-
-                sel.value = opt.value;
-                const jq = (
-                  window as unknown as {
-                    jQuery?: (el: Element) => {
-                      val: (v: string) => { trigger: (e: string) => unknown };
-                    };
-                  }
-                ).jQuery;
-                if (typeof jq === 'function') {
-                  try {
-                    jq(sel).val(opt.value).trigger('chosen:updated');
-                    jq(sel).val(opt.value).trigger('change');
-                  } catch {
-                    // ignore
-                  }
-                }
-
-                sel.dispatchEvent(new Event('input', { bubbles: true }));
-                sel.dispatchEvent(new Event('change', { bubbles: true }));
-              },
-              { selector: field.selector, value: normalizedValue },
-            );
-          }
-        }
+        await this.fillSelectControl(page, field, locator, normalizedValue);
         break;
       case 'radio':
         if (field.selector) {
@@ -345,11 +300,117 @@ export class FormFiller {
       case 'essay':
       case 'number':
       case 'text':
-        await this.fillTextControl(page, field, locator, normalizedValue);
+        await this.fillTextControl(page, field, locator, valueForControl);
         break;
       case 'file':
         break;
     }
+  }
+
+  /**
+   * Chosen / custom UI hides native <select> — Playwright selectOption often times out.
+   */
+  private async fillSelectControl(
+    page: Page,
+    field: FieldConfig,
+    locator: Locator,
+    value: string,
+  ): Promise<void> {
+    const sexish = /gender|sex/i.test(field.labelHint || field.selector || '');
+    const candidates = sexish
+      ? [this.normalizeSexLabel(value), value]
+      : [value];
+
+    for (const candidate of candidates) {
+      try {
+        await locator.selectOption({ label: candidate }, { timeout: 2_000 });
+        return;
+      } catch {
+        try {
+          await locator.selectOption(candidate, { timeout: 2_000 });
+          return;
+        } catch {
+          // fall through
+        }
+      }
+    }
+
+    if (!field.selector) {
+      throw new Error(`Cannot fill hidden select without selector: ${value}`);
+    }
+
+    const ok = await page.evaluate(
+      ({ selector, values }) => {
+        const sel = document.querySelector(selector) as HTMLSelectElement | null;
+        if (!sel) {
+          return false;
+        }
+
+        const needle = values
+          .map((v) => v.trim().toLowerCase())
+          .filter(Boolean);
+
+        const opt = [...sel.options].find((option) => {
+          const text = option.text.trim().toLowerCase();
+          const val = option.value.trim().toLowerCase();
+          return needle.some(
+            (n) =>
+              text === n ||
+              val === n ||
+              text.includes(n) ||
+              n.includes(text) ||
+              text.replace(/\s+/g, ' ') === n,
+          );
+        });
+
+        if (!opt || !opt.value) {
+          return false;
+        }
+
+        sel.value = opt.value;
+        sel.dispatchEvent(new Event('input', { bubbles: true }));
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+
+        const jq = (
+          window as unknown as {
+            jQuery?: (el: Element) => {
+              val: (v: string) => { trigger: (e: string) => unknown };
+            };
+          }
+        ).jQuery;
+
+        if (typeof jq === 'function') {
+          try {
+            jq(sel).val(opt.value).trigger('chosen:updated');
+            jq(sel).val(opt.value).trigger('change');
+            jq(sel).val(opt.value).trigger('liszt:updated');
+          } catch {
+            // ignore
+          }
+        }
+
+        return sel.value === opt.value;
+      },
+      { selector: field.selector, values: candidates },
+    );
+
+    if (!ok) {
+      throw new Error(
+        `Failed to select "${value}" for ${field.selector}` +
+          `${field.labelHint ? ` ("${field.labelHint}")` : ''}`,
+      );
+    }
+  }
+
+  private normalizeSexLabel(value: string): string {
+    const v = value.trim().toLowerCase();
+    if (['f', 'female', 'woman', 'ж', 'жен', 'женский', 'female'].includes(v)) {
+      return 'Female';
+    }
+    if (['m', 'male', 'man', 'м', 'муж', 'мужской'].includes(v)) {
+      return 'Male';
+    }
+    return value;
   }
 
   /**
@@ -429,6 +490,32 @@ export class FormFiller {
         `Failed to fill ${field.selector}${field.labelHint ? ` ("${field.labelHint}")` : ''} via JS fallback`,
       );
     }
+  }
+
+  private normalizeTextValue(field: FieldConfig, value: string): string {
+    const key = `${field.selector || ''} ${field.labelHint || ''}`.toLowerCase();
+    if (/phone|mobile|tel/.test(key)) {
+      return this.normalizePhone(value);
+    }
+    if (/email/.test(key) && !value.includes('@')) {
+      return 'applicant@example.com';
+    }
+    return value;
+  }
+
+  /** CUCAS jquery.validate tel:true expects a mainland mobile, not +7… */
+  private normalizePhone(value: string): string {
+    const digits = value.replace(/\D/g, '');
+    if (/^1\d{10}$/.test(digits)) {
+      return digits;
+    }
+    if (digits.length >= 11) {
+      const last11 = digits.slice(-11);
+      if (/^1\d{10}$/.test(last11)) {
+        return last11;
+      }
+    }
+    return '13800138000';
   }
 
   private toBoolean(value: unknown): boolean {

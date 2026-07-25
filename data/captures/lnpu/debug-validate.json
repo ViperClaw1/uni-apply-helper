@@ -1,0 +1,11 @@
+{
+  "valid": true,
+  "errorList": [],
+  "emptySelects": [],
+  "emptyRequired": [
+    null
+  ],
+  "formAction": "http://lnpu.chiwest.cn/en/student/apply_forms/save?apply_id=OTg4NTU",
+  "formMethod": "post",
+  "pleaseSelectCount": 25
+}
