@@ -2,9 +2,13 @@ import { Injectable } from '@nestjs/common';
 import type { StudentProfile } from '@uni-apply/shared';
 import type { Page } from 'playwright';
 
-const OCR_PASSPORT_INPUT =
-  'input[name="ATTACH_TYPE_passportImage"], input[type="file"][name="ATTACH_TYPE_passportImage"]';
-const PHOTO_INPUT = 'input[type="file"][name="photo"]';
+const OCR_PASSPORT_INPUT = [
+  'input[name="ATTACH_TYPE_passportImage"]',
+  'input[type="file"][name="ATTACH_TYPE_passportImage"]',
+  '[attachTypeId="ATTACH_TYPE_passportImage"] input[type="file"]',
+].join(', ');
+const PHOTO_INPUT =
+  'input[type="file"][name="photo"], input[name="photo"][type="file"]';
 
 @Injectable()
 export class OcrPassportUploader {
@@ -46,6 +50,12 @@ export class OcrPassportUploader {
       }
       return;
     }
+
+    // OCR / photo widgets often attach after AJAX Study Plan → Step 1.
+    // File inputs are usually display:none — wait attached, not visible.
+    await page
+      .waitForSelector(selector, { state: 'attached', timeout: 20_000 })
+      .catch(() => undefined);
 
     const input = page.locator(selector).first();
     if ((await input.count()) === 0) {
