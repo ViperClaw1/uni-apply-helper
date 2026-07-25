@@ -109,10 +109,9 @@ async function advanceIntermediateSteps(
       if (advanced || (await isWizardStep(page))) {
         return true;
       }
-      // Still on a pre-wizard screen that didn't advance — stop spinning.
-      if (await detectPreWizardScreen(page)) {
-        return false;
-      }
+      // advanceThroughPreWizard exhausted retries — wait and let outer loop retry
+      await page.waitForTimeout(1000);
+      continue;
     }
 
     const bodyText = await page.locator('body').innerText();

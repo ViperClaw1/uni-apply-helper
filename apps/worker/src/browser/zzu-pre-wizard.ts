@@ -441,96 +441,100 @@ async function isProgramSelectionEmpty(page: Page): Promise<boolean> {
 }
 
 async function selectStudyPlanRow(page: Page): Promise<string | null> {
+  const APPLY_LINK_SELECTOR = [
+    'a[onclick*="saveChooseProjectBind"]',
+    'a[onclick*="StudyPlan"]',
+    'a[onclick*="choose"]',
+    'a[onclick*="ChooseProject"]',
+    'a[onclick*="saveChoose"]',
+    'td a',
+  ].join(', ');
+
   // Study Plan table often lazy-loads Apply rows after AJAX (PKU Total:N shown
-  // before links exist). Wait for at least one Apply / bind link in DOM.
-  await page
-    .waitForSelector(
-      [
-        'a[onclick*="saveChooseProjectBind"]',
-        'a[onclick*="StudyPlan"]',
-        'a[onclick*="choose"]',
-        'a[onclick*="ChooseProject"]',
-        'a[onclick*="saveChoose"]',
-        'td a',
-      ].join(', '),
-      { state: 'attached', timeout: 15_000 },
-    )
-    .catch(() => undefined);
-  await page.waitForTimeout(500);
+  // before links exist). Retry wait+click — first miss is usually timing.
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    await page
+      .waitForSelector(APPLY_LINK_SELECTOR, {
+        state: 'attached',
+        timeout: 10_000,
+      })
+      .catch(() => undefined);
+    await page.waitForTimeout(attempt === 0 ? 500 : 1200);
 
-  // Prefer DOM dispatchEvent: PKU onclick is
-  //   saveChooseProjectBind(this, arguments[0], 'ID')
-  // and needs a real MouseEvent as arguments[0]. Playwright force-click /
-  // new Function(onclick) without event both fail to bind.
-  const clicked = await page.evaluate(() => {
-    const labelOf = (el: Element) =>
-      ((el as HTMLInputElement).value || el.textContent || '')
-        .replace(/\s+/g, ' ')
-        .trim();
+    // Prefer DOM dispatchEvent: PKU onclick is
+    //   saveChooseProjectBind(this, arguments[0], 'ID')
+    // and needs a real MouseEvent as arguments[0].
+    const clicked = await page.evaluate(() => {
+      const labelOf = (el: Element) =>
+        ((el as HTMLInputElement).value || el.textContent || '')
+          .replace(/\s+/g, ' ')
+          .trim();
 
-    const fireApplyClick = (link: HTMLElement): string => {
-      link.scrollIntoView({ block: 'center', inline: 'nearest' });
-      link.dispatchEvent(
-        new MouseEvent('click', {
-          bubbles: true,
-          cancelable: true,
-          view: window,
-        }),
-      );
-      const onclick = link.getAttribute('onclick') || '';
-      return `Apply:dispatch:${onclick.slice(0, 48)}`;
-    };
+      const fireApplyClick = (link: HTMLElement): string => {
+        link.scrollIntoView({ block: 'center', inline: 'nearest' });
+        link.dispatchEvent(
+          new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+          }),
+        );
+        const onclick = link.getAttribute('onclick') || '';
+        return `Apply:dispatch:${onclick.slice(0, 48)}`;
+      };
 
-    const byText = [
-      ...document.querySelectorAll('a, input[type="button"], input[type="submit"]'),
-    ].find((el) =>
-      /^(Apply|申请|选择|Select)$/i.test(labelOf(el)),
-    ) as HTMLElement | undefined;
+      const byText = [
+        ...document.querySelectorAll(
+          'a, input[type="button"], input[type="submit"]',
+        ),
+      ].find((el) =>
+        /^(Apply|申请|选择|Select)$/i.test(labelOf(el)),
+      ) as HTMLElement | undefined;
 
-    if (byText) {
-      return fireApplyClick(byText);
+      if (byText) {
+        return fireApplyClick(byText);
+      }
+
+      const byOnclick = [
+        ...document.querySelectorAll(
+          [
+            'a[href*="apply"]',
+            'a[onclick*="StudyPlan"]',
+            'a[onclick*="choose"]',
+            'a[onclick*="Choose"]',
+            'a[onclick*="ChooseProject"]',
+            'a[onclick*="saveChoose"]',
+            'a[onclick*="ProjectBind"]',
+            'a[onclick*="saveChooseProjectBind"]',
+          ].join(', '),
+        ),
+      ].find((el) => {
+        const style = getComputedStyle(el as HTMLElement);
+        return style.display !== 'none' && style.visibility !== 'hidden';
+      }) as HTMLElement | undefined;
+
+      if (byOnclick) {
+        return fireApplyClick(byOnclick);
+      }
+
+      return null;
+    });
+
+    if (clicked) {
+      return clicked;
     }
 
-    // Icon/empty-text Apply: PKU uses saveChooseProjectBind(this,arguments[0],id)
-    const byOnclick = [
-      ...document.querySelectorAll(
-        [
-          'a[href*="apply"]',
-          'a[onclick*="StudyPlan"]',
-          'a[onclick*="choose"]',
-          'a[onclick*="Choose"]',
-          'a[onclick*="ChooseProject"]',
-          'a[onclick*="saveChoose"]',
-          'a[onclick*="ProjectBind"]',
-          'a[onclick*="saveChooseProjectBind"]',
-        ].join(', '),
-      ),
-    ].find((el) => {
-      const style = getComputedStyle(el as HTMLElement);
-      return style.display !== 'none' && style.visibility !== 'hidden';
-    }) as HTMLElement | undefined;
+    // Playwright locator fallback between retries
+    const applyLink = page
+      .locator('td a, table a, a')
+      .filter({ hasText: /^(Apply|申请|选择|Select)$/i })
+      .first();
 
-    if (byOnclick) {
-      return fireApplyClick(byOnclick);
+    if ((await applyLink.count()) > 0) {
+      await applyLink.scrollIntoViewIfNeeded().catch(() => undefined);
+      await applyLink.click({ force: true });
+      return 'Apply:playwright';
     }
-
-    return null;
-  });
-
-  if (clicked) {
-    return clicked;
-  }
-
-  // Last resort: Playwright locator (some portals need trusted click).
-  const applyLink = page
-    .locator('td a, table a, a')
-    .filter({ hasText: /^(Apply|申请|选择|Select)$/i })
-    .first();
-
-  if ((await applyLink.count()) > 0) {
-    await applyLink.scrollIntoViewIfNeeded().catch(() => undefined);
-    await applyLink.click({ force: true });
-    return 'Apply:playwright';
   }
 
   return null;
@@ -1030,8 +1034,11 @@ export async function clearStuckProcessing(page: Page): Promise<boolean> {
 export async function advanceThroughPreWizard(
   page: Page,
   programHint?: string,
-  { maxSteps = 6 } = {},
+  { maxSteps = 20 } = {},
 ): Promise<boolean> {
+  const MAX_CONSECUTIVE_FAILS = 4;
+  let consecutiveFails = 0;
+
   await clearStuckProcessing(page);
 
   for (let step = 0; step < maxSteps; step += 1) {
@@ -1041,13 +1048,26 @@ export async function advanceThroughPreWizard(
 
     const screen = await detectPreWizardScreen(page);
     if (!screen) {
-      return false;
+      // Screen may still be hydrating after Apply/AJAX — retry a few times.
+      consecutiveFails += 1;
+      if (consecutiveFails >= MAX_CONSECUTIVE_FAILS) {
+        return false;
+      }
+      await page.waitForTimeout(1200);
+      continue;
     }
 
     const advanced = await advancePreWizardScreen(page, screen, programHint);
-    if (!advanced) {
+    if (advanced || (await isMainWizard(page))) {
+      consecutiveFails = 0;
+      continue;
+    }
+
+    consecutiveFails += 1;
+    if (consecutiveFails >= MAX_CONSECUTIVE_FAILS) {
       return false;
     }
+    await page.waitForTimeout(1200);
   }
 
   return isMainWizard(page);
