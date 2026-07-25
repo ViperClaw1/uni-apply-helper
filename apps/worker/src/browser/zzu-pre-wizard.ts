@@ -441,7 +441,7 @@ async function isProgramSelectionEmpty(page: Page): Promise<boolean> {
 }
 
 async function selectStudyPlanRow(page: Page): Promise<string | null> {
-  // KMMC Apply links are often below the fold — isVisible() falsely fails.
+  // KMMC/PKU Apply links are often below the fold — isVisible() falsely fails.
   await page.evaluate(() => {
     const table =
       document.querySelector('table.datagrid-btable, .datagrid-view table, table') ??
@@ -450,6 +450,70 @@ async function selectStudyPlanRow(page: Page): Promise<string | null> {
   });
   await page.waitForTimeout(300);
 
+  // Prefer DOM dispatchEvent: PKU onclick is
+  //   saveChooseProjectBind(this, arguments[0], 'ID')
+  // and needs a real MouseEvent as arguments[0]. Playwright force-click /
+  // new Function(onclick) without event both fail to bind.
+  const clicked = await page.evaluate(() => {
+    const labelOf = (el: Element) =>
+      ((el as HTMLInputElement).value || el.textContent || '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    const fireApplyClick = (link: HTMLElement): string => {
+      link.scrollIntoView({ block: 'center', inline: 'nearest' });
+      link.dispatchEvent(
+        new MouseEvent('click', {
+          bubbles: true,
+          cancelable: true,
+          view: window,
+        }),
+      );
+      const onclick = link.getAttribute('onclick') || '';
+      return `Apply:dispatch:${onclick.slice(0, 48)}`;
+    };
+
+    const byText = [
+      ...document.querySelectorAll('a, input[type="button"], input[type="submit"]'),
+    ].find((el) =>
+      /^(Apply|申请|选择|Select)$/i.test(labelOf(el)),
+    ) as HTMLElement | undefined;
+
+    if (byText) {
+      return fireApplyClick(byText);
+    }
+
+    // Icon/empty-text Apply: PKU uses saveChooseProjectBind(this,arguments[0],id)
+    const byOnclick = [
+      ...document.querySelectorAll(
+        [
+          'a[href*="apply"]',
+          'a[onclick*="StudyPlan"]',
+          'a[onclick*="choose"]',
+          'a[onclick*="Choose"]',
+          'a[onclick*="ChooseProject"]',
+          'a[onclick*="saveChoose"]',
+          'a[onclick*="ProjectBind"]',
+          'a[onclick*="saveChooseProjectBind"]',
+        ].join(', '),
+      ),
+    ].find((el) => {
+      const style = getComputedStyle(el as HTMLElement);
+      return style.display !== 'none' && style.visibility !== 'hidden';
+    }) as HTMLElement | undefined;
+
+    if (byOnclick) {
+      return fireApplyClick(byOnclick);
+    }
+
+    return null;
+  });
+
+  if (clicked) {
+    return clicked;
+  }
+
+  // Last resort: Playwright locator (some portals need trusted click).
   const applyLink = page
     .locator('td a, table a, a')
     .filter({ hasText: /^(Apply|申请|选择|Select)$/i })
@@ -458,52 +522,10 @@ async function selectStudyPlanRow(page: Page): Promise<string | null> {
   if ((await applyLink.count()) > 0) {
     await applyLink.scrollIntoViewIfNeeded().catch(() => undefined);
     await applyLink.click({ force: true });
-    return 'Apply';
+    return 'Apply:playwright';
   }
 
-  return page.evaluate(() => {
-    const labelOf = (el: Element) =>
-      ((el as HTMLInputElement).value || el.textContent || '')
-        .replace(/\s+/g, ' ')
-        .trim();
-
-    const link = [
-      ...document.querySelectorAll('a, input[type="button"], input[type="submit"]'),
-    ].find((el) =>
-      /^(Apply|申请|选择|Select)$/i.test(labelOf(el)),
-    ) as HTMLElement | null;
-
-    if (!link) {
-      // href-based fallback (no visible text / icon-only)
-      const byHref = [
-        ...document.querySelectorAll('a[href*="apply"], a[onclick*="StudyPlan"], a[onclick*="choose"]'),
-      ].find((el) => {
-        const style = getComputedStyle(el as HTMLElement);
-        return style.display !== 'none' && style.visibility !== 'hidden';
-      }) as HTMLElement | null;
-      if (!byHref) {
-        return null;
-      }
-      const onclick = byHref.getAttribute('onclick');
-      if (onclick) {
-        const run = new Function('el', onclick.replace(/\bthis\b/g, 'el'));
-        run(byHref);
-        return `Apply:onclick`;
-      }
-      byHref.click();
-      return 'Apply:href';
-    }
-
-    const onclick = link.getAttribute('onclick');
-    if (onclick) {
-      const run = new Function('el', onclick.replace(/\bthis\b/g, 'el'));
-      run(link);
-      return `Apply:${onclick.slice(0, 40)}`;
-    }
-
-    link.click();
-    return `Apply:${labelOf(link)}`;
-  });
+  return null;
 }
 
 const STUDENT_TYPE_HINTS = [
