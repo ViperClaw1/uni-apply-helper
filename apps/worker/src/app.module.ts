@@ -22,6 +22,7 @@ import { LogResultStep } from './steps/log-result.step.js';
 import { FieldMapper } from './filler/field.mapper.js';
 import { FileAttacher } from './filler/file.attacher.js';
 import { FormFiller } from './filler/form.filler.js';
+import { OcrPassportUploader } from './filler/ocr-passport.uploader.js';
 import { WizardFieldGroups } from './filler/wizard-field-groups.js';
 import { WizardNavigator } from './filler/wizard.navigator.js';
 import { NotificationsService } from './notifications/notifications.service.js';
@@ -49,6 +50,7 @@ import { ScreenshotService } from './screenshot/screenshot.service.js';
     FormAgent,
     FieldMapper,
     FileAttacher,
+    OcrPassportUploader,
     WizardNavigator,
     WizardFieldGroups,
     FormFiller,

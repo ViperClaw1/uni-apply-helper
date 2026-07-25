@@ -3,7 +3,8 @@
   "displayName": "Peking University",
   "formUrl": "https://pku.17gz.org/apply/index.do",
   "navigationHints": {
-    "programText": "Research Scholar"
+    "programText": "Research Scholar",
+    "ocrPassportUpload": true
   },
   "session": {
     "loginUrlPattern": "/member/login\\.do",
@@ -29,7 +30,7 @@
       "selector": "input[type=\"file\"][name=\"photo\"]",
       "mapsTo": null,
       "type": "file",
-      "required": false,
+      "required": true,
       "wizardStep": 1,
       "documentType": "photo"
     },
@@ -307,5 +308,5 @@
     "goal": "Complete and submit the Peking University online application form"
   },
   "requiresEssay": false,
-  "notes": "17gz 7-step wizard (same platform as ZZU/KMMC). Research Scholar Program open 2026-01-01~2026-12-31 — selected via navigationHints.programText. Study Plan List has Department only (no Major/Language filter). Verify attachTypeIds on Step 6 after first live capture if Field not found."
+  "notes": "17gz 7-step wizard (same platform as ZZU/KMMC). Research Scholar Program open 2026-01-01~2026-12-31 — selected via navigationHints.programText. Step 1 requires OCR passport (ATTACH_TYPE_passportImage + Confirm Passport Information) and personal photo before Next. Study Plan List has Department only (no Major/Language filter). Verify attachTypeIds on Step 6 after first live capture if Field not found."
 }

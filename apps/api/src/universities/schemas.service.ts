@@ -283,12 +283,16 @@ export class SchemasService {
       typeof hints.programText === 'string' ? hints.programText : undefined;
     const language =
       typeof hints.language === 'string' ? hints.language : undefined;
+    const ocrPassportUpload =
+      typeof hints.ocrPassportUpload === 'boolean'
+        ? hints.ocrPassportUpload
+        : undefined;
 
-    if (!programText && !language) {
+    if (!programText && !language && ocrPassportUpload === undefined) {
       return undefined;
     }
 
-    return { programText, language };
+    return { programText, language, ocrPassportUpload };
   }
 
   private hashSchema(schema: UniversitySchemaFile): string {

@@ -42,6 +42,9 @@ export class WizardNavigator {
     // eval breaks HTML form validation / jQuery handlers.
     await next.click({ force: true });
 
+    // OCR / validate AJAX often shows "It's processing!" right after Next.
+    await this.waitForProcessingGone(page, 45_000);
+
     if (nextStepMarker) {
       await page
         .waitForSelector(nextStepMarker, {
@@ -84,6 +87,7 @@ export class WizardNavigator {
 
     await this.waitForUiReady(page);
     await this.dismissBlockingDialogs(page);
+    await this.waitForProcessingGone(page, 20_000);
     await page.waitForTimeout(800);
 
     if (!advanced) {
@@ -229,12 +233,27 @@ export class WizardNavigator {
 
   private async dismissBlockingDialogs(page: Page): Promise<void> {
     for (let attempt = 0; attempt < 5; attempt += 1) {
+      // Don't OK-dismiss an in-flight "It's processing!" overlay — wait instead.
+      const processingVisible = await page
+        .evaluate(() =>
+          /It'?s processing|请求正在处理中|please wait|processing your request/i.test(
+            document.body?.innerText ?? '',
+          ),
+        )
+        .catch(() => false);
+
+      if (processingVisible) {
+        await this.waitForProcessingGone(page, 45_000);
+        continue;
+      }
+
       const okButton = page
         .locator(
           [
             '.messager-button .okButton',
             '.messager-button input[value="Ok"]',
             '.messager-button input[value="OK"]',
+            'input.okButton',
             'button:has-text("OK")',
             'button:has-text("Continue")',
             'button:has-text("Accept")',
@@ -244,6 +263,10 @@ export class WizardNavigator {
         .first();
 
       if ((await okButton.count()) === 0) {
+        break;
+      }
+
+      if (!(await okButton.isVisible().catch(() => false))) {
         break;
       }
 
@@ -271,13 +294,20 @@ export class WizardNavigator {
       .waitFor({ state: 'hidden', timeout: 20_000 })
       .catch(() => undefined);
 
+    await this.waitForProcessingGone(page, 45_000);
+  }
+
+  private async waitForProcessingGone(
+    page: Page,
+    timeoutMs: number,
+  ): Promise<void> {
     await page
       .waitForFunction(
         () =>
-          !/请求正在处理中|please wait|processing your request/i.test(
+          !/It'?s processing|请求正在处理中|please wait|processing your request/i.test(
             document.body?.innerText ?? '',
           ),
-        { timeout: 15_000 },
+        { timeout: timeoutMs },
       )
       .catch(() => undefined);
   }

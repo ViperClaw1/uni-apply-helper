@@ -8,6 +8,7 @@ import { SemanticFieldMapper } from '../agent/dom/semantic-field.mapper.js';
 import { resolveFieldLocator } from './field.locator.js';
 import { FieldMapper } from './field.mapper.js';
 import { FileAttacher } from './file.attacher.js';
+import { OcrPassportUploader } from './ocr-passport.uploader.js';
 import { WizardFieldGroups } from './wizard-field-groups.js';
 import { WizardNavigator } from './wizard.navigator.js';
 
@@ -17,6 +18,7 @@ export class FormFiller {
     private readonly configService: ConfigService,
     private readonly fieldMapper: FieldMapper,
     private readonly fileAttacher: FileAttacher,
+    private readonly ocrPassportUploader: OcrPassportUploader,
     private readonly wizardNavigator: WizardNavigator,
     private readonly wizardFieldGroups: WizardFieldGroups,
     private readonly semanticFieldMapper: SemanticFieldMapper,
@@ -105,6 +107,14 @@ export class FormFiller {
       page,
       wizard,
       async (step) => {
+        if (
+          step === 1 &&
+          (university.id === 'pku' ||
+            university.navigationHints?.ocrPassportUpload)
+        ) {
+          await this.ocrPassportUploader.upload(page, profile);
+        }
+
         const fields = this.wizardFieldGroups.fieldsForStep(university, step);
         await this.fillFieldBatch(
           page,
@@ -114,7 +124,20 @@ export class FormFiller {
           fillMode,
         );
 
-        const fileFields = fields.filter((field) => field.type === 'file');
+        // Photo already attached in OCR Step-1 hook — skip duplicate.
+        const fileFields = fields.filter((field) => {
+          if (field.type !== 'file') {
+            return false;
+          }
+          if (
+            step === 1 &&
+            university.navigationHints?.ocrPassportUpload &&
+            field.documentType === 'photo'
+          ) {
+            return false;
+          }
+          return true;
+        });
         if (fileFields.length > 0) {
           await this.fileAttacher.attachFiles(page, profile, fileFields);
         }

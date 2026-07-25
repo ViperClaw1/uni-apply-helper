@@ -26,6 +26,8 @@ export interface NavigationHints {
     programText?: string;
     /** Preferred language option when the portal asks, e.g. "English" */
     language?: string;
+    /** Step 1: upload passport to OCR input + Confirm before filling fields (PKU). */
+    ocrPassportUpload?: boolean;
 }
 export interface UniversitySchema {
     id: string;
