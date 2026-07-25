@@ -143,7 +143,11 @@ export class WizardNavigator {
 
         const val = (input.value || '').trim();
         if (!val || /please select/i.test(val)) {
-          emptyRequired.push(input.name || input.id || input.placeholder || '?');
+          const placeholder =
+            'placeholder' in input && typeof input.placeholder === 'string'
+              ? input.placeholder
+              : '';
+          emptyRequired.push(input.name || input.id || placeholder || '?');
         }
       }
 
