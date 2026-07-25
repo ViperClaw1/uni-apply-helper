@@ -316,10 +316,7 @@ export class FormFiller {
     locator: Locator,
     value: string,
   ): Promise<void> {
-    const sexish = /gender|sex/i.test(field.labelHint || field.selector || '');
-    const candidates = sexish
-      ? [this.normalizeSexLabel(value), value]
-      : [value];
+    const candidates = this.expandSelectCandidates(field, value);
 
     for (const candidate of candidates) {
       try {
@@ -350,24 +347,47 @@ export class FormFiller {
           .map((v) => v.trim().toLowerCase())
           .filter(Boolean);
 
-        const opt = [...sel.options].find((option) => {
-          const text = option.text.trim().toLowerCase();
-          const val = option.value.trim().toLowerCase();
-          return needle.some(
-            (n) =>
-              text === n ||
-              val === n ||
-              text.includes(n) ||
-              n.includes(text) ||
-              text.replace(/\s+/g, ' ') === n,
-          );
-        });
+        const isPlaceholder = (text: string) =>
+          !text ||
+          /please\s*(choose|select)/i.test(text) ||
+          /^-+$/.test(text) ||
+          /^\.\.\./.test(text);
 
-        if (!opt || !opt.value) {
+        const scoreOption = (option: HTMLOptionElement): number => {
+          const text = option.text.replace(/\s+/g, ' ').trim().toLowerCase();
+          const val = option.value.trim().toLowerCase();
+          if (!val || isPlaceholder(text)) {
+            return 0;
+          }
+
+          let best = 0;
+          for (const n of needle) {
+            if (text === n || val === n) {
+              best = Math.max(best, 3);
+            } else if (text.startsWith(n) || n.startsWith(text)) {
+              best = Math.max(best, 2);
+            } else if (text.includes(n) || (n.length >= 4 && text.length >= 4 && n.includes(text))) {
+              best = Math.max(best, 1);
+            }
+          }
+          return best;
+        };
+
+        let bestOpt: HTMLOptionElement | null = null;
+        let bestScore = 0;
+        for (const option of sel.options) {
+          const score = scoreOption(option);
+          if (score > bestScore) {
+            bestScore = score;
+            bestOpt = option;
+          }
+        }
+
+        if (!bestOpt || !bestOpt.value || bestScore === 0) {
           return false;
         }
 
-        sel.value = opt.value;
+        sel.value = bestOpt.value;
         sel.dispatchEvent(new Event('input', { bubbles: true }));
         sel.dispatchEvent(new Event('change', { bubbles: true }));
 
@@ -381,15 +401,15 @@ export class FormFiller {
 
         if (typeof jq === 'function') {
           try {
-            jq(sel).val(opt.value).trigger('chosen:updated');
-            jq(sel).val(opt.value).trigger('change');
-            jq(sel).val(opt.value).trigger('liszt:updated');
+            jq(sel).val(bestOpt.value).trigger('chosen:updated');
+            jq(sel).val(bestOpt.value).trigger('change');
+            jq(sel).val(bestOpt.value).trigger('liszt:updated');
           } catch {
             // ignore
           }
         }
 
-        return sel.value === opt.value;
+        return sel.value === bestOpt.value;
       },
       { selector: field.selector, values: candidates },
     );
@@ -400,6 +420,94 @@ export class FormFiller {
           `${field.labelHint ? ` ("${field.labelHint}")` : ''}`,
       );
     }
+  }
+
+  private expandSelectCandidates(field: FieldConfig, value: string): string[] {
+    const hint = [field.labelHint, field.selector, field.mapsTo]
+      .filter(Boolean)
+      .join(' ');
+
+    if (/gender|sex/i.test(hint)) {
+      return [...new Set([this.normalizeSexLabel(value), value])];
+    }
+
+    if (/country|nationalit|nation|born|birth|region/i.test(hint)) {
+      return this.expandCountryLabels(value);
+    }
+
+    return [value];
+  }
+
+  private expandCountryLabels(value: string): string[] {
+    const v = value.trim().toLowerCase();
+    const groups: Array<{ keys: string[]; labels: string[] }> = [
+      {
+        keys: [
+          'russian federation',
+          'russia',
+          'russian',
+          'rf',
+          'россия',
+          'российская федерация',
+          'русский',
+        ],
+        labels: [
+          'Russian Federation',
+          'Russia',
+          'Russian',
+          'RF',
+          'Россия',
+          'Российская Федерация',
+        ],
+      },
+      {
+        keys: ['united states of america', 'united states', 'usa', 'us', 'america'],
+        labels: ['United States of America', 'United States', 'USA', 'US', 'America'],
+      },
+      {
+        keys: ['united kingdom', 'uk', 'great britain', 'britain', 'england'],
+        labels: ['United Kingdom', 'UK', 'Great Britain', 'Britain', 'England'],
+      },
+      {
+        keys: ['china', "people's republic of china", 'prc', '中国', '中华人民共和国'],
+        labels: ['China', "People's Republic of China", 'PRC', '中国', '中华人民共和国'],
+      },
+      {
+        keys: ['korea, republic of', 'south korea', 'republic of korea', 'korea'],
+        labels: ['Korea, Republic of', 'South Korea', 'Republic of Korea', 'Korea'],
+      },
+      {
+        keys: [
+          "korea, democratic people's republic of",
+          'north korea',
+          'dprk',
+        ],
+        labels: [
+          "Korea, Democratic People's Republic of",
+          'North Korea',
+          'DPRK',
+        ],
+      },
+    ];
+
+    const matched = groups.find((group) =>
+      group.keys.some((key) => {
+        if (key === v) {
+          return true;
+        }
+        // Prefix match only for meaningful stems ("rus" → russia), never
+        // substring ("us" ⊂ "russian").
+        if (v.length >= 3 && key.startsWith(v)) {
+          return true;
+        }
+        if (key.length >= 4 && v.startsWith(key)) {
+          return true;
+        }
+        return false;
+      }),
+    );
+
+    return [...new Set([...(matched?.labels ?? []), value].filter(Boolean))];
   }
 
   private normalizeSexLabel(value: string): string {
