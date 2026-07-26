@@ -436,7 +436,12 @@ export class FormFiller {
 
     switch (field.type) {
       case 'select':
-        await this.fillSelectControl(page, field, locator, normalizedValue);
+        await this.fillSelectControl(
+          page,
+          field,
+          locator,
+          this.applyValueMap(field, normalizedValue),
+        );
         break;
       case 'radio':
         await this.fillRadioControl(page, field, locator, normalizedValue);
@@ -701,13 +706,37 @@ export class FormFiller {
 
     if (!ok) {
       throw new Error(
-        `Failed to select "${value}" for ${field.selector}` +
+        `Failed to select "${value}"` +
+          (value !== candidates[0] ? ` (tried: ${candidates.slice(0, 5).join(' | ')})` : '') +
+          ` for ${field.selector}` +
           `${field.labelHint ? ` ("${field.labelHint}")` : ''}`,
       );
     }
   }
 
+  private applyValueMap(field: FieldConfig, value: string): string {
+    const trimmed = value.trim();
+    if (!field.valueMap) {
+      return trimmed;
+    }
+
+    if (field.valueMap[trimmed]) {
+      return field.valueMap[trimmed];
+    }
+
+    // Case-insensitive / whitespace-tolerant lookup
+    const lower = trimmed.toLowerCase();
+    for (const [from, to] of Object.entries(field.valueMap)) {
+      if (from.trim().toLowerCase() === lower) {
+        return to;
+      }
+    }
+
+    return trimmed;
+  }
+
   private expandSelectCandidates(field: FieldConfig, value: string): string[] {
+    const mapped = this.applyValueMap(field, value);
     const hint = [
       field.labelHint,
       field.selector,
@@ -717,11 +746,11 @@ export class FormFiller {
       .join(' ');
 
     if (/gender|sex/i.test(hint)) {
-      return [...new Set([this.normalizeSexLabel(value), value])];
+      return [...new Set([this.normalizeSexLabel(mapped), mapped, value])];
     }
 
     if (/country|nationalit|nation|born|birth|region/i.test(hint)) {
-      return this.expandCountryLabels(value);
+      return this.expandCountryLabels(mapped);
     }
 
     // 17gz English certificate: option text is "Native Language", not "Native Speaker"
@@ -730,17 +759,53 @@ export class FormFiller {
         hint,
       )
     ) {
-      const v = value.trim().toLowerCase();
+      const v = mapped.trim().toLowerCase();
       if (/native\s*(speaker|language|tongue)/i.test(v) || v === 'native') {
-        return [...new Set(['Native Language', 'Native Speaker', value])];
+        return [...new Set(['Native Language', 'Native Speaker', mapped, value])];
       }
     }
 
-    if (/native\s*speaker/i.test(value)) {
-      return [...new Set(['Native Language', value])];
+    if (/native\s*speaker/i.test(mapped)) {
+      return [...new Set(['Native Language', mapped, value])];
     }
 
-    return [value];
+    // Education level aliases (PKU/17gz: no "High school diploma")
+    if (/educationId|education level|highest level of education/i.test(hint)) {
+      return [
+        ...new Set([
+          mapped,
+          value.trim(),
+          ...this.expandEducationLabels(mapped),
+          ...this.expandEducationLabels(value),
+        ]),
+      ];
+    }
+
+    return [...new Set([mapped, value.trim()].filter(Boolean))];
+  }
+
+  private expandEducationLabels(value: string): string[] {
+    const v = value.trim().toLowerCase();
+    if (
+      /high\s*school|senior\s*high|secondary|диплом.*средн|средн(ее|яя).*образован/i.test(
+        v,
+      )
+    ) {
+      return ['Senior high', 'Senior High', 'High school'];
+    }
+    if (/bachelor|бакалавр|undergraduate/i.test(v)) {
+      return ['Bachelor', "Bachelor's degree", 'Currently an Undergraduate'];
+    }
+    if (/master|магистр/i.test(v)) {
+      return ['Master', "Master's degree", "Currently a Master's"];
+    }
+    if (/ph\.?\s*d|doctor|доктор|dr\.?/i.test(v)) {
+      return ['Dr.', 'PhD', 'Doctorate'];
+    }
+    if (/vocational|колледж|техникум/i.test(v)) {
+      return ['Vocational College', 'Technical secondary'];
+    }
+    return [];
   }
 
   private expandCountryLabels(value: string): string[] {

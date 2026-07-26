@@ -16,6 +16,8 @@ export interface FieldConfig {
   required: boolean;
   wizardStep?: number;
   options?: string[];
+  /** Map profile/raw values → option labels (or values) for selects. */
+  valueMap?: Record<string, string>;
   essayPrompt?: string;
   documentType?: string;
   /** Fallback for semantic locator: getByLabel / getByPlaceholder */

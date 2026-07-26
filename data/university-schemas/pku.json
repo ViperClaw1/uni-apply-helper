@@ -121,7 +121,19 @@
       "required": true,
       "wizardStep": 1,
       "labelHint": "Highest Level of Education Completed",
-      "options": ["Bachelor", "Master", "Dr.", "Senior high"]
+      "options": ["Bachelor", "Master", "Dr.", "Senior high"],
+      "valueMap": {
+        "High school diploma": "Senior high",
+        "High school": "Senior high",
+        "Senior high school": "Senior high",
+        "Bachelor's degree": "Bachelor",
+        "Bachelor": "Bachelor",
+        "Master's degree": "Master",
+        "Master": "Master",
+        "PhD": "Dr.",
+        "Doctorate": "Dr.",
+        "Vocational": "Vocational College"
+      }
     },
     {
       "selector": "input[name=\"applyEx.lastSchool\"]",
@@ -490,16 +502,30 @@
       "selector": "select[name=\"sh.educationId\"]",
       "mapsTo": "education.0.degree",
       "type": "select",
-      "required": false,
+      "required": true,
       "wizardStep": 3,
-      "options": ["Bachelor", "Master", "Dr.", "Senior high", "Vocational College"]
+      "labelHint": "Education Level",
+      "options": ["Bachelor", "Master", "Dr.", "Senior high", "Vocational College"],
+      "valueMap": {
+        "High school diploma": "Senior high",
+        "High school": "Senior high",
+        "Senior high school": "Senior high",
+        "Bachelor's degree": "Bachelor",
+        "Bachelor": "Bachelor",
+        "Master's degree": "Master",
+        "Master": "Master",
+        "PhD": "Dr.",
+        "Doctorate": "Dr.",
+        "Vocational": "Vocational College"
+      }
     },
     {
       "selector": "input[type=\"radio\"][name=\"applyEx.haveStudiedInChina\"]",
       "mapsTo": "personal.studiedInChina",
       "type": "radio",
-      "required": false,
+      "required": true,
       "wizardStep": 3,
+      "labelHint": "Have you ever studied in China",
       "options": ["No", "Yes"]
     },
     {
