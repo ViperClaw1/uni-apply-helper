@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import type { StudentProfile } from '@uni-apply/shared';
-import type { Locator, Page } from 'playwright';
+import type { Page } from 'playwright';
 
 const PHOTO_INPUT =
   'input[type="file"][name="photo"], input[name="photo"][type="file"]';
@@ -10,14 +10,20 @@ const UPLOAD_IMAGE_BTN = [
   'input[value*="Upload Image"]',
   'button:has-text("Upload Image")',
   'a:has-text("Upload Image")',
-  'input[value="上传图片"]',
-  'button:has-text("上传图片")',
 ].join(', ');
 
 const CONFIRM_PASSPORT_BTN = [
   'input[value="Confirm Passport Information"]',
   'input[value*="Confirm Passport"]',
   'button:has-text("Confirm Passport")',
+  'a:has-text("Confirm Passport")',
+].join(', ');
+
+const ADD_PHOTO_BTN = [
+  'input[value="Add your photo"]',
+  'input[value*="Add your photo"]',
+  'button:has-text("Add your photo")',
+  'a:has-text("Add your photo")',
 ].join(', ');
 
 type FilePayload = {
@@ -26,21 +32,39 @@ type FilePayload = {
   buffer: Buffer;
 };
 
+type OcrDebugState = {
+  processingVisible: boolean;
+  processingText: string;
+  ocrFilled: Array<{ name: string; value: string }>;
+  ocrFilledCount: number;
+  confirmFound: boolean;
+  confirmTag: string;
+  confirmDisabled: boolean;
+  confirmClass: string;
+  applyLastName: string;
+  applyPassportNo: string;
+};
+
 @Injectable()
 export class OcrPassportUploader {
+  private readonly logger = new Logger(OcrPassportUploader.name);
+
   /**
-   * PKU Step 1 flow (from live screenshots):
-   * 1. Upload Image → filechooser (OSS)
-   * 2. "It's processing!" dialog while OCR runs; Confirm is greyed/disabled
-   * 3. OCR fills Recognized Information; Confirm turns blue/enabled
-   * 4. Click Confirm → apply.* sync
-   * 5. Upload personal photo
+   * PKU Step 1 (verified against live screenshots):
+   * Upload Image → wait OCR fields filled → Confirm → wait apply.* sync → photo.
    */
   async upload(page: Page, profile: StudentProfile): Promise<void> {
+    this.logger.log('OCR step 1/4: upload passport via Upload Image + filechooser');
     await this.uploadPassportViaButton(page, profile.documents.passport);
+
+    this.logger.log('OCR step 2/4: wait Recognized Information filled');
     await this.waitForOcrReady(page);
+
+    this.logger.log('OCR step 3/4: Confirm Passport Information');
     await this.confirmPassportOcr(page);
-    await this.waitForProcessingGone(page, 45_000);
+
+    this.logger.log('OCR step 4/4: wait apply.* sync + upload photo');
+    await this.waitForApplySync(page);
     await this.uploadPhoto(page, profile.documents.photo);
   }
 
@@ -58,182 +82,114 @@ export class OcrPassportUploader {
       .waitForSelector(UPLOAD_IMAGE_BTN, { state: 'attached', timeout: 20_000 })
       .catch(() => undefined);
 
-    const uploadBtn = page.locator('input[value="Upload Image"]').first();
-    const btn =
-      (await uploadBtn.count()) > 0
-        ? uploadBtn
-        : page.locator(UPLOAD_IMAGE_BTN).first();
-
+    const btn = page.locator(UPLOAD_IMAGE_BTN).first();
     if ((await btn.count()) === 0) {
       throw new Error('Upload Image button not found for OCR passport');
     }
 
     await btn.scrollIntoViewIfNeeded().catch(() => undefined);
 
-    // locator.click (CDP) — required for Playwright to intercept filechooser.
     const [fileChooser] = await Promise.all([
       page.waitForEvent('filechooser', { timeout: 15_000 }),
       btn.click({ force: true }),
     ]);
 
     await fileChooser.setFiles(file);
-    await page.waitForTimeout(1_000);
+    this.logger.log('Passport filechooser.setFiles done — waiting OCR');
   }
 
   /**
-   * Wait until OCR finishes: processing dialog gone + Confirm enabled (blue).
-   * Do NOT rely on input[name="ocr.*"] — Recognized Information may render
-   * values in table cells / styled inputs with different names.
+   * Ready = no visible processing dialog AND at least 2 filled ocr.* text inputs.
+   * Screenshot proof: Surname/Given Name/Passport No are real <input name="ocr.*">.
+   * Do NOT use button color heuristics — they false-negative on ready UI.
    */
   private async waitForOcrReady(page: Page): Promise<void> {
-    await this.waitForProcessingGone(page, 90_000);
+    const deadline = Date.now() + 90_000;
+    let lastState: OcrDebugState | null = null;
 
-    const ready = await page
-      .waitForFunction(
-        () => {
-          const processing =
-            /It'?s processing|请求正在处理中|please wait|processing your request/i.test(
-              document.body?.innerText ?? '',
-            );
-          if (processing) {
-            return false;
-          }
-
-          const confirm = [
-            ...document.querySelectorAll(
-              'input[type="button"], input[type="submit"], button',
-            ),
-          ].find((el) =>
-            /Confirm Passport/i.test(
-              ((el as HTMLInputElement).value || el.textContent || '').trim(),
-            ),
-          ) as HTMLInputElement | HTMLButtonElement | undefined;
-
-          if (!confirm) {
-            return false;
-          }
-
-          if (confirm.disabled) {
-            return false;
-          }
-
-          const style = getComputedStyle(confirm);
-          if (
-            style.display === 'none' ||
-            style.visibility === 'hidden' ||
-            style.pointerEvents === 'none'
-          ) {
-            return false;
-          }
-
-          // Greyed-out Confirm (Image 1) vs active blue (Image 2)
-          const bg = style.backgroundColor || '';
-          const opacity = Number(style.opacity || '1');
-          if (opacity < 0.6) {
-            return false;
-          }
-
-          // Disabled-looking grey backgrounds (#ccc / light gray)
-          const rgb = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-          if (rgb) {
-            const [, r, g, b] = rgb.map(Number);
-            const isGrey =
-              Math.abs(r - g) < 12 &&
-              Math.abs(g - b) < 12 &&
-              r > 160 &&
-              r < 230;
-            if (isGrey) {
-              return false;
-            }
-          }
-
-          // Soft check: some recognized value present (surname / passport no)
-          const body = document.body?.innerText ?? '';
-          const hasRecognizedBlock = /Recognized Information/i.test(body);
-          const hasLikelyData =
-            /Passport No|护照|Surname|姓/i.test(body) &&
-            (/[A-Z]{2,}/.test(body) || /\d{6,}/.test(body));
-
-          return hasRecognizedBlock ? hasLikelyData : true;
-        },
-        { timeout: 90_000 },
-      )
-      .then(() => true)
-      .catch(() => false);
-
-    if (!ready) {
-      throw new Error(
-        'OCR did not finish: Confirm Passport Information stayed disabled/grey. ' +
-          'Upload Image / OSS / recognition likely failed.',
+    while (Date.now() < deadline) {
+      lastState = await this.readOcrDebugState(page);
+      this.logger.debug(
+        `OCR poll: filled=${lastState.ocrFilledCount} processing=${lastState.processingVisible} confirmDisabled=${lastState.confirmDisabled}`,
       );
+
+      if (!lastState.processingVisible && lastState.ocrFilledCount >= 2) {
+        this.logger.log(
+          `OCR ready: ${lastState.ocrFilled.map((f) => `${f.name}=${f.value}`).join(', ')}`,
+        );
+        await page.waitForTimeout(400);
+        return;
+      }
+
+      await page.waitForTimeout(1_000);
     }
 
-    await page.waitForTimeout(500);
-  }
-
-  private async waitForProcessingGone(
-    page: Page,
-    timeoutMs: number,
-  ): Promise<void> {
-    await page
-      .waitForFunction(
-        () => {
-          const text = document.body?.innerText ?? '';
-          if (
-            /It'?s processing|请求正在处理中|please wait|processing your request/i.test(
-              text,
-            )
-          ) {
-            return false;
-          }
-
-          const messager = document.querySelector(
-            '.messager-window:not([style*="display: none"]), .messager-body',
-          );
-          if (messager) {
-            const t = (messager.textContent || '').trim();
-            if (/processing|please wait|请求正在处理/i.test(t)) {
-              return false;
-            }
-          }
-
-          return true;
-        },
-        { timeout: timeoutMs },
-      )
-      .catch(() => undefined);
+    throw new Error(
+      'OCR did not finish within 90s. ' + this.formatDebug(lastState),
+    );
   }
 
   private async confirmPassportOcr(page: Page): Promise<void> {
     const confirm = page.locator(CONFIRM_PASSPORT_BTN).first();
-
-    await confirm
-      .waitFor({ state: 'visible', timeout: 15_000 })
-      .catch(() => undefined);
+    await confirm.waitFor({ state: 'attached', timeout: 15_000 });
 
     if ((await confirm.count()) === 0) {
-      throw new Error('Confirm Passport Information button not found');
+      throw new Error(
+        'Confirm Passport Information button not found. ' +
+          this.formatDebug(await this.readOcrDebugState(page)),
+      );
     }
 
-    // Ensure enabled before click — force:true would click a greyed button.
-    await page
-      .waitForFunction(() => {
-        const btn = [
-          ...document.querySelectorAll(
-            'input[type="button"], input[type="submit"], button',
-          ),
-        ].find((el) =>
-          /Confirm Passport/i.test(
-            ((el as HTMLInputElement).value || el.textContent || '').trim(),
-          ),
-        ) as HTMLInputElement | undefined;
-        return Boolean(btn && !btn.disabled);
-      }, { timeout: 15_000 })
-      .catch(() => undefined);
-
     await confirm.scrollIntoViewIfNeeded().catch(() => undefined);
-    await (confirm as Locator).click({ force: false });
+
+    // Prefer a real click; force only if Playwright thinks it's not actionable
+    // while OCR data is already present (overlay quirks).
+    try {
+      await confirm.click({ timeout: 5_000 });
+    } catch {
+      await confirm.click({ force: true, timeout: 5_000 });
+    }
+
     await page.waitForTimeout(800);
+  }
+
+  private async waitForApplySync(page: Page): Promise<void> {
+    await this.waitForVisibleProcessingGone(page, 45_000);
+
+    const synced = await page
+      .waitForFunction(() => {
+        const last = document.querySelector(
+          'input[name="apply.lastName"]',
+        ) as HTMLInputElement | null;
+        const given = document.querySelector(
+          'input[name="apply.givenName"]',
+        ) as HTMLInputElement | null;
+        const passport = document.querySelector(
+          'input[name="apply.passportNo"]',
+        ) as HTMLInputElement | null;
+
+        return Boolean(
+          (last?.value && last.value.trim().length > 0) ||
+            (given?.value && given.value.trim().length > 0) ||
+            (passport?.value && passport.value.trim().length > 0),
+        );
+      }, { timeout: 30_000 })
+      .then(() => true)
+      .catch(() => false);
+
+    const state = await this.readOcrDebugState(page);
+    if (!synced) {
+      // Confirm may still have worked with delayed sync — log and continue;
+      // fillFieldBatch will overwrite apply.* from profile anyway.
+      this.logger.warn(
+        `apply.* not synced after Confirm (continuing). ${this.formatDebug(state)}`,
+      );
+      return;
+    }
+
+    this.logger.log(
+      `apply.* synced: lastName=${state.applyLastName} passportNo=${state.applyPassportNo}`,
+    );
   }
 
   private async uploadPhoto(
@@ -246,17 +202,160 @@ export class OcrPassportUploader {
 
     const file = await this.downloadFile(fileUrl, 'photo');
 
+    // 1) Direct hidden input[name=photo] (ZZU-style)
     await page
-      .waitForSelector(PHOTO_INPUT, { state: 'attached', timeout: 20_000 })
+      .waitForSelector(PHOTO_INPUT, { state: 'attached', timeout: 10_000 })
       .catch(() => undefined);
 
-    const input = page.locator(PHOTO_INPUT).first();
-    if ((await input.count()) === 0) {
-      throw new Error(`File input not found: ${PHOTO_INPUT}`);
+    const photoInput = page.locator(PHOTO_INPUT).first();
+    if ((await photoInput.count()) > 0) {
+      try {
+        await photoInput.setInputFiles(file);
+        this.logger.log('Photo uploaded via input[name=photo]');
+        await page.waitForTimeout(500);
+        return;
+      } catch (error) {
+        this.logger.warn(
+          `setInputFiles(photo) failed, trying Add your photo: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
     }
 
-    await input.setInputFiles(file);
+    // 2) PKU "Add your photo" → filechooser
+    const addBtn = page.locator(ADD_PHOTO_BTN).first();
+    await addBtn
+      .waitFor({ state: 'attached', timeout: 10_000 })
+      .catch(() => undefined);
+
+    if ((await addBtn.count()) === 0) {
+      throw new Error(
+        `Photo upload failed: neither ${PHOTO_INPUT} nor Add your photo found`,
+      );
+    }
+
+    const [fileChooser] = await Promise.all([
+      page.waitForEvent('filechooser', { timeout: 15_000 }),
+      addBtn.click({ force: true }),
+    ]);
+    await fileChooser.setFiles(file);
+    this.logger.log('Photo uploaded via Add your photo + filechooser');
     await page.waitForTimeout(500);
+  }
+
+  private async readOcrDebugState(page: Page): Promise<OcrDebugState> {
+    return page.evaluate(() => {
+      const isVisible = (el: Element | null) => {
+        if (!el) {
+          return false;
+        }
+        const style = getComputedStyle(el as HTMLElement);
+        if (
+          style.display === 'none' ||
+          style.visibility === 'hidden' ||
+          style.opacity === '0'
+        ) {
+          return false;
+        }
+        const rect = (el as HTMLElement).getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+
+      const processingNodes = [
+        ...document.querySelectorAll(
+          '.messager-window, .panel.window, .window-mask, .messager-body',
+        ),
+      ].filter((el) => isVisible(el));
+
+      const processingText = processingNodes
+        .map((el) => (el.textContent || '').replace(/\s+/g, ' ').trim())
+        .find((t) => /processing|please wait|请求正在处理/i.test(t)) ?? '';
+
+      const processingVisible = Boolean(processingText);
+
+      const ocrFilled = (
+        [...document.querySelectorAll('input[name^="ocr."]')] as HTMLInputElement[]
+      )
+        .filter(
+          (input) =>
+            input.type !== 'checkbox' &&
+            input.type !== 'radio' &&
+            input.type !== 'hidden' &&
+            (input.value || '').trim().length > 0,
+        )
+        .map((input) => ({
+          name: input.name,
+          value: input.value.trim().slice(0, 40),
+        }));
+
+      const confirm = [
+        ...document.querySelectorAll(
+          'input[type="button"], input[type="submit"], button, a',
+        ),
+      ].find((el) =>
+        /Confirm Passport/i.test(
+          ((el as HTMLInputElement).value || el.textContent || '').trim(),
+        ),
+      ) as HTMLInputElement | HTMLButtonElement | undefined;
+
+      const applyLastName = (
+        document.querySelector(
+          'input[name="apply.lastName"]',
+        ) as HTMLInputElement | null
+      )?.value?.trim() ?? '';
+      const applyPassportNo = (
+        document.querySelector(
+          'input[name="apply.passportNo"]',
+        ) as HTMLInputElement | null
+      )?.value?.trim() ?? '';
+
+      return {
+        processingVisible,
+        processingText: processingText.slice(0, 80),
+        ocrFilled,
+        ocrFilledCount: ocrFilled.length,
+        confirmFound: Boolean(confirm),
+        confirmTag: confirm ? confirm.tagName.toLowerCase() : '',
+        confirmDisabled: Boolean(
+          confirm && 'disabled' in confirm && confirm.disabled,
+        ),
+        confirmClass: confirm?.className?.toString().slice(0, 80) ?? '',
+        applyLastName,
+        applyPassportNo,
+      };
+    });
+  }
+
+  private formatDebug(state: OcrDebugState | null): string {
+    if (!state) {
+      return 'debug=unavailable';
+    }
+    return (
+      `debug={processing:${state.processingVisible}` +
+      ` "${state.processingText}";` +
+      ` ocrFilled:${state.ocrFilledCount}` +
+      ` [${state.ocrFilled.map((f) => `${f.name}=${f.value}`).join('; ')}];` +
+      ` confirm:${state.confirmFound}/${state.confirmTag}` +
+      ` disabled=${state.confirmDisabled}` +
+      ` class="${state.confirmClass}";` +
+      ` apply.lastName="${state.applyLastName}"` +
+      ` apply.passportNo="${state.applyPassportNo}"}`
+    );
+  }
+
+  private async waitForVisibleProcessingGone(
+    page: Page,
+    timeoutMs: number,
+  ): Promise<void> {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      const state = await this.readOcrDebugState(page);
+      if (!state.processingVisible) {
+        return;
+      }
+      await page.waitForTimeout(500);
+    }
   }
 
   private async downloadFile(
