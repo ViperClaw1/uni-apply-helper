@@ -17,6 +17,7 @@ export class FillWizardStep implements ApplicationPipelineStep {
       context.profile,
       context.university,
       context.motivationLetterContent,
+      context.applicationId,
     );
   }
 }

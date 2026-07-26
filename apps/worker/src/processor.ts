@@ -135,49 +135,83 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
 
     try {
       await this.browserService.withPage(university.id, async (page) => {
-        const context: ApplicationStepContext = {
-          applicationId: application.id,
-          batchId: application.batchId,
-          studentId: profile.id,
-          universityId: university.id,
-          profile,
-          university,
-          motivationLetterContent,
-          page,
-        };
+        try {
+          const context: ApplicationStepContext = {
+            applicationId: application.id,
+            batchId: application.batchId,
+            studentId: profile.id,
+            universityId: university.id,
+            profile,
+            university,
+            motivationLetterContent,
+            page,
+          };
 
-        for (const step of this.getSteps(university)) {
-          await this.runStep(application.id, step, context);
+          for (const step of this.getSteps(university)) {
+            await this.runStep(application.id, step, context);
 
-          if (step.name === 'open_form') {
-            context.screenshotBefore = await this.screenshotService.capture(
+            if (step.name === 'open_form') {
+              context.screenshotBefore = await this.screenshotService.capture(
+                page,
+                application.id,
+                'before',
+              );
+
+              await this.prisma.application.update({
+                where: { id: application.id },
+                data: { screenshotBefore: context.screenshotBefore },
+              });
+            }
+          }
+
+          await this.prisma.application.update({
+            where: { id: application.id },
+            data: {
+              status: 'submitted',
+              submittedAt: new Date(),
+              screenshotAfter: context.screenshotAfter,
+            },
+          });
+
+          await this.recalculateBatchCounters(application.batchId);
+          await this.notificationsService.notifySubmitted(
+            university.displayName,
+            studentName,
+            context.screenshotAfter,
+          );
+        } catch (innerError) {
+          // Page still open here — capture failure screen for debugging.
+          const baseMessage =
+            innerError instanceof Error ? innerError.message : 'Unknown error';
+          const fromMessage = baseMessage.match(
+            /Screenshot:\s*(https?:\/\/\S+)/i,
+          )?.[1];
+          const shotUrl =
+            fromMessage ??
+            (await this.screenshotService.captureSafe(
               page,
               application.id,
-              'before',
-            );
+              'failed',
+            ));
 
-            await this.prisma.application.update({
-              where: { id: application.id },
-              data: { screenshotBefore: context.screenshotBefore },
-            });
+          const message =
+            shotUrl && !fromMessage
+              ? `${baseMessage} Screenshot: ${shotUrl}`
+              : baseMessage;
+
+          if (shotUrl) {
+            await this.prisma.application
+              .update({
+                where: { id: application.id },
+                data: { screenshotAfter: shotUrl },
+              })
+              .catch(() => undefined);
           }
+
+          throw message === baseMessage
+            ? innerError
+            : new Error(message, { cause: innerError });
         }
-
-        await this.prisma.application.update({
-          where: { id: application.id },
-          data: {
-            status: 'submitted',
-            submittedAt: new Date(),
-            screenshotAfter: context.screenshotAfter,
-          },
-        });
-
-        await this.recalculateBatchCounters(application.batchId);
-        await this.notificationsService.notifySubmitted(
-          university.displayName,
-          studentName,
-          context.screenshotAfter,
-        );
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';

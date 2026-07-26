@@ -1,9 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import type { WizardConfig } from '@uni-apply/shared';
 import type { Page } from 'playwright';
+import { ScreenshotService } from '../screenshot/screenshot.service.js';
 
 @Injectable()
 export class WizardNavigator {
+  constructor(private readonly screenshotService: ScreenshotService) {}
+
   async forEachStep(
     page: Page,
     wizard: WizardConfig,
@@ -11,6 +14,7 @@ export class WizardNavigator {
     options?: {
       /** CSS selector that should appear after advancing to this step (AJAX wizards). */
       markerForStep?: (step: number) => string | undefined;
+      applicationId?: string;
     },
   ): Promise<void> {
     for (let step = 1; step <= wizard.totalSteps; step += 1) {
@@ -18,7 +22,13 @@ export class WizardNavigator {
 
       if (step < wizard.totalSteps) {
         const nextMarker = options?.markerForStep?.(step + 1);
-        await this.clickNext(page, wizard.nextButtonSelector, nextMarker);
+        await this.clickNext(
+          page,
+          wizard.nextButtonSelector,
+          nextMarker,
+          options?.applicationId,
+          step,
+        );
       }
     }
   }
@@ -27,6 +37,8 @@ export class WizardNavigator {
     page: Page,
     selector: string,
     nextStepMarker?: string,
+    applicationId?: string,
+    fromStep?: number,
   ): Promise<void> {
     await this.waitForUiReady(page);
     await this.dismissBlockingDialogs(page);
@@ -94,10 +106,16 @@ export class WizardNavigator {
       const afterSig = await this.getStepSignature(page);
       if (afterSig === beforeSig) {
         const validation = await this.collectValidationHints(page);
+        const label = `wizard-stuck-step${fromStep ?? '?'}`;
+        const screenshotUrl = applicationId
+          ? await this.screenshotService.captureSafe(page, applicationId, label)
+          : undefined;
+
         throw new Error(
           'Wizard step did not advance after Next (DOM/URL unchanged). ' +
             `Still on fields: [${afterSig.split('|').slice(0, 12).join(', ')}]` +
-            (validation ? ` Validation: ${validation}` : ''),
+            (validation ? ` Validation: ${validation}` : '') +
+            (screenshotUrl ? ` Screenshot: ${screenshotUrl}` : ''),
         );
       }
     }

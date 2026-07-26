@@ -1,4 +1,4 @@
-import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { randomUUID } from 'node:crypto';
@@ -6,6 +6,7 @@ import type { Page } from 'playwright';
 
 @Injectable()
 export class ScreenshotService {
+  private readonly logger = new Logger(ScreenshotService.name);
   private readonly s3?: S3Client;
   private readonly bucket?: string;
   private readonly publicUrl?: string;
@@ -53,6 +54,27 @@ export class ScreenshotService {
     );
 
     return `${this.publicUrl.replace(/\/$/, '')}/${key}`;
+  }
+
+  /** Best-effort capture for failure paths — never throws. */
+  async captureSafe(
+    page: Page,
+    applicationId: string,
+    label: string,
+  ): Promise<string | undefined> {
+    try {
+      if (page.isClosed()) {
+        return undefined;
+      }
+      return await this.capture(page, applicationId, label);
+    } catch (error) {
+      this.logger.warn(
+        `Screenshot capture failed (${label}): ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      return undefined;
+    }
   }
 }
 
