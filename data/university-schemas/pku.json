@@ -201,6 +201,62 @@
       "labelHint": "Passport Expiry Date"
     },
     {
+      "selector": "input[name=\"apply.fieldName\"]",
+      "mapsTo": null,
+      "type": "text",
+      "required": false,
+      "wizardStep": 2,
+      "labelHint": "Area of Research (in Chinese)"
+    },
+    {
+      "selector": "input[name=\"apply.fieldEnglish\"]",
+      "mapsTo": null,
+      "type": "text",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Area of Research (in English)"
+    },
+    {
+      "selector": "input[name=\"apply.studyStartDate\"]",
+      "mapsTo": null,
+      "type": "text",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Duration of Study Start"
+    },
+    {
+      "selector": "input[name=\"apply.studyEndDate\"]",
+      "mapsTo": null,
+      "type": "text",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Duration of Study End"
+    },
+    {
+      "selector": "input[name=\"apply.advisor\"]",
+      "mapsTo": null,
+      "type": "text",
+      "required": false,
+      "wizardStep": 2,
+      "labelHint": "Supervisor Chinese Name"
+    },
+    {
+      "selector": "input[name=\"apply.advisorEn\"]",
+      "mapsTo": null,
+      "type": "text",
+      "required": false,
+      "wizardStep": 2,
+      "labelHint": "Supervisor English Name"
+    },
+    {
+      "selector": "input[name=\"apply.advisorConnect\"]",
+      "mapsTo": null,
+      "type": "text",
+      "required": false,
+      "wizardStep": 2,
+      "labelHint": "Supervisor Contact"
+    },
+    {
       "selector": "select[name=\"apply.languageSkillId\"]",
       "mapsTo": null,
       "type": "select",
@@ -256,30 +312,74 @@
       "selector": "input[name=\"apply.guarantorEnname\"]",
       "mapsTo": "guarantor.name",
       "type": "text",
-      "required": false,
+      "required": true,
       "wizardStep": 2,
-      "labelHint": "Guarantor Name"
+      "labelHint": "Recommender Name"
+    },
+    {
+      "selector": "input[name=\"apply.guarRelation\"]",
+      "mapsTo": "guarantor.relationship",
+      "type": "text",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Relationship with the applicant"
+    },
+    {
+      "selector": "input[name=\"apply.guarWorkplace\"]",
+      "mapsTo": "guarantor.company",
+      "type": "text",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Organization"
     },
     {
       "selector": "input[name=\"apply.guarPhone\"]",
       "mapsTo": "guarantor.phone",
       "type": "text",
-      "required": false,
-      "wizardStep": 2
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Phone Number"
     },
     {
       "selector": "input[name=\"apply.guarMobile\"]",
       "mapsTo": "guarantor.phone",
       "type": "text",
       "required": false,
-      "wizardStep": 2
+      "wizardStep": 2,
+      "labelHint": "Mobile"
     },
     {
       "selector": "input[name=\"apply.guarEmail\"]",
       "mapsTo": "guarantor.email",
       "type": "text",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Email"
+    },
+    {
+      "selector": "select[name=\"apply.guarCountryId\"]",
+      "mapsTo": "guarantor.nationality",
+      "type": "select",
       "required": false,
-      "wizardStep": 2
+      "wizardStep": 2,
+      "labelHint": "Nationality",
+      "options": ["Russian Federation", "Russia", "China"]
+    },
+    {
+      "selector": "input[name=\"apply.guarCareer\"]",
+      "mapsTo": "guarantor.position",
+      "type": "text",
+      "required": false,
+      "wizardStep": 2,
+      "labelHint": "Job Title"
+    },
+    {
+      "selector": "input[name=\"apply.guarAddress\"]",
+      "mapsTo": "guarantor.homeAddress",
+      "type": "text",
+      "required": false,
+      "wizardStep": 2,
+      "labelHint": "Address"
     },
     {
       "selector": "input[name=\"sh.startDate\"]",

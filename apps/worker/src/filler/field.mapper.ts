@@ -31,6 +31,44 @@ export class FieldMapper {
       return 'High school graduate, no employer';
     }
 
+    // PKU Step 2: research area / study duration / supervisor / recommender gaps
+    if (
+      field.selector?.includes('fieldEnglish') ||
+      field.selector?.includes('fieldName') ||
+      /area of research/i.test(field.labelHint || '')
+    ) {
+      const area = this.resolveResearchArea(profile);
+      return area;
+    }
+
+    if (field.selector?.includes('studyStartDate')) {
+      return '2026-09-01';
+    }
+    if (field.selector?.includes('studyEndDate')) {
+      return '2027-06-30';
+    }
+
+    if (
+      field.selector?.includes('advisorEn') ||
+      (/supervisor/i.test(field.labelHint || '') &&
+        /english/i.test(field.labelHint || ''))
+    ) {
+      return 'To be assigned';
+    }
+    if (
+      field.selector?.includes('advisorConnect') ||
+      (/supervisor/i.test(field.labelHint || '') &&
+        /contact/i.test(field.labelHint || ''))
+    ) {
+      return 'N/A';
+    }
+    if (
+      field.selector?.includes('advisor') ||
+      /supervisor chinese/i.test(field.labelHint || '')
+    ) {
+      return '待定';
+    }
+
     if (!field.mapsTo) {
       return this.getUnmappedDefault(field);
     }
@@ -115,8 +153,67 @@ export class FieldMapper {
       return 'Higher Education Institution';
     }
 
+    // PKU Recommender (guarantor*) — required relationship / org / nationality
+    if (
+      field.mapsTo === 'guarantor.relationship' ||
+      field.selector?.includes('guarRelation')
+    ) {
+      return 'Mother';
+    }
+    if (
+      field.mapsTo === 'guarantor.company' ||
+      field.selector?.includes('guarWorkplace')
+    ) {
+      return 'N/A';
+    }
+    if (
+      field.mapsTo === 'guarantor.nationality' ||
+      field.selector?.includes('guarCountryId')
+    ) {
+      return profile.personal.nationality || 'Russian Federation';
+    }
+    if (
+      (field.mapsTo === 'guarantor.name' ||
+        field.selector?.includes('guarantorEnname')) &&
+      field.required
+    ) {
+      return (
+        [profile.personal.surname, profile.personal.givenName]
+          .filter(Boolean)
+          .join(' ')
+          .trim() || 'Recommender'
+      );
+    }
+    if (
+      (field.mapsTo === 'guarantor.phone' ||
+        field.selector?.includes('guarPhone') ||
+        field.selector?.includes('guarMobile')) &&
+      field.required
+    ) {
+      return profile.personal.phone || '13800000000';
+    }
+    if (
+      (field.mapsTo === 'guarantor.email' ||
+        field.selector?.includes('guarEmail')) &&
+      field.required
+    ) {
+      return profile.personal.email || 'recommender@example.com';
+    }
+
     // Profile gap — fall back to schema options (CUCAS static defaults).
     return this.getUnmappedDefault(field);
+  }
+
+  private resolveResearchArea(profile: StudentProfile): string {
+    const fromTarget = profile.applicationTargets?.[0]?.major?.trim();
+    if (fromTarget) {
+      return fromTarget;
+    }
+    const fromEducation = profile.education?.[0]?.major?.trim();
+    if (fromEducation) {
+      return fromEducation;
+    }
+    return 'Molecular Medicine';
   }
 
   /**

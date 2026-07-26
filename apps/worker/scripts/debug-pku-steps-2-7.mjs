@@ -76,9 +76,12 @@ const profile = {
   languages: [{ language: 'english', score: 'Good' }],
   familyMembers: [],
   guarantor: {
-    name: 'Ivan Petrov',
+    name: 'Kvochkina Tatiana Fedorovna',
+    relationship: 'Mother',
+    company: 'N/A',
+    nationality: 'Russian Federation',
     phone: '+79007654321',
-    email: 'ivan@example.com',
+    email: 'Tatyana_kv85@mail.ru',
   },
   emergencyContact: {
     name: 'Ivan Petrov',
@@ -92,6 +95,14 @@ const profile = {
     medical: 'https://example.com/medical.pdf',
     diploma: 'https://example.com/diploma.pdf',
   },
+  applicationTargets: [
+    {
+      universityRaw: 'Peking University',
+      universityId: 'pku',
+      major: 'Molecular Medicine',
+      degree: 'Research Scholar',
+    },
+  ],
 };
 
 function getByPath(obj, path) {
@@ -135,6 +146,31 @@ function resolveValue(field) {
       ? profile.documents[field.documentType]
       : undefined;
   }
+
+  if (
+    field.selector?.includes('workplace') ||
+    field.selector?.includes('careerName')
+  ) {
+    return 'High school graduate, no employer';
+  }
+
+  if (
+    field.selector?.includes('fieldEnglish') ||
+    field.selector?.includes('fieldName') ||
+    /area of research/i.test(field.labelHint || '')
+  ) {
+    return (
+      profile.applicationTargets?.[0]?.major ||
+      profile.education[0]?.major ||
+      'Molecular Medicine'
+    );
+  }
+
+  if (field.selector?.includes('studyStartDate')) return '2026-09-01';
+  if (field.selector?.includes('studyEndDate')) return '2027-06-30';
+  if (field.selector?.includes('advisorEn')) return 'To be assigned';
+  if (field.selector?.includes('advisorConnect')) return 'N/A';
+  if (field.selector?.includes('advisor')) return '待定';
 
   if (!field.mapsTo) {
     if (field.type === 'checkbox') return true;
@@ -194,12 +230,26 @@ function resolveValue(field) {
     return mapped;
   }
 
-  if (field.type === 'checkbox') return true;
-  if (field.type === 'file') {
-    return field.documentType
-      ? profile.documents[field.documentType]
-      : undefined;
+  if (
+    field.mapsTo === 'guarantor.relationship' ||
+    field.selector?.includes('guarRelation')
+  ) {
+    return 'Mother';
   }
+  if (
+    field.mapsTo === 'guarantor.company' ||
+    field.selector?.includes('guarWorkplace')
+  ) {
+    return 'N/A';
+  }
+  if (
+    field.mapsTo === 'guarantor.nationality' ||
+    field.selector?.includes('guarCountryId')
+  ) {
+    return profile.personal.nationality || 'Russian Federation';
+  }
+
+  if (field.type === 'checkbox') return true;
   return firstRealOption(field.options);
 }
 
@@ -276,6 +326,27 @@ const passportFile = step6.find((f) => f.documentType === 'passport');
 assert(passportFile?.required === true, 'passport upload required on step 6');
 
 console.log('\n=== Critical soft-defaults ===');
+const step2Must = [
+  ['apply.fieldEnglish', 'Molecular Medicine'],
+  ['apply.studyStartDate', '2026-09-01'],
+  ['apply.studyEndDate', '2027-06-30'],
+  ['apply.languageSkillId', 'None'],
+  ['apply.hskId', 'None'],
+  ['apply.hskOralId', 'None'],
+  ['apply.englishLanguageSkillId', 'Good'],
+  ['apply.yydjzs', 'Native Language'],
+  ['apply.guarRelation', 'Mother'],
+  ['apply.guarWorkplace', 'N/A'],
+];
+for (const [selPart, expected] of step2Must) {
+  const field = fieldsForStep(2).find((f) => f.selector?.includes(selPart));
+  assert(Boolean(field), `Step2 schema has ${selPart}`);
+  assert(
+    resolveValue(field) === expected,
+    `Step2 ${selPart} → ${expected} (got ${resolveValue(field)})`,
+  );
+}
+
 const china = fieldsForStep(3).find((f) =>
   f.selector?.includes('haveStudiedInChina'),
 );
@@ -297,10 +368,35 @@ const homeMobile = fieldsForStep(5).find((f) =>
 );
 assert(Boolean(resolveValue(homeMobile)), 'homeMobile resolved');
 
-console.log('\n=== Playwright fixtures: step 3–4 radios + overlays ===');
+console.log('\n=== Playwright fixtures: step 2 study plan + step 3–4 radios ===');
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage();
 await page.setContent(`<!DOCTYPE html><html><body>
+  <h3>Step 2</h3>
+  <table>
+    <tr><td>Area of Research (in English)</td><td><input name="apply.fieldEnglish" /></td></tr>
+    <tr><td>Area of Research (in Chinese)</td><td><input name="apply.fieldName" /></td></tr>
+    <tr><td>*Duration of Study</td>
+      <td>
+        <input name="apply.studyStartDate" class="Wdate" />
+        <input name="apply.studyEndDate" class="Wdate" />
+      </td>
+    </tr>
+    <tr><td>Supervisor English Name</td><td><input name="apply.advisorEn" /></td></tr>
+    <tr><td>*Relationship</td><td><input name="apply.guarRelation" /></td></tr>
+    <tr><td>*Organization</td><td><input name="apply.guarWorkplace" /></td></tr>
+    <tr><td>Nationality</td>
+      <td>
+        <select name="apply.guarCountryId">
+          <option value="">Please choose</option>
+          <option value="1">Russian Federation</option>
+          <option value="2">China</option>
+        </select>
+      </td>
+    </tr>
+  </table>
+  <div class="WdateDiv" style="display:block;width:100px;height:100px">calendar</div>
+
   <h3>Step 3</h3>
   <label><input type="radio" name="applyEx.haveStudiedInChina" value="1"> Yes</label>
   <label><input type="radio" name="applyEx.haveStudiedInChina" value="0"> No</label>
@@ -320,8 +416,52 @@ await page.setContent(`<!DOCTYPE html><html><body>
     <div class="messager-body">Successfully copied to the corresponding input box!</div>
     <div class="messager-button"><input class="okButton" type="button" value="Ok"></div>
   </div>
-  <div class="WdateDiv" style="display:block;width:100px;height:100px">calendar</div>
 </body></html>`);
+
+async function setJs(name, value) {
+  return page.evaluate(
+    ({ name, value }) => {
+      const el = document.querySelector(`input[name="${name}"]`);
+      if (!el) return false;
+      el.value = value;
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+      return el.value === value;
+    },
+    { name, value },
+  );
+}
+
+assert(
+  await setJs('apply.fieldEnglish', resolveValue(fieldsForStep(2).find((f) => f.selector.includes('fieldEnglish')))),
+  'DOM: fieldEnglish filled via JS',
+);
+assert(
+  await setJs('apply.studyStartDate', '2026-09-01'),
+  'DOM: studyStartDate via JS (no datepicker type)',
+);
+assert(
+  await setJs('apply.studyEndDate', '2027-06-30'),
+  'DOM: studyEndDate via JS',
+);
+assert(await setJs('apply.guarRelation', 'Mother'), 'DOM: guarRelation');
+assert(await setJs('apply.guarWorkplace', 'N/A'), 'DOM: guarWorkplace');
+await page.selectOption('select[name="apply.guarCountryId"]', { label: 'Russian Federation' });
+assert(
+  (await page.inputValue('select[name="apply.guarCountryId"]')) === '1',
+  'DOM: guarCountryId = Russian Federation',
+);
+
+// Close datepicker without interacting via fill()
+await page.evaluate(() => {
+  for (const el of document.querySelectorAll('.WdateDiv')) {
+    el.style.display = 'none';
+  }
+});
+assert(
+  (await page.locator('.WdateDiv').evaluate((el) => getComputedStyle(el).display)) ===
+    'none',
+  'DOM: step2 datepicker closed',
+);
 
 async function pickRadioByLabel(name, label) {
   const radio = page.getByRole('radio', { name: label, exact: true }).first();

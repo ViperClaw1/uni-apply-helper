@@ -135,6 +135,9 @@ export class FormFiller {
             await this.ensurePkuStep1RequiredGaps(page);
           }
         }
+        if (step === 2 && university.id === 'pku') {
+          await this.ensurePkuStep2RequiredGaps(page, profile);
+        }
         await this.dismissFormOverlays(page);
 
         // Photo already attached in OCR Step-1 hook — skip duplicate.
@@ -1229,6 +1232,92 @@ export class FormFiller {
       }, passportCandidates.map((c) => c.toLowerCase()));
     }
 
+    await this.dismissFormOverlays(page);
+  }
+
+  /**
+   * PKU Step 2 gaps from wizard-stuck screenshots:
+   * study dates (My97), research area, recommender relation/org/nationality.
+   */
+  private async ensurePkuStep2RequiredGaps(
+    page: Page,
+    profile: StudentProfile,
+  ): Promise<void> {
+    await this.dismissFormOverlays(page);
+    await this.closeDatePickers(page);
+
+    const area =
+      profile.applicationTargets?.[0]?.major?.trim() ||
+      profile.education?.[0]?.major?.trim() ||
+      'Molecular Medicine';
+
+    const fills: Array<[string, string]> = [
+      ['apply.fieldEnglish', area],
+      ['apply.fieldName', area],
+      ['apply.studyStartDate', '2026-09-01'],
+      ['apply.studyEndDate', '2027-06-30'],
+      ['apply.advisorEn', 'To be assigned'],
+      ['apply.advisor', '待定'],
+      ['apply.advisorConnect', 'N/A'],
+      [
+        'apply.guarRelation',
+        profile.guarantor?.relationship?.trim() || 'Mother',
+      ],
+      ['apply.guarWorkplace', profile.guarantor?.company?.trim() || 'N/A'],
+      [
+        'apply.guarantorEnname',
+        profile.guarantor?.name?.trim() ||
+          [profile.personal.surname, profile.personal.givenName]
+            .filter(Boolean)
+            .join(' ')
+            .trim() ||
+          'Recommender',
+      ],
+      [
+        'apply.guarPhone',
+        profile.guarantor?.phone?.trim() ||
+          profile.personal.phone ||
+          '13800000000',
+      ],
+      [
+        'apply.guarMobile',
+        profile.guarantor?.phone?.trim() ||
+          profile.personal.phone ||
+          '13800000000',
+      ],
+      [
+        'apply.guarEmail',
+        profile.guarantor?.email?.trim() ||
+          profile.personal.email ||
+          'recommender@example.com',
+      ],
+    ];
+
+    for (const [name, value] of fills) {
+      await this.setInputValueJs(page, `input[name="${name}"]`, value).catch(
+        () => undefined,
+      );
+    }
+
+    // Nationality select for recommender
+    const nationality =
+      profile.guarantor?.nationality ||
+      profile.personal.nationality ||
+      'Russian Federation';
+    await this.fillSelectControl(
+      page,
+      {
+        selector: 'select[name="apply.guarCountryId"]',
+        type: 'select',
+        required: false,
+        mapsTo: null,
+        labelHint: 'Nationality',
+      },
+      page.locator('select[name="apply.guarCountryId"]').first(),
+      nationality,
+    ).catch(() => undefined);
+
+    await this.closeDatePickers(page);
     await this.dismissFormOverlays(page);
   }
 

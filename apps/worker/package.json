@@ -25,6 +25,7 @@
     "capture:pku-session": "node scripts/capture-pku-session.mjs",
     "debug:pku-step1": "node scripts/debug-pku-step1-waiver.mjs",
     "debug:pku-steps-2-7": "node scripts/debug-pku-steps-2-7.mjs",
+    "debug:pku-all": "node scripts/debug-pku-all.mjs",
     "debug:kmmc-prewizard": "node scripts/debug-kmmc-prewizard.mjs",
     "capture:sdu-session": "node scripts/capture-sdu-session.mjs",
     "capture:lnpu-session": "node scripts/capture-lnpu-postlogin.mjs",
