@@ -720,6 +720,22 @@ export class FormFiller {
       return this.expandCountryLabels(value);
     }
 
+    // 17gz English certificate: option text is "Native Language", not "Native Speaker"
+    if (
+      /yydjzs|english.*certificate|certificate of english|language certificate/i.test(
+        hint,
+      )
+    ) {
+      const v = value.trim().toLowerCase();
+      if (/native\s*(speaker|language|tongue)/i.test(v) || v === 'native') {
+        return [...new Set(['Native Language', 'Native Speaker', value])];
+      }
+    }
+
+    if (/native\s*speaker/i.test(value)) {
+      return [...new Set(['Native Language', value])];
+    }
+
     return [value];
   }
 

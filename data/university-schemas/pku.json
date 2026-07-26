@@ -201,22 +201,49 @@
       "labelHint": "Passport Expiry Date"
     },
     {
+      "selector": "select[name=\"apply.languageSkillId\"]",
+      "mapsTo": null,
+      "type": "select",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Chinese Language Proficiency",
+      "options": ["None", "Poor", "Fair", "Good", "Excellent"]
+    },
+    {
+      "selector": "select[name=\"apply.hskId\"]",
+      "mapsTo": null,
+      "type": "select",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Level of HSK",
+      "options": ["None", "HSK LEVEL 1", "HSK LEVEL 2", "HSK LEVEL 3", "HSK LEVEL 4", "HSK LEVEL 5", "HSK LEVEL 6", "HSK LEVEL 7", "HSK LEVEL 8", "HSK LEVEL 9"]
+    },
+    {
+      "selector": "select[name=\"apply.hskOralId\"]",
+      "mapsTo": null,
+      "type": "select",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Level of HSKK",
+      "options": ["None", "Primary", "Junior", "Senior"]
+    },
+    {
       "selector": "select[name=\"apply.englishLanguageSkillId\"]",
       "mapsTo": null,
       "type": "select",
-      "required": false,
+      "required": true,
       "wizardStep": 2,
-      "labelHint": "English Proficiency",
+      "labelHint": "English Language Proficiency",
       "options": ["Good", "Excellent", "Fair", "Poor", "None"]
     },
     {
       "selector": "select[name=\"apply.yydjzs\"]",
       "mapsTo": null,
       "type": "select",
-      "required": false,
+      "required": true,
       "wizardStep": 2,
-      "labelHint": "Language Certificate",
-      "options": ["Native Speaker", "IELTS", "TOEFL", "Other", "None"]
+      "labelHint": "Certificate of English Proficiency",
+      "options": ["Native Language", "Native Speaker", "IELTS", "TOEFL", "Other", "None"]
     },
     {
       "selector": "input[name=\"apply.yydjzsScore\"]",
