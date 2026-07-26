@@ -21,7 +21,7 @@ export interface AgentObservation {
     screenshotBase64?: string;
 }
 export interface AgentFieldHint {
-    mapsTo: string | null;
+    mapsTo: string | string[] | null;
     label: string;
     type: string;
     value: string;

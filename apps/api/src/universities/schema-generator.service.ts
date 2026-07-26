@@ -170,7 +170,7 @@ export class SchemaGeneratorService {
       '  "requiredDocuments": string[],',
       '  "fields": Array<{',
       '    "selector": string,',
-      '    "mapsTo": string | null,',
+      '    "mapsTo": string | string[] | null,',
       `    "type": ${JSON.stringify(FIELD_TYPES)},`,
       '    "required": boolean,',
       '    "wizardStep"?: number,',
@@ -285,8 +285,15 @@ export class SchemaGeneratorService {
         warnings.push(`File field ${field.selector} has no documentType.`);
       }
 
-      if (field.mapsTo && !STUDENT_PROFILE_PATHS.includes(field.mapsTo as never)) {
-        warnings.push(`Unusual mapsTo path: ${field.mapsTo}`);
+      if (field.mapsTo) {
+        const paths = Array.isArray(field.mapsTo)
+          ? field.mapsTo
+          : [field.mapsTo];
+        for (const path of paths) {
+          if (!STUDENT_PROFILE_PATHS.includes(path as never)) {
+            warnings.push(`Unusual mapsTo path: ${path}`);
+          }
+        }
       }
     }
 
