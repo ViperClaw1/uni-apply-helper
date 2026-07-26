@@ -55,9 +55,103 @@ const FIXTURE = `<!DOCTYPE html><html><body>
     not have a Chinese name yet
   </label>
   <input name="apply.passportExpire" value="2029-07-10T00:00:00.0" />
-  <input type="radio" name="apply.marryStatus" value="1" /> Unmarried
-  <input type="radio" name="apply.marryStatus" value="2" /> Married
+  <table>
+    <tr>
+      <td>*Marital Status</td>
+      <td>
+        <input type="radio" name="apply.marryStatus" value="1" /> Unmarried
+        <input type="radio" name="apply.marryStatus" value="2" /> Married
+      </td>
+    </tr>
+    <tr>
+      <td>*Are you Ethnic Chinese?</td>
+      <td>
+        <input type="radio" name="apply.isOversea" value="1" /> Yes
+        <input type="radio" name="apply.isOversea" value="0" /> No
+      </td>
+    </tr>
+    <tr>
+      <td>*Whether in Chinese mainland now?</td>
+      <td>
+        <input type="radio" name="applyEx.inChinaOnApply" value="1" /> Yes
+        <input type="radio" name="applyEx.inChinaOnApply" value="0" /> No
+      </td>
+    </tr>
+    <tr>
+      <td>*Passport Type</td>
+      <td>
+        <select name="apply.someUnknownPassportType">
+          <option value="">-Choose-</option>
+          <option value="1">Ordinary Passport</option>
+          <option value="2">Diplomatic Passport</option>
+          <option value="3">Service Passport</option>
+        </select>
+      </td>
+    </tr>
+  </table>
 </body></html>`;
+
+async function fillRadioByLabelText(page, sel, want) {
+  return page.evaluate(({ sel, want }) => {
+    const radios = [...document.querySelectorAll(sel)];
+    const norm = (s) => s.replace(/\s+/g, ' ').trim().toLowerCase();
+    const wantN = norm(want);
+    const labelOf = (radio) => {
+      let sib = radio.nextSibling;
+      let acc = '';
+      while (sib && acc.length < 40) {
+        if (sib.nodeType === Node.TEXT_NODE) acc += sib.textContent || '';
+        else if (sib.nodeType === Node.ELEMENT_NODE) {
+          if (sib.tagName === 'INPUT') break;
+          acc += sib.textContent || '';
+        }
+        sib = sib.nextSibling;
+      }
+      return acc;
+    };
+    const match = radios.find((r) => {
+      const lab = norm(labelOf(r));
+      return lab === wantN || lab.startsWith(wantN);
+    });
+    const aliases = {
+      no: ['0', 'n', 'no'],
+      yes: ['1', 'y', 'yes'],
+      unmarried: ['1', 'unmarried'],
+    };
+    const target =
+      match ||
+      radios.find((r) => (aliases[wantN] || []).includes(norm(r.value))) ||
+      (wantN === 'no' ? radios[radios.length - 1] : null);
+    if (!target) return false;
+    target.checked = true;
+    target.dispatchEvent(new Event('change', { bubbles: true }));
+    return target.checked;
+  }, { sel, want });
+}
+
+async function selectNearLabel(page, labelSource, values) {
+  return page.evaluate(({ labelSource, values }) => {
+    const labelReLocal = new RegExp(labelSource, 'i');
+    const nodes = [...document.querySelectorAll('td, th, label, div, span, li')];
+    const labelEl = nodes.find((el) => {
+      const t = (el.textContent || '').replace(/\s+/g, ' ').trim();
+      return labelReLocal.test(t) && t.length < 80;
+    });
+    if (!labelEl) return false;
+    const row = labelEl.closest('tr') || labelEl.parentElement;
+    const select = row?.querySelector('select');
+    if (!select) return false;
+    const needles = values.map((v) => v.toLowerCase());
+    const opt = [...select.options].find((option) => {
+      const text = (option.textContent || '').trim().toLowerCase();
+      return needles.some((n) => text === n || text.includes(n));
+    });
+    if (!opt?.value) return false;
+    select.value = opt.value;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    return select.value === opt.value;
+  }, { labelSource, values });
+}
 
 async function ensureChineseNameWaiver(page, profile) {
   const hasChinese = Boolean(profile.personal?.chineseName?.trim());
@@ -120,6 +214,8 @@ const requiredHints = [
   'careerId',
   'religionId',
   'passportExpire',
+  'isOversea',
+  'inChinaOnApply',
 ];
 for (const hint of requiredHints) {
   assert(
@@ -133,9 +229,13 @@ for (const hint of requiredHints) {
     `pku.json step1 covers ${hint}`,
   );
 }
+const passportTypeField = step1.find((f) =>
+  /Passport Type/i.test(f.labelHint || ''),
+);
+assert(Boolean(passportTypeField), 'pku.json has Passport Type field');
 assert(
-  !step1.some((f) => /passportTypeId|hzlb|passportId/.test(f.selector || '')),
-  'pku.json must NOT require non-existent Passport Type select',
+  passportTypeField.required === false,
+  'Passport Type must be required:false (name unknown; filled by label scan)',
 );
 
 console.log('\n=== playwright DOM waiver ===');
@@ -162,6 +262,38 @@ assert(resultHas.skipped === true, 'DOM: skip waiver when chineseName set');
 assert(
   (await page.locator('input[name="noName"]').isChecked()) === false,
   'DOM: noName stays unchecked when chineseName set',
+);
+
+console.log('\n=== radio + passport type gaps ===');
+await page.setContent(FIXTURE);
+assert(
+  await fillRadioByLabelText(page, 'input[name="apply.marryStatus"]', 'Unmarried'),
+  'radio: Unmarried by sibling text',
+);
+assert(
+  await page.locator('input[name="apply.marryStatus"][value="1"]').isChecked(),
+  'radio: marryStatus value=1 checked',
+);
+assert(
+  await fillRadioByLabelText(page, 'input[name="apply.isOversea"]', 'No'),
+  'radio: Ethnic Chinese No (not .first=Yes)',
+);
+assert(
+  await page.locator('input[name="apply.isOversea"][value="0"]').isChecked(),
+  'radio: isOversea value=0 checked',
+);
+assert(
+  await fillRadioByLabelText(page, 'input[name="applyEx.inChinaOnApply"]', 'No'),
+  'radio: inChina No',
+);
+assert(
+  await selectNearLabel(page, 'Passport Type', ['Ordinary Passport', 'Ordinary']),
+  'select: Passport Type by label → Ordinary',
+);
+assert(
+  (await page.locator('select[name="apply.someUnknownPassportType"]').inputValue()) ===
+    '1',
+  'select: unknown name still filled',
 );
 
 await browser.close();

@@ -150,6 +150,33 @@
       "options": ["None", "Atheism", "Christianity", "Islam", "Buddhism", "Other"]
     },
     {
+      "selector": "input[type=\"radio\"][name=\"apply.isOversea\"]",
+      "mapsTo": null,
+      "type": "radio",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Are you Ethnic Chinese?",
+      "options": ["No", "Yes"]
+    },
+    {
+      "selector": "input[type=\"radio\"][name=\"applyEx.inChinaOnApply\"]",
+      "mapsTo": "personal.beenToChina",
+      "type": "radio",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Whether in Chinese mainland now?",
+      "options": ["No", "Yes"]
+    },
+    {
+      "selector": "select[name=\"apply.passportTypeId\"], select[name=\"apply.hzlb\"], select[name=\"apply.passportType\"], select[name=\"apply.hslb\"]",
+      "mapsTo": null,
+      "type": "select",
+      "required": false,
+      "wizardStep": 1,
+      "labelHint": "Passport Type",
+      "options": ["Ordinary Passport", "Ordinary", "Private Passport", "Diplomatic Passport", "Service Passport"]
+    },
+    {
       "selector": "input[name=\"apply.passportNo\"]",
       "mapsTo": "personal.passportNo",
       "type": "text",

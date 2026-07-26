@@ -128,6 +128,12 @@ export class FormFiller {
 
         if (step === 1) {
           await this.ensureChineseNameWaiver(page, profile);
+          if (
+            university.id === 'pku' ||
+            university.navigationHints?.ocrPassportUpload
+          ) {
+            await this.ensurePkuStep1RequiredGaps(page);
+          }
         }
         await this.dismissFormOverlays(page);
 
@@ -346,40 +352,7 @@ export class FormFiller {
         await this.fillSelectControl(page, field, locator, normalizedValue);
         break;
       case 'radio':
-        if (field.selector) {
-          const byValue = page
-            .locator(`${field.selector}[value="${normalizedValue}"]`)
-            .first();
-          if ((await byValue.count()) > 0) {
-            await byValue.check({ force: true });
-            break;
-          }
-        }
-
-        {
-          const byLabel = page
-            .getByRole('radio', { name: normalizedValue, exact: false })
-            .first();
-          if ((await byLabel.count()) > 0) {
-            await byLabel.check({ force: true }).catch(() => undefined);
-            if (await byLabel.isChecked().catch(() => false)) {
-              break;
-            }
-          }
-        }
-
-        // CUCAS mailing radios often lack useful labels in captures — pick first.
-        await (field.selector
-          ? page.locator(field.selector).first()
-          : locator
-        )
-          .check({ force: true })
-          .catch(async () =>
-            (field.selector
-              ? page.locator(field.selector).first()
-              : locator
-            ).click({ force: true }),
-          );
+        await this.fillRadioControl(page, field, locator, normalizedValue);
         break;
       case 'checkbox':
         if (this.toBoolean(value)) {
@@ -397,6 +370,139 @@ export class FormFiller {
       case 'file':
         break;
     }
+  }
+
+  /**
+   * 17gz radios use numeric values (0/1, 1/2) while schema/profile give
+   * "No"/"Unmarried". Match by adjacent label text — never blindly pick .first()
+   * (that selects Yes on Ethnic Chinese / in-mainland pairs).
+   */
+  private async fillRadioControl(
+    page: Page,
+    field: FieldConfig,
+    locator: Locator,
+    normalizedValue: string,
+  ): Promise<void> {
+    const selector = field.selector;
+
+    if (selector) {
+      const byValue = page
+        .locator(`${selector}[value="${normalizedValue}"]`)
+        .first();
+      if ((await byValue.count()) > 0) {
+        await byValue.check({ force: true });
+        return;
+      }
+    }
+
+    {
+      const byRole = page
+        .getByRole('radio', { name: normalizedValue, exact: false })
+        .first();
+      if ((await byRole.count()) > 0) {
+        await byRole.check({ force: true }).catch(() => undefined);
+        if (await byRole.isChecked().catch(() => false)) {
+          return;
+        }
+      }
+    }
+
+    if (selector) {
+      const matched = await page.evaluate(
+        ({ sel, want }) => {
+          const radios = [
+            ...document.querySelectorAll(sel),
+          ] as HTMLInputElement[];
+          if (radios.length === 0) {
+            return false;
+          }
+
+          const norm = (s: string) => s.replace(/\s+/g, ' ').trim().toLowerCase();
+          const wantN = norm(want);
+
+          const labelOf = (radio: HTMLInputElement): string => {
+            if (radio.id) {
+              const forLab = document.querySelector(`label[for="${radio.id}"]`);
+              if (forLab?.textContent) {
+                return forLab.textContent;
+              }
+            }
+            const wrap = radio.closest('label');
+            if (wrap?.textContent) {
+              return wrap.textContent;
+            }
+            const parent = radio.parentElement;
+            if (parent) {
+              return parent.textContent || '';
+            }
+            let sib = radio.nextSibling;
+            let acc = '';
+            while (sib && acc.length < 40) {
+              if (sib.nodeType === Node.TEXT_NODE) {
+                acc += sib.textContent || '';
+              } else if (sib.nodeType === Node.ELEMENT_NODE) {
+                const el = sib as Element;
+                if (el.tagName === 'INPUT') {
+                  break;
+                }
+                acc += el.textContent || '';
+              }
+              sib = sib.nextSibling;
+            }
+            return acc;
+          };
+
+          const match = radios.find((radio) => {
+            const lab = norm(labelOf(radio));
+            return (
+              lab === wantN ||
+              lab.startsWith(wantN) ||
+              new RegExp(`\\b${wantN}\\b`, 'i').test(lab)
+            );
+          });
+
+          // Yes/No aliases → common 17gz values
+          const aliases: Record<string, string[]> = {
+            no: ['0', 'n', 'no', 'false', '2'],
+            yes: ['1', 'y', 'yes', 'true'],
+            unmarried: ['1', 'unmarried', 'single'],
+            married: ['2', 'married'],
+            female: ['2', 'f', 'female'],
+            male: ['1', 'm', 'male'],
+          };
+          const byAlias =
+            match ||
+            radios.find((radio) =>
+              (aliases[wantN] || []).includes(norm(radio.value)),
+            );
+
+          // Prefer last option for bare "No" when still ambiguous (Yes=first on 17gz)
+          const target =
+            byAlias ||
+            (wantN === 'no' ? radios[radios.length - 1] : undefined);
+
+          if (!target) {
+            return false;
+          }
+
+          target.checked = true;
+          target.click();
+          target.dispatchEvent(new Event('input', { bubbles: true }));
+          target.dispatchEvent(new Event('change', { bubbles: true }));
+          return target.checked;
+        },
+        { sel: selector, want: normalizedValue },
+      );
+
+      if (matched) {
+        return;
+      }
+    }
+
+    // Last resort only when a single radio locator was resolved (not a group).
+    await locator
+      .check({ force: true })
+      .catch(async () => locator.click({ force: true }));
   }
 
   /**
@@ -796,6 +902,342 @@ export class FormFiller {
     if ((await label.count()) > 0) {
       await label.click({ force: true }).catch(() => undefined);
     }
+  }
+
+  /**
+   * PKU Step 1 live gaps (from wizard-stuck screenshots):
+   * - Are you Ethnic Chinese? → apply.isOversea = No
+   * - Whether in Chinese mainland now? → applyEx.inChinaOnApply = No
+   * - Passport Type → select by label (name varies: hzlb / passportType / …)
+   */
+  private async ensurePkuStep1RequiredGaps(page: Page): Promise<void> {
+    await this.dismissFormOverlays(page);
+
+    // Marital often fails when profile/schema value doesn't match radio value=
+    await this.checkRadioNearLabel(page, /Marital Status/i, 'Unmarried');
+    await page
+      .locator('input[type="radio"][name="apply.marryStatus"]')
+      .evaluateAll((nodes) => {
+        const radios = nodes as HTMLInputElement[];
+        const unmarried =
+          radios.find((r) =>
+            /unmarried|single/i.test(
+              (r.closest('label')?.textContent ||
+                r.parentElement?.textContent ||
+                '') +
+                ' ' +
+                (r.nextSibling?.textContent || ''),
+            ),
+          ) ||
+          radios.find((r) => r.value === '1') ||
+          radios[0];
+        if (!unmarried) {
+          return;
+        }
+        unmarried.checked = true;
+        unmarried.click();
+        unmarried.dispatchEvent(new Event('change', { bubbles: true }));
+      })
+      .catch(() => undefined);
+
+    await this.checkRadioGroupNo(page, 'apply.isOversea');
+    await this.checkRadioGroupNo(page, 'applyEx.inChinaOnApply');
+
+    // Label-near radios if names differ on some 17gz skins
+    await this.checkRadioNearLabel(page, /Ethnic Chinese/i, 'No');
+    await this.checkRadioNearLabel(
+      page,
+      /Whether in Chinese mainland|in Chinese mainland now/i,
+      'No',
+    );
+
+    const passportCandidates = [
+      'Ordinary Passport',
+      'Ordinary',
+      'Private Passport',
+      'Private',
+    ];
+
+    let passportTypeOk = await this.selectNearLabel(
+      page,
+      /Passport Type/i,
+      passportCandidates,
+    );
+
+    if (!passportTypeOk) {
+      // getByLabel / placeholder when <label for> is wired
+      const byLabel = page.getByLabel(/Passport Type/i).first();
+      if ((await byLabel.count()) > 0) {
+        for (const cand of passportCandidates) {
+          try {
+            await byLabel.selectOption({ label: cand });
+            passportTypeOk = true;
+            break;
+          } catch {
+            // try next
+          }
+        }
+      }
+    }
+
+    if (!passportTypeOk) {
+      // Scan every select whose options look like passport types
+      passportTypeOk = await page.evaluate((needles) => {
+        const setSelect = (select: HTMLSelectElement, value: string) => {
+          select.value = value;
+          select.dispatchEvent(new Event('input', { bubbles: true }));
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+          const jq = (
+            window as unknown as {
+              jQuery?: (el: Element) => {
+                val: (v: string) => { trigger: (e: string) => unknown };
+              };
+            }
+          ).jQuery;
+          if (typeof jq === 'function') {
+            try {
+              jq(select).val(value).trigger('chosen:updated');
+              jq(select).val(value).trigger('change');
+              jq(select).val(value).trigger('liszt:updated');
+            } catch {
+              // ignore
+            }
+          }
+        };
+
+        for (const sel of document.querySelectorAll('select')) {
+          const select = sel as HTMLSelectElement;
+          const texts = [...select.options].map((o) =>
+            (o.textContent || '').trim().toLowerCase(),
+          );
+          const looksLikePassportType = texts.some((t) =>
+            /ordinary passport|diplomatic passport|service passport|private passport|公务护照|普通护照|外交护照/.test(
+              t,
+            ),
+          );
+          if (!looksLikePassportType) {
+            continue;
+          }
+
+          const match = [...select.options].find((opt) => {
+            const t = (opt.textContent || '').trim().toLowerCase();
+            return needles.some(
+              (n) => t === n || t.includes(n) || n.includes(t),
+            );
+          });
+          if (!match?.value) {
+            continue;
+          }
+          setSelect(select, match.value);
+          return select.value === match.value;
+        }
+        return false;
+      }, passportCandidates.map((c) => c.toLowerCase()));
+    }
+
+    await this.dismissFormOverlays(page);
+  }
+
+  private async checkRadioGroupNo(page: Page, name: string): Promise<void> {
+    const group = page.locator(`input[type="radio"][name="${name}"]`);
+    if ((await group.count()) === 0) {
+      return;
+    }
+
+    // Prefer label "No"
+    const byLabel = page
+      .locator(`label:has(input[type="radio"][name="${name}"])`)
+      .filter({ hasText: /^No$/i })
+      .first();
+    if ((await byLabel.count()) > 0) {
+      await byLabel.click({ force: true }).catch(() => undefined);
+      return;
+    }
+
+    const noRadio = page
+      .locator(
+        `input[type="radio"][name="${name}"][value="0"], input[type="radio"][name="${name}"][value="N"], input[type="radio"][name="${name}"][value="No"]`,
+      )
+      .first();
+    if ((await noRadio.count()) > 0) {
+      await noRadio.check({ force: true }).catch(() => undefined);
+      return;
+    }
+
+    // Last option is often No on 17gz Yes/No pairs (value 1 = Yes, 0 = No) — pick value=0 or second
+    const second = group.nth(1);
+    if ((await second.count()) > 0) {
+      await second.check({ force: true }).catch(() => undefined);
+    }
+  }
+
+  private async checkRadioNearLabel(
+    page: Page,
+    labelRe: RegExp,
+    choice: string,
+  ): Promise<void> {
+    const done = await page.evaluate(
+      ({ labelSource, choiceText }) => {
+        const labelReLocal = new RegExp(labelSource, 'i');
+        const nodes = [
+          ...document.querySelectorAll('td, th, label, div, span, li'),
+        ];
+        const labelEl = nodes.find((el) => {
+          const t = (el.textContent || '').replace(/\s+/g, ' ').trim();
+          return labelReLocal.test(t) && t.length < 80;
+        });
+        if (!labelEl) {
+          return false;
+        }
+
+        const row =
+          labelEl.closest('tr') ||
+          labelEl.closest('.form-group') ||
+          labelEl.parentElement;
+        if (!row) {
+          return false;
+        }
+
+        const radios = [
+          ...row.querySelectorAll('input[type="radio"]'),
+        ] as HTMLInputElement[];
+        if (radios.length === 0) {
+          return false;
+        }
+
+        const norm = (s: string) => s.replace(/\s+/g, ' ').trim();
+        const want = norm(choiceText).toLowerCase();
+
+        const labelOf = (radio: HTMLInputElement): string => {
+          if (radio.id) {
+            const forLab = document.querySelector(`label[for="${radio.id}"]`);
+            if (forLab?.textContent) {
+              return forLab.textContent;
+            }
+          }
+          const wrap = radio.closest('label');
+          if (wrap) {
+            return wrap.textContent || '';
+          }
+          let sib = radio.nextSibling;
+          let acc = '';
+          while (sib && acc.length < 48) {
+            if (sib.nodeType === Node.TEXT_NODE) {
+              acc += sib.textContent || '';
+            } else if (sib.nodeType === Node.ELEMENT_NODE) {
+              const el = sib as Element;
+              if (el.tagName === 'INPUT') {
+                break;
+              }
+              acc += el.textContent || '';
+            }
+            sib = sib.nextSibling;
+          }
+          return acc || radio.parentElement?.textContent || radio.value || '';
+        };
+
+        const match = radios.find((radio) => {
+          const lab = norm(labelOf(radio)).toLowerCase();
+          return (
+            lab === want ||
+            lab.startsWith(want) ||
+            new RegExp(`\\b${want}\\b`, 'i').test(lab)
+          );
+        });
+
+        const target =
+          match ||
+          (want === 'no'
+            ? radios.find((r) => r.value === '0') || radios[radios.length - 1]
+            : want === 'yes'
+              ? radios.find((r) => r.value === '1') || radios[0]
+              : want === 'unmarried'
+                ? radios.find((r) => r.value === '1') || radios[0]
+                : radios[0]);
+
+        if (!target) {
+          return false;
+        }
+
+        target.checked = true;
+        target.click();
+        target.dispatchEvent(new Event('change', { bubbles: true }));
+        return true;
+      },
+      { labelSource: labelRe.source, choiceText: choice },
+    );
+
+    void done;
+  }
+
+  private async selectNearLabel(
+    page: Page,
+    labelRe: RegExp,
+    candidates: string[],
+  ): Promise<boolean> {
+    return page.evaluate(
+      ({ labelSource, values }) => {
+        const labelReLocal = new RegExp(labelSource, 'i');
+        const nodes = [
+          ...document.querySelectorAll('td, th, label, div, span, li'),
+        ];
+        const labelEl = nodes.find((el) => {
+          const t = (el.textContent || '').replace(/\s+/g, ' ').trim();
+          return labelReLocal.test(t) && t.length < 80;
+        });
+        if (!labelEl) {
+          return false;
+        }
+
+        const row =
+          labelEl.closest('tr') ||
+          labelEl.closest('.form-group') ||
+          labelEl.parentElement;
+        const select =
+          (row?.querySelector('select') as HTMLSelectElement | null) ||
+          (labelEl.parentElement?.querySelector(
+            'select',
+          ) as HTMLSelectElement | null);
+        if (!select) {
+          return false;
+        }
+
+        const needles = values.map((v) => v.toLowerCase());
+        const opt = [...select.options].find((option) => {
+          const text = (option.textContent || '').trim().toLowerCase();
+          return needles.some(
+            (n) => text === n || text.includes(n) || n.includes(text),
+          );
+        });
+        if (!opt?.value) {
+          return false;
+        }
+
+        select.value = opt.value;
+        select.dispatchEvent(new Event('input', { bubbles: true }));
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+
+        const jq = (
+          window as unknown as {
+            jQuery?: (el: Element) => {
+              val: (v: string) => { trigger: (e: string) => unknown };
+            };
+          }
+        ).jQuery;
+        if (typeof jq === 'function') {
+          try {
+            jq(select).val(opt.value).trigger('chosen:updated');
+            jq(select).val(opt.value).trigger('change');
+            jq(select).val(opt.value).trigger('liszt:updated');
+          } catch {
+            // ignore
+          }
+        }
+
+        return select.value === opt.value;
+      },
+      { labelSource: labelRe.source, values: candidates },
+    );
   }
 
   /** CUCAS jquery.validate tel:true expects a mainland mobile, not +7… */
