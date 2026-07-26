@@ -55,7 +55,8 @@
       "mapsTo": "personal.chineseName",
       "type": "text",
       "required": false,
-      "wizardStep": 1
+      "wizardStep": 1,
+      "labelHint": "Chinese Name"
     },
     {
       "selector": "input[type=\"radio\"][name=\"apply.sex\"]",
@@ -68,22 +69,94 @@
       "selector": "input[type=\"radio\"][name=\"apply.marryStatus\"]",
       "mapsTo": "personal.maritalStatus",
       "type": "radio",
-      "required": false,
-      "wizardStep": 1
+      "required": true,
+      "wizardStep": 1,
+      "options": ["Unmarried", "Married"]
     },
     {
       "selector": "select[name=\"apply.countryId\"]",
       "mapsTo": "personal.nationality",
       "type": "select",
       "required": true,
-      "wizardStep": 1
+      "wizardStep": 1,
+      "labelHint": "Nationality"
+    },
+    {
+      "selector": "select[name=\"apply.bornedCountryId\"]",
+      "mapsTo": "personal.nationality",
+      "type": "select",
+      "required": false,
+      "wizardStep": 1,
+      "labelHint": "Country or region of birth"
     },
     {
       "selector": "input[name=\"apply.bornedDate\"]",
       "mapsTo": "personal.dateOfBirth",
       "type": "text",
       "required": true,
-      "wizardStep": 1
+      "wizardStep": 1,
+      "labelHint": "Birth Date"
+    },
+    {
+      "selector": "input[name=\"apply.bornedAddress\"]",
+      "mapsTo": "personal.cityOfBirth",
+      "type": "text",
+      "required": false,
+      "wizardStep": 1,
+      "labelHint": "City of Birth"
+    },
+    {
+      "selector": "select[name=\"apply.languageId\"]",
+      "mapsTo": null,
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Native Language",
+      "options": ["Russian", "English", "Chinese"]
+    },
+    {
+      "selector": "select[name=\"apply.educationId\"]",
+      "mapsTo": null,
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Highest Level of Education Completed",
+      "options": ["Bachelor", "Master", "Dr.", "Senior high"]
+    },
+    {
+      "selector": "input[name=\"applyEx.lastSchool\"]",
+      "mapsTo": "personal.currentInstitution",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Institution of Highest Diploma"
+    },
+    {
+      "selector": "select[name=\"apply.careerId\"]",
+      "mapsTo": null,
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Occupation",
+      "options": ["Student", "Scholars", "Employee", "Others"]
+    },
+    {
+      "selector": "select[name=\"apply.religionId\"]",
+      "mapsTo": "personal.religion",
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Religion",
+      "options": ["None", "Atheism", "Christianity", "Islam", "Buddhism", "Other"]
+    },
+    {
+      "selector": "select[name=\"apply.passportTypeId\"], select[name=\"apply.hzlb\"], select[name=\"apply.passportId\"]",
+      "mapsTo": null,
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Passport Type",
+      "options": ["Ordinary Passport", "Diplomatic Passport", "Service Passport", "Ordinary", "Private"]
     },
     {
       "selector": "input[name=\"apply.passportNo\"]",
@@ -97,8 +170,9 @@
       "selector": "input[name=\"apply.passportExpire\"]",
       "mapsTo": "personal.passportExpiry",
       "type": "text",
-      "required": false,
-      "wizardStep": 1
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Passport Expiry Date"
     },
     {
       "selector": "select[name=\"apply.englishLanguageSkillId\"]",

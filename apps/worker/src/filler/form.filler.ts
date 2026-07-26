@@ -125,6 +125,10 @@ export class FormFiller {
           fillMode,
         );
 
+        if (step === 1) {
+          await this.ensureChineseNameWaiver(page, profile);
+        }
+
         // Photo already attached in OCR Step-1 hook — skip duplicate.
         const fileFields = fields.filter((field) => {
           if (field.type !== 'file') {
@@ -633,7 +637,77 @@ export class FormFiller {
     if (/email/.test(key) && !value.includes('@')) {
       return 'applicant@example.com';
     }
+    if (
+      /date|borned|birth|expire|expiry|passportExpire/i.test(key) ||
+      /Date|Expire|Birth/.test(field.labelHint || '')
+    ) {
+      return this.normalizeDateValue(value);
+    }
     return value;
+  }
+
+  /** Strip ISO time: 2029-07-10T00:00:00.0 → 2029-07-10 */
+  private normalizeDateValue(value: string): string {
+    const trimmed = value.trim();
+    const iso = trimmed.match(/^(\d{4}-\d{2}-\d{2})[T\s]/);
+    if (iso) {
+      return iso[1];
+    }
+    const dmy = trimmed.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})$/);
+    if (dmy) {
+      const [, d, m, y] = dmy;
+      return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+    }
+    return trimmed;
+  }
+
+  /**
+   * PKU/17gz: Chinese Name is optional but validation requires either a value
+   * or checkbox input[name=noName] ("not have a Chinese name yet").
+   */
+  private async ensureChineseNameWaiver(
+    page: Page,
+    profile: StudentProfile,
+  ): Promise<void> {
+    const hasChinese = Boolean(profile.personal.chineseName?.trim());
+    if (hasChinese) {
+      return;
+    }
+
+    // Clear empty/whitespace chinese name so validation doesn't see a fake value.
+    await page.evaluate(() => {
+      const input = document.querySelector(
+        'input[name="apply.name"]',
+      ) as HTMLInputElement | null;
+      if (!input) {
+        return;
+      }
+      input.value = '';
+      input.setAttribute('value', '');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      input.blur();
+    });
+
+    const checkbox = page
+      .locator('input[type="checkbox"][name="noName"]')
+      .first();
+
+    if ((await checkbox.count()) > 0) {
+      const checked = await checkbox.isChecked().catch(() => false);
+      if (!checked) {
+        await checkbox.check({ force: true }).catch(async () => {
+          await checkbox.click({ force: true });
+        });
+      }
+      return;
+    }
+
+    // Label-based fallback
+    const label = page.getByText(/not have a Chinese name yet/i).first();
+    if ((await label.count()) > 0) {
+      await label.click({ force: true }).catch(() => undefined);
+    }
   }
 
   /** CUCAS jquery.validate tel:true expects a mainland mobile, not +7… */

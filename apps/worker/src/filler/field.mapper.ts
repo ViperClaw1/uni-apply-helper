@@ -35,9 +35,30 @@ export class FieldMapper {
       }
     }
 
+    if (field.mapsTo === 'personal.maritalStatus') {
+      const marital = get(profile, 'personal.maritalStatus');
+      if (marital !== undefined && marital !== null && marital !== '') {
+        return this.normalizeMaritalStatus(String(marital));
+      }
+      // PKU requires marital status — default Unmarried when profile empty
+      return 'Unmarried';
+    }
+
     const mapped = get(profile, field.mapsTo);
     if (mapped !== undefined && mapped !== null && mapped !== '') {
       return mapped;
+    }
+
+    // Institution of highest diploma — fall back to education history.
+    if (
+      field.selector?.includes('lastSchool') ||
+      /institution of highest/i.test(field.labelHint || '')
+    ) {
+      const fromEducation = profile.education?.[0]?.institution?.trim();
+      if (fromEducation) {
+        return fromEducation;
+      }
+      return 'Higher Education Institution';
     }
 
     // Profile gap — fall back to schema options (CUCAS static defaults).
@@ -92,6 +113,26 @@ export class FieldMapper {
       v.startsWith('mal')
     ) {
       return 'Male';
+    }
+    return value;
+  }
+
+  private normalizeMaritalStatus(value: string): string {
+    const v = value.trim().toLowerCase();
+    if (
+      ['unmarried', 'single', 'холост', 'не замужем', 'незамужем', 'single'].includes(
+        v,
+      ) ||
+      v.includes('unmar') ||
+      v.includes('single')
+    ) {
+      return 'Unmarried';
+    }
+    if (
+      ['married', 'женат', 'замужем'].includes(v) ||
+      v.includes('marri')
+    ) {
+      return 'Married';
     }
     return value;
   }
