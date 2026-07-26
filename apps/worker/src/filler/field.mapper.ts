@@ -56,6 +56,49 @@ export class FieldMapper {
       return '2020-01-01';
     }
 
+    // PKU Recommender #2 — resolve from emergencyContact → guarantor regardless of mapsTo shape
+    if (/guarSecEnname/i.test(field.selector || '')) {
+      return (
+        profile.emergencyContact?.name?.trim() ||
+        profile.guarantor?.name?.trim() ||
+        [profile.personal.surname, profile.personal.givenName]
+          .filter(Boolean)
+          .join(' ')
+          .trim() ||
+        'Recommender'
+      );
+    }
+    if (/guarSecRelative/i.test(field.selector || '')) {
+      return (
+        profile.emergencyContact?.relationship?.trim() ||
+        profile.guarantor?.relationship?.trim() ||
+        'Father'
+      );
+    }
+    if (/guarSecWork/i.test(field.selector || '')) {
+      return (
+        profile.emergencyContact?.company?.trim() ||
+        profile.guarantor?.company?.trim() ||
+        'N/A'
+      );
+    }
+    if (/guarSecPhone|guarMobile2/i.test(field.selector || '')) {
+      return (
+        profile.emergencyContact?.phone?.trim() ||
+        profile.guarantor?.phone?.trim() ||
+        profile.personal.phone ||
+        '13800000000'
+      );
+    }
+    if (/guarSecEmail/i.test(field.selector || '')) {
+      return (
+        profile.emergencyContact?.email?.trim() ||
+        profile.guarantor?.email?.trim() ||
+        profile.personal.email ||
+        'recommender@example.com'
+      );
+    }
+
     if (
       field.selector?.includes('advisorEn') ||
       (/supervisor/i.test(field.labelHint || '') &&

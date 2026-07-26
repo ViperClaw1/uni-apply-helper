@@ -110,8 +110,7 @@ export class FormFiller {
       async (step) => {
         if (
           step === 1 &&
-          (university.id === 'pku' ||
-            university.navigationHints?.ocrPassportUpload)
+          this.isPkuLike(university)
         ) {
           await this.ocrPassportUploader.upload(page, profile);
         }
@@ -128,15 +127,13 @@ export class FormFiller {
 
         if (step === 1) {
           await this.ensureChineseNameWaiver(page, profile);
-          if (
-            university.id === 'pku' ||
-            university.navigationHints?.ocrPassportUpload
-          ) {
+          if (this.isPkuLike(university)) {
             await this.ensurePkuStep1RequiredGaps(page);
           }
         }
-        if (step === 2 && university.id === 'pku') {
+        if (step === 2 && this.isPkuLike(university)) {
           await this.ensurePkuStep2RequiredGaps(page, profile);
+          await this.assertPkuStep2CriticalFilled(page, profile);
         }
         await this.dismissFormOverlays(page);
 
@@ -1239,9 +1236,21 @@ export class FormFiller {
     await this.dismissFormOverlays(page);
   }
 
+  private isPkuLike(university: {
+    id: string;
+    formUrl?: string;
+    navigationHints?: { ocrPassportUpload?: boolean };
+  }): boolean {
+    return (
+      university.id === 'pku' ||
+      Boolean(university.navigationHints?.ocrPassportUpload) ||
+      /pku\.17gz\.org/i.test(university.formUrl || '')
+    );
+  }
+
   /**
-   * PKU Step 2 gaps from wizard-stuck screenshots:
-   * study dates (My97), research area, recommender relation/org/nationality.
+   * PKU Step 2 gaps — FORCE-write critical fields by name (schema/mapsTo can lag deploy).
+   * Rec#2 + yydjzs score/date must be non-empty or Save and Next shows a Warning dialog.
    */
   private async ensurePkuStep2RequiredGaps(
     page: Page,
@@ -1270,12 +1279,17 @@ export class FormFiller {
       profile.guarantor?.email?.trim() ||
       profile.personal.email ||
       'recommender@example.com';
-    const rec2Name =
-      profile.emergencyContact?.name?.trim() || rec1Name;
-    const rec2Phone =
-      profile.emergencyContact?.phone?.trim() || rec1Phone;
-    const rec2Email =
-      profile.emergencyContact?.email?.trim() || rec1Email;
+    const rec2Name = profile.emergencyContact?.name?.trim() || rec1Name;
+    const rec2Phone = profile.emergencyContact?.phone?.trim() || rec1Phone;
+    const rec2Email = profile.emergencyContact?.email?.trim() || rec1Email;
+    const rec2Relation =
+      profile.emergencyContact?.relationship?.trim() ||
+      profile.guarantor?.relationship?.trim() ||
+      'Father';
+    const rec2Work =
+      profile.emergencyContact?.company?.trim() ||
+      profile.guarantor?.company?.trim() ||
+      'N/A';
 
     const fills: Array<[string, string]> = [
       ['apply.fieldEnglish', area],
@@ -1296,20 +1310,9 @@ export class FormFiller {
       ['apply.guarPhone', rec1Phone],
       ['apply.guarMobile', rec1Phone],
       ['apply.guarEmail', rec1Email],
-      // Recommender #2 — emergencyContact with guarantor fallback
       ['apply.guarSecEnname', rec2Name],
-      [
-        'apply.guarSecRelative',
-        profile.emergencyContact?.relationship?.trim() ||
-          profile.guarantor?.relationship?.trim() ||
-          'Father',
-      ],
-      [
-        'apply.guarSecWork',
-        profile.emergencyContact?.company?.trim() ||
-          profile.guarantor?.company?.trim() ||
-          'N/A',
-      ],
+      ['apply.guarSecRelative', rec2Relation],
+      ['apply.guarSecWork', rec2Work],
       ['apply.guarMobile2', rec2Phone],
       ['apply.guarSecPhone', rec2Phone],
       ['apply.guarSecEmail', rec2Email],
@@ -1318,33 +1321,69 @@ export class FormFiller {
         profile.emergencyContact?.homeAddress?.trim() ||
           profile.guarantor?.homeAddress?.trim() ||
           profile.personal.permanentAddress ||
-          '',
+          'N/A',
       ],
     ];
 
+    // Force-write via JS + jQuery (skip-if-filled was leaving Rec#2 empty on prod).
+    const writeResult = await page.evaluate((rows) => {
+      const report: Record<string, string> = {};
+      const jq = (
+        window as unknown as {
+          jQuery?: (el: Element) => {
+            val: (v?: string) => {
+              trigger: (e: string) => unknown;
+              length?: number;
+            };
+          };
+        }
+      ).jQuery;
+
+      for (const [name, value] of rows) {
+        const el = document.querySelector(
+          `input[name="${name}"]`,
+        ) as HTMLInputElement | null;
+        if (!el) {
+          report[name] = 'MISSING';
+          continue;
+        }
+        el.focus();
+        el.value = value;
+        el.setAttribute('value', value);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        el.dispatchEvent(new Event('blur', { bubbles: true }));
+        if (typeof jq === 'function') {
+          try {
+            jq(el).val(value).trigger('input');
+            jq(el).val(value).trigger('change');
+            jq(el).val(value).trigger('blur');
+          } catch {
+            // ignore
+          }
+        }
+        report[name] = el.value?.trim() ? 'OK' : 'EMPTY_AFTER_SET';
+      }
+      return report;
+    }, fills);
+
+    // Playwright fill backup for anything still empty / missing from evaluate quirks
     for (const [name, value] of fills) {
-      if (!value) {
+      if (writeResult[name] === 'OK') {
         continue;
       }
-      await page
-        .evaluate(
-          ({ sel, nextValue }) => {
-            const el = document.querySelector(sel) as HTMLInputElement | null;
-            if (!el || el.value?.trim()) {
-              return;
-            }
-            el.value = nextValue;
-            el.setAttribute('value', nextValue);
-            el.dispatchEvent(new Event('input', { bubbles: true }));
-            el.dispatchEvent(new Event('change', { bubbles: true }));
-            el.dispatchEvent(new Event('blur', { bubbles: true }));
-          },
-          { sel: `input[name="${name}"]`, nextValue: value },
-        )
-        .catch(() => undefined);
+      const loc = page.locator(`input[name="${name}"]`).first();
+      if ((await loc.count()) === 0) {
+        continue;
+      }
+      await loc.scrollIntoViewIfNeeded().catch(() => undefined);
+      await loc
+        .fill(value, { force: true, timeout: 5_000 })
+        .catch(async () => {
+          await this.setInputValueJs(page, `input[name="${name}"]`, value);
+        });
     }
 
-    // Nationality selects for both recommenders
     const nationality =
       profile.guarantor?.nationality ||
       profile.personal.nationality ||
@@ -1372,6 +1411,59 @@ export class FormFiller {
 
     await this.closeDatePickers(page);
     await this.dismissFormOverlays(page);
+  }
+
+  /** Hard-fail before Next if Rec#2 / cert date fields still empty. */
+  private async assertPkuStep2CriticalFilled(
+    page: Page,
+    profile: StudentProfile,
+  ): Promise<void> {
+    const critical = [
+      'apply.yydjzsScore',
+      'apply.yydjzsIssueDate',
+      'apply.guarSecEnname',
+      'apply.guarSecRelative',
+      'apply.guarSecWork',
+      'apply.guarSecPhone',
+      'apply.guarSecEmail',
+    ];
+
+    const empty = await page.evaluate((names) => {
+      return names.filter((name) => {
+        const el = document.querySelector(
+          `input[name="${name}"]`,
+        ) as HTMLInputElement | null;
+        return !el || !el.value?.trim();
+      });
+    }, critical);
+
+    if (empty.length === 0) {
+      return;
+    }
+
+    await this.ensurePkuStep2RequiredGaps(page, profile);
+
+    const stillEmpty = await page.evaluate((names) => {
+      const present = [
+        ...document.querySelectorAll('input[name^="apply.guar"]'),
+      ].map((el) => (el as HTMLInputElement).name);
+      return {
+        empty: names.filter((name) => {
+          const el = document.querySelector(
+            `input[name="${name}"]`,
+          ) as HTMLInputElement | null;
+          return !el || !el.value?.trim();
+        }),
+        presentGuar: present.slice(0, 40),
+      };
+    }, critical);
+
+    if (stillEmpty.empty.length > 0) {
+      throw new Error(
+        `PKU Step2 critical fields still empty after force-fill: [${stillEmpty.empty.join(', ')}]. ` +
+          `Present apply.guar* names: [${stillEmpty.presentGuar.join(', ')}]`,
+      );
+    }
   }
 
   private async checkRadioGroupNo(page: Page, name: string): Promise<void> {
