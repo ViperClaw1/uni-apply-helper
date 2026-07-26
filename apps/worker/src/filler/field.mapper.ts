@@ -13,16 +13,19 @@ export class FieldMapper {
       return motivationLetterContent;
     }
 
-    // PKU: Current Employer / Educational Institution (apply.careerName).
-    // Bachelor applicants are often school graduates with no employer.
+    // PKU: Current Employer (apply.workplace). Bachelor grads often have none.
     if (
-      field.selector?.includes('careerName') ||
-      /current employer|educational institution/i.test(field.labelHint || '')
+      field.selector?.includes('workplace') ||
+      field.selector?.includes('careerName')
     ) {
       const fromProfile =
         get(profile, 'personal.currentInstitution') ||
         profile.education?.[0]?.institution?.trim();
-      if (fromProfile && !/^currently not studying$/i.test(String(fromProfile))) {
+      if (
+        fromProfile &&
+        !/^currently not studying$/i.test(String(fromProfile)) &&
+        !/high school graduate/i.test(String(fromProfile))
+      ) {
         return fromProfile;
       }
       return 'High school graduate, no employer';

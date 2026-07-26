@@ -230,6 +230,22 @@ export class FormFiller {
         continue;
       }
 
+      // PKU employer field: name varies / appears after Occupation — never let
+      // hybrid semantic map it onto lastSchool (caused "studyingHigh school…" concat).
+      if (this.isCareerNameField(field)) {
+        const ok = await this.fillTextNearLabel(
+          page,
+          /Current Employer/i,
+          String(value),
+        );
+        if (!ok && field.required) {
+          throw new Error(
+            `Field not found near label "Current Employer" (${field.selector})`,
+          );
+        }
+        continue;
+      }
+
       let locator = await resolveFieldLocator(page, field);
 
       if (!locator && fillMode === 'hybrid') {
@@ -284,6 +300,77 @@ export class FormFiller {
   private isDateField(field: FieldConfig): boolean {
     const key = `${field.selector || ''} ${field.labelHint || ''}`;
     return /date|borned|birth|expire|expiry|passportExpire/i.test(key);
+  }
+
+  private isCareerNameField(field: FieldConfig): boolean {
+    return (
+      Boolean(field.selector?.includes('workplace')) ||
+      Boolean(field.selector?.includes('careerName')) ||
+      /current employer/i.test(field.labelHint || '')
+    );
+  }
+
+  /** Set text input in the same row as a short label — avoids wrong-field semantic maps. */
+  private async fillTextNearLabel(
+    page: Page,
+    labelRe: RegExp,
+    value: string,
+  ): Promise<boolean> {
+    return page.evaluate(
+      ({ labelSource, nextValue }) => {
+        const labelReLocal = new RegExp(labelSource, 'i');
+        const nodes = [
+          ...document.querySelectorAll('td, th, label, div, span, li'),
+        ];
+        const labelEl = nodes.find((el) => {
+          const t = (el.textContent || '').replace(/\s+/g, ' ').trim();
+          return (
+            labelReLocal.test(t) &&
+            !/Highest Diploma/i.test(t) &&
+            t.length < 100
+          );
+        });
+        if (!labelEl) {
+          return false;
+        }
+
+        const row =
+          labelEl.closest('tr') ||
+          labelEl.closest('.form-group') ||
+          labelEl.parentElement;
+        const input = row?.querySelector(
+          'input[type="text"], input:not([type]), textarea',
+        ) as HTMLInputElement | null;
+        if (!input) {
+          return false;
+        }
+
+        input.value = nextValue;
+        input.setAttribute('value', nextValue);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        input.dispatchEvent(new Event('blur', { bubbles: true }));
+
+        const jq = (
+          window as unknown as {
+            jQuery?: (el: Element) => {
+              val: (v: string) => { trigger: (e: string) => unknown };
+            };
+          }
+        ).jQuery;
+        if (typeof jq === 'function') {
+          try {
+            jq(input).val(nextValue).trigger('input');
+            jq(input).val(nextValue).trigger('change');
+          } catch {
+            // ignore
+          }
+        }
+
+        return input.value === nextValue;
+      },
+      { labelSource: labelRe.source, nextValue: value },
+    );
   }
 
   private async dismissFormOverlays(page: Page): Promise<void> {
@@ -943,20 +1030,95 @@ export class FormFiller {
     await this.checkRadioGroupNo(page, 'apply.isOversea');
     await this.checkRadioGroupNo(page, 'applyEx.inChinaOnApply');
 
-    // Current Employer / Educational Institution — required on PKU when Occupation=Student
+    // Current Employer — fill by row label (name unknown / not apply.careerName on PKU).
+    // Also repair lastSchool if a previous run appended the employer fallback.
     await page.evaluate(() => {
-      const input = document.querySelector(
-        'input[name="apply.careerName"]',
+      const EMPLOYER = 'High school graduate, no employer';
+
+      const lastSchool = document.querySelector(
+        'input[name="applyEx.lastSchool"]',
       ) as HTMLInputElement | null;
-      if (!input || input.value?.trim()) {
+      if (lastSchool?.value && /high school graduate/i.test(lastSchool.value)) {
+        lastSchool.value = lastSchool.value
+          .replace(/\s*High school graduate, no employer\s*/gi, '')
+          .trim();
+        if (!lastSchool.value) {
+          lastSchool.value = 'currently not studying';
+        }
+        lastSchool.setAttribute('value', lastSchool.value);
+        lastSchool.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+
+      const setInput = (input: HTMLInputElement, value: string) => {
+        input.value = value;
+        input.setAttribute('value', value);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        input.dispatchEvent(new Event('blur', { bubbles: true }));
+        const jq = (
+          window as unknown as {
+            jQuery?: (el: Element) => {
+              val: (v: string) => { trigger: (e: string) => unknown };
+            };
+          }
+        ).jQuery;
+        if (typeof jq === 'function') {
+          try {
+            jq(input).val(value).trigger('input');
+            jq(input).val(value).trigger('change');
+          } catch {
+            // ignore
+          }
+        }
+      };
+
+      const nameCandidates = [
+        'apply.workplace',
+        'apply.careerName',
+        'applyEx.careerName',
+        'apply.company',
+        'apply.companyName',
+        'apply.workUnit',
+        'apply.employer',
+        'applyEx.employer',
+      ];
+      for (const name of nameCandidates) {
+        const input = document.querySelector(
+          `input[name="${name}"]`,
+        ) as HTMLInputElement | null;
+        if (input && !input.value?.trim()) {
+          setInput(input, EMPLOYER);
+          return;
+        }
+        if (input?.value?.trim()) {
+          return;
+        }
+      }
+
+      const nodes = [
+        ...document.querySelectorAll('td, th, label, div, span, li'),
+      ];
+      const labelEl = nodes.find((el) => {
+        const t = (el.textContent || '').replace(/\s+/g, ' ').trim();
+        return (
+          /Current Employer/i.test(t) &&
+          !/Highest Diploma/i.test(t) &&
+          t.length < 80
+        );
+      });
+      if (!labelEl) {
         return;
       }
-      const fallback = 'High school graduate, no employer';
-      input.value = fallback;
-      input.setAttribute('value', fallback);
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      input.dispatchEvent(new Event('change', { bubbles: true }));
-      input.dispatchEvent(new Event('blur', { bubbles: true }));
+      const row =
+        labelEl.closest('tr') ||
+        labelEl.closest('.form-group') ||
+        labelEl.parentElement;
+      const input = row?.querySelector(
+        'input[type="text"], input:not([type]), input[type="search"]',
+      ) as HTMLInputElement | null;
+      if (input && !input.value?.trim()) {
+        setInput(input, EMPLOYER);
+      }
     });
 
     // Label-near radios if names differ on some 17gz skins

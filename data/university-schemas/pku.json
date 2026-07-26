@@ -141,12 +141,12 @@
       "options": ["Student", "Scholars", "Employee", "Others"]
     },
     {
-      "selector": "input[name=\"apply.careerName\"]",
+      "selector": "input[name=\"apply.workplace\"]",
       "mapsTo": null,
       "type": "text",
       "required": true,
       "wizardStep": 1,
-      "labelHint": "Current Employer or Educational Institution"
+      "labelHint": "Current Employer"
     },
     {
       "selector": "select[name=\"apply.religionId\"]",

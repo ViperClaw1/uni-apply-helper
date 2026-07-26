@@ -64,6 +64,26 @@ const FIXTURE = `<!DOCTYPE html><html><body>
       </td>
     </tr>
     <tr>
+      <td>*Institution of Highest Diploma</td>
+      <td>
+        <input name="applyEx.lastSchool" value="currently not studying" />
+      </td>
+    </tr>
+    <tr>
+      <td>*Occupation</td>
+      <td>
+        <select name="apply.careerId">
+          <option value="1">Student</option>
+        </select>
+      </td>
+    </tr>
+    <tr>
+      <td>*Current Employer or Educational Institution</td>
+      <td>
+        <input name="apply.workplace" value="" />
+      </td>
+    </tr>
+    <tr>
       <td>*Are you Ethnic Chinese?</td>
       <td>
         <input type="radio" name="apply.isOversea" value="1" /> Yes
@@ -90,6 +110,28 @@ const FIXTURE = `<!DOCTYPE html><html><body>
     </tr>
   </table>
 </body></html>`;
+
+async function fillTextNearLabel(page, labelSource, nextValue) {
+  return page.evaluate(({ labelSource, nextValue }) => {
+    const labelReLocal = new RegExp(labelSource, 'i');
+    const nodes = [...document.querySelectorAll('td, th, label, div, span, li')];
+    const labelEl = nodes.find((el) => {
+      const t = (el.textContent || '').replace(/\s+/g, ' ').trim();
+      return (
+        labelReLocal.test(t) &&
+        !/Highest Diploma/i.test(t) &&
+        t.length < 100
+      );
+    });
+    if (!labelEl) return false;
+    const row = labelEl.closest('tr') || labelEl.parentElement;
+    const input = row?.querySelector('input[type="text"], input:not([type])');
+    if (!input) return false;
+    input.value = nextValue;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    return input.value === nextValue;
+  }, { labelSource, nextValue });
+}
 
 async function fillRadioByLabelText(page, sel, want) {
   return page.evaluate(({ sel, want }) => {
@@ -212,7 +254,7 @@ const requiredHints = [
   'educationId',
   'lastSchool',
   'careerId',
-  'careerName',
+  'workplace',
   'religionId',
   'passportExpire',
   'isOversea',
@@ -237,6 +279,16 @@ assert(Boolean(passportTypeField), 'pku.json has Passport Type field');
 assert(
   passportTypeField.required === false,
   'Passport Type must be required:false (name unknown; filled by label scan)',
+);
+const careerNameField = step1.find((f) =>
+  /workplace|careerName|Current Employer/i.test(
+    `${f.selector || ''} ${f.labelHint || ''}`,
+  ),
+);
+assert(Boolean(careerNameField), 'pku.json has apply.workplace / Current Employer');
+assert(
+  (careerNameField.selector || '').includes('apply.workplace'),
+  'Current Employer selector must be apply.workplace',
 );
 
 console.log('\n=== playwright DOM waiver ===');
@@ -295,6 +347,47 @@ assert(
   (await page.locator('select[name="apply.someUnknownPassportType"]').inputValue()) ===
     '1',
   'select: unknown name still filled',
+);
+
+// Simulate polluted lastSchool from previous bad semantic map
+await page.fill(
+  'input[name="applyEx.lastSchool"]',
+  'currently not studyingHigh school graduate, no employer',
+);
+assert(
+  await fillTextNearLabel(
+    page,
+    'Current Employer',
+    'High school graduate, no employer',
+  ),
+  'employer: fill by Current Employer label (unknown name)',
+);
+assert(
+  (await page.locator('input[name="apply.workplace"]').inputValue()) ===
+    'High school graduate, no employer',
+  'employer: apply.workplace filled',
+);
+assert(
+  (await page.locator('input[name="applyEx.lastSchool"]').inputValue()).includes(
+    'High school graduate',
+  ),
+  'setup: lastSchool still polluted before repair',
+);
+await page.evaluate(() => {
+  const lastSchool = document.querySelector(
+    'input[name="applyEx.lastSchool"]',
+  );
+  if (lastSchool?.value && /high school graduate/i.test(lastSchool.value)) {
+    lastSchool.value = lastSchool.value
+      .replace(/\s*High school graduate, no employer\s*/gi, '')
+      .trim();
+    if (!lastSchool.value) lastSchool.value = 'currently not studying';
+  }
+});
+assert(
+  (await page.locator('input[name="applyEx.lastSchool"]').inputValue()) ===
+    'currently not studying',
+  'repair: lastSchool de-polluted',
 );
 
 await browser.close();
