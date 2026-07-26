@@ -20,6 +20,14 @@ function getByPath(obj: unknown, path: string): unknown {
   }, obj);
 }
 
+/** Normalize mapsTo to an ordered list of profile paths. */
+export function mapsToPaths(mapsTo: FieldConfig['mapsTo']): string[] {
+  if (!mapsTo) {
+    return [];
+  }
+  return Array.isArray(mapsTo) ? mapsTo.filter(Boolean) : [mapsTo];
+}
+
 export function getFieldValue(
   profile: StudentProfile,
   field: FieldConfig,
@@ -29,11 +37,19 @@ export function getFieldValue(
     return motivationLetterContent;
   }
 
-  if (!field.mapsTo) {
+  const paths = mapsToPaths(field.mapsTo);
+  if (paths.length === 0) {
     return undefined;
   }
 
-  return getByPath(profile, field.mapsTo);
+  for (const path of paths) {
+    const value = getByPath(profile, path);
+    if (value !== undefined && value !== null && value !== '') {
+      return value;
+    }
+  }
+
+  return undefined;
 }
 
 export function fieldsForStep(

@@ -2,7 +2,8 @@ import type { AgentConfig } from './agent.types.js';
 
 export interface FieldConfig {
   selector: string;
-  mapsTo: string | null;
+  /** Profile path, or fallback chain (first non-empty wins). */
+  mapsTo: string | string[] | null;
   type:
     | 'text'
     | 'number'

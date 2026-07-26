@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { FieldConfig, StudentProfile } from '@uni-apply/shared';
+import { mapsToPaths } from '@uni-apply/shared';
 import get from 'lodash/get.js';
 
 @Injectable()
@@ -31,14 +32,13 @@ export class FieldMapper {
       return 'High school graduate, no employer';
     }
 
-    // PKU Step 2: research area / study duration / supervisor / recommender gaps
+    // PKU Step 2: research area / study duration / supervisor
     if (
       field.selector?.includes('fieldEnglish') ||
       field.selector?.includes('fieldName') ||
       /area of research/i.test(field.labelHint || '')
     ) {
-      const area = this.resolveResearchArea(profile);
-      return area;
+      return this.resolveResearchArea(profile);
     }
 
     if (field.selector?.includes('studyStartDate')) {
@@ -46,6 +46,14 @@ export class FieldMapper {
     }
     if (field.selector?.includes('studyEndDate')) {
       return '2027-06-30';
+    }
+
+    // Native Language cert still requires score + issue date on PKU.
+    if (field.selector?.includes('yydjzsScore')) {
+      return 'N/A';
+    }
+    if (field.selector?.includes('yydjzsIssueDate')) {
+      return '2020-01-01';
     }
 
     if (
@@ -69,79 +77,72 @@ export class FieldMapper {
       return '待定';
     }
 
-    if (!field.mapsTo) {
+    const paths = mapsToPaths(field.mapsTo);
+    if (paths.length === 0) {
       return this.getUnmappedDefault(field);
     }
 
-    // Virtual path — CUCAS recipient / display name fields.
-    if (field.mapsTo === 'personal.fullName') {
-      const full = [profile.personal.surname, profile.personal.givenName]
-        .filter(Boolean)
-        .join(' ')
-        .trim();
-      if (full) {
-        return full;
+    for (const path of paths) {
+      const value = this.resolvePathValue(profile, field, path);
+      if (value !== undefined && value !== null && value !== '') {
+        return value;
       }
     }
 
-    if (field.mapsTo === 'personal.sex') {
-      const sex = get(profile, 'personal.sex');
-      if (sex !== undefined && sex !== null && sex !== '') {
-        return this.normalizeSex(String(sex));
-      }
-    }
-
-    if (field.mapsTo === 'personal.maritalStatus') {
-      const marital = get(profile, 'personal.maritalStatus');
-      if (marital !== undefined && marital !== null && marital !== '') {
-        return this.normalizeMaritalStatus(String(marital));
-      }
-      // PKU requires marital status — default Unmarried when profile empty
-      return 'Unmarried';
-    }
-
+    // Soft defaults after the whole fallback chain is empty.
     if (
-      field.mapsTo === 'personal.studiedInChina' ||
-      field.mapsTo === 'personal.beenToChina'
+      this.pathsInclude(paths, 'guarantor.relationship') ||
+      this.pathsInclude(paths, 'emergencyContact.relationship') ||
+      /guarRelation|guarSecRelative/i.test(field.selector || '')
     ) {
-      const raw = get(profile, field.mapsTo);
-      return this.normalizeYesNo(raw, 'No');
+      return field.selector?.includes('Sec') ? 'Father' : 'Mother';
     }
-
-    // Emergency contact required on PKU step 4 — never leave blank.
-    if (field.mapsTo === 'emergencyContact.name' && field.required) {
-      const name = get(profile, field.mapsTo);
-      if (name) {
-        return name;
-      }
+    if (
+      this.pathsInclude(paths, 'guarantor.company') ||
+      this.pathsInclude(paths, 'emergencyContact.company') ||
+      /guarWorkplace|guarSecWork/i.test(field.selector || '')
+    ) {
+      return 'N/A';
+    }
+    if (
+      this.pathsInclude(paths, 'guarantor.nationality') ||
+      this.pathsInclude(paths, 'emergencyContact.nationality') ||
+      /guarCountryId/i.test(field.selector || '')
+    ) {
+      return profile.personal.nationality || 'Russian Federation';
+    }
+    if (
+      (this.pathsInclude(paths, 'guarantor.name') ||
+        this.pathsInclude(paths, 'emergencyContact.name') ||
+        /guarantorEnname|guarSecEnname/i.test(field.selector || '')) &&
+      field.required
+    ) {
       return (
         [profile.personal.surname, profile.personal.givenName]
           .filter(Boolean)
           .join(' ')
-          .trim() || 'Emergency Contact'
+          .trim() || 'Recommender'
       );
     }
-
     if (
-      (field.mapsTo === 'emergencyContact.phone' ||
-        field.selector?.includes('emergencyMobile') ||
-        field.selector?.includes('emergencyPhone')) &&
+      (this.pathsInclude(paths, 'guarantor.phone') ||
+        this.pathsInclude(paths, 'emergencyContact.phone') ||
+        /guarPhone|guarMobile|guarSecPhone|guarMobile2/i.test(
+          field.selector || '',
+        )) &&
       field.required
     ) {
-      const phone =
-        get(profile, 'emergencyContact.phone') || profile.personal.phone;
-      if (phone) {
-        return phone;
-      }
-      return '13800000000';
+      return profile.personal.phone || '13800000000';
+    }
+    if (
+      (this.pathsInclude(paths, 'guarantor.email') ||
+        this.pathsInclude(paths, 'emergencyContact.email') ||
+        /guarEmail|guarSecEmail/i.test(field.selector || '')) &&
+      field.required
+    ) {
+      return profile.personal.email || 'recommender@example.com';
     }
 
-    const mapped = get(profile, field.mapsTo);
-    if (mapped !== undefined && mapped !== null && mapped !== '') {
-      return mapped;
-    }
-
-    // Institution of highest diploma — fall back to education history.
     if (
       field.selector?.includes('lastSchool') ||
       /institution of highest/i.test(field.labelHint || '')
@@ -153,55 +154,75 @@ export class FieldMapper {
       return 'Higher Education Institution';
     }
 
-    // PKU Recommender (guarantor*) — required relationship / org / nationality
-    if (
-      field.mapsTo === 'guarantor.relationship' ||
-      field.selector?.includes('guarRelation')
-    ) {
-      return 'Mother';
-    }
-    if (
-      field.mapsTo === 'guarantor.company' ||
-      field.selector?.includes('guarWorkplace')
-    ) {
-      return 'N/A';
-    }
-    if (
-      field.mapsTo === 'guarantor.nationality' ||
-      field.selector?.includes('guarCountryId')
-    ) {
-      return profile.personal.nationality || 'Russian Federation';
-    }
-    if (
-      (field.mapsTo === 'guarantor.name' ||
-        field.selector?.includes('guarantorEnname')) &&
-      field.required
-    ) {
-      return (
-        [profile.personal.surname, profile.personal.givenName]
-          .filter(Boolean)
-          .join(' ')
-          .trim() || 'Recommender'
-      );
-    }
-    if (
-      (field.mapsTo === 'guarantor.phone' ||
-        field.selector?.includes('guarPhone') ||
-        field.selector?.includes('guarMobile')) &&
-      field.required
-    ) {
-      return profile.personal.phone || '13800000000';
-    }
-    if (
-      (field.mapsTo === 'guarantor.email' ||
-        field.selector?.includes('guarEmail')) &&
-      field.required
-    ) {
-      return profile.personal.email || 'recommender@example.com';
+    return this.getUnmappedDefault(field);
+  }
+
+  private resolvePathValue(
+    profile: StudentProfile,
+    field: FieldConfig,
+    path: string,
+  ): unknown {
+    if (path === 'personal.fullName') {
+      const full = [profile.personal.surname, profile.personal.givenName]
+        .filter(Boolean)
+        .join(' ')
+        .trim();
+      if (full) {
+        return full;
+      }
+      return undefined;
     }
 
-    // Profile gap — fall back to schema options (CUCAS static defaults).
-    return this.getUnmappedDefault(field);
+    if (path === 'personal.sex') {
+      const sex = get(profile, 'personal.sex');
+      if (sex !== undefined && sex !== null && sex !== '') {
+        return this.normalizeSex(String(sex));
+      }
+      return undefined;
+    }
+
+    if (path === 'personal.maritalStatus') {
+      const marital = get(profile, 'personal.maritalStatus');
+      if (marital !== undefined && marital !== null && marital !== '') {
+        return this.normalizeMaritalStatus(String(marital));
+      }
+      return field.required ? 'Unmarried' : undefined;
+    }
+
+    if (path === 'personal.studiedInChina' || path === 'personal.beenToChina') {
+      return this.normalizeYesNo(get(profile, path), 'No');
+    }
+
+    if (path === 'emergencyContact.name' && field.required) {
+      const name = get(profile, path);
+      if (name) {
+        return name;
+      }
+      // Fall through to next mapsTo path / soft default
+      return undefined;
+    }
+
+    if (
+      (path === 'emergencyContact.phone' || path === 'guarantor.phone') &&
+      field.required
+    ) {
+      const phone = get(profile, path);
+      if (phone) {
+        return phone;
+      }
+      return undefined;
+    }
+
+    const mapped = get(profile, path);
+    if (mapped !== undefined && mapped !== null && mapped !== '') {
+      return mapped;
+    }
+
+    return undefined;
+  }
+
+  private pathsInclude(paths: string[], path: string): boolean {
+    return paths.includes(path);
   }
 
   private resolveResearchArea(profile: StudentProfile): string {
@@ -216,10 +237,6 @@ export class FieldMapper {
     return 'Molecular Medicine';
   }
 
-  /**
-   * Required form controls without a profile mapping (CUCAS declaration,
-   * passport type, study dates, occupation, …).
-   */
   private getUnmappedDefault(field: FieldConfig): unknown {
     if (field.type === 'checkbox') {
       return true;
@@ -305,4 +322,3 @@ export class FieldMapper {
     return fallback;
   }
 }
-

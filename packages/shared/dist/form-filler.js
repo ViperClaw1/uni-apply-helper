@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.mapsToPaths = mapsToPaths;
 exports.getFieldValue = getFieldValue;
 exports.fieldsForStep = fieldsForStep;
 exports.toBoolean = toBoolean;
@@ -18,14 +19,28 @@ function getByPath(obj, path) {
         return undefined;
     }, obj);
 }
+/** Normalize mapsTo to an ordered list of profile paths. */
+function mapsToPaths(mapsTo) {
+    if (!mapsTo) {
+        return [];
+    }
+    return Array.isArray(mapsTo) ? mapsTo.filter(Boolean) : [mapsTo];
+}
 function getFieldValue(profile, field, motivationLetterContent) {
     if (field.type === 'essay' && !field.mapsTo) {
         return motivationLetterContent;
     }
-    if (!field.mapsTo) {
+    const paths = mapsToPaths(field.mapsTo);
+    if (paths.length === 0) {
         return undefined;
     }
-    return getByPath(profile, field.mapsTo);
+    for (const path of paths) {
+        const value = getByPath(profile, path);
+        if (value !== undefined && value !== null && value !== '') {
+            return value;
+        }
+    }
+    return undefined;
 }
 function fieldsForStep(schema, step) {
     return schema.fields.filter((field) => (field.wizardStep ?? 1) === step);

@@ -305,8 +305,17 @@
       "selector": "input[name=\"apply.yydjzsScore\"]",
       "mapsTo": null,
       "type": "text",
-      "required": false,
-      "wizardStep": 2
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "English Certificate Score"
+    },
+    {
+      "selector": "input[name=\"apply.yydjzsIssueDate\"]",
+      "mapsTo": null,
+      "type": "text",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "English Certificate Issue Date"
     },
     {
       "selector": "input[name=\"apply.guarantorEnname\"]",
@@ -380,6 +389,71 @@
       "required": false,
       "wizardStep": 2,
       "labelHint": "Address"
+    },
+    {
+      "selector": "input[name=\"apply.guarSecEnname\"]",
+      "mapsTo": ["emergencyContact.name", "guarantor.name"],
+      "type": "text",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Recommender #2 Name"
+    },
+    {
+      "selector": "input[name=\"apply.guarSecRelative\"]",
+      "mapsTo": ["emergencyContact.relationship", "guarantor.relationship"],
+      "type": "text",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Recommender #2 Relationship"
+    },
+    {
+      "selector": "input[name=\"apply.guarSecWork\"]",
+      "mapsTo": ["emergencyContact.company", "guarantor.company"],
+      "type": "text",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Recommender #2 Organization"
+    },
+    {
+      "selector": "input[name=\"apply.guarMobile2\"]",
+      "mapsTo": ["emergencyContact.phone", "guarantor.phone"],
+      "type": "text",
+      "required": false,
+      "wizardStep": 2,
+      "labelHint": "Recommender #2 Mobile"
+    },
+    {
+      "selector": "input[name=\"apply.guarSecPhone\"]",
+      "mapsTo": ["emergencyContact.phone", "guarantor.phone"],
+      "type": "text",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Recommender #2 Phone"
+    },
+    {
+      "selector": "input[name=\"apply.guarSecEmail\"]",
+      "mapsTo": ["emergencyContact.email", "guarantor.email"],
+      "type": "text",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Recommender #2 Email"
+    },
+    {
+      "selector": "select[name=\"apply.guarCountryId2\"]",
+      "mapsTo": ["emergencyContact.nationality", "guarantor.nationality", "personal.nationality"],
+      "type": "select",
+      "required": false,
+      "wizardStep": 2,
+      "labelHint": "Recommender #2 Nationality",
+      "options": ["Russian Federation", "Russia", "China"]
+    },
+    {
+      "selector": "input[name=\"apply.guarAddress2\"]",
+      "mapsTo": ["emergencyContact.homeAddress", "guarantor.homeAddress", "personal.permanentAddress"],
+      "type": "text",
+      "required": false,
+      "wizardStep": 2,
+      "labelHint": "Recommender #2 Address"
     },
     {
       "selector": "input[name=\"sh.startDate\"]",

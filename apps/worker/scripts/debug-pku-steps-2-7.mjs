@@ -85,6 +85,8 @@ const profile = {
   },
   emergencyContact: {
     name: 'Ivan Petrov',
+    relationship: 'Father',
+    company: 'N/A',
     phone: '+79007654321',
     email: 'ivan@example.com',
   },
@@ -139,6 +141,11 @@ function normalizeDate(value) {
   return iso ? iso[1] : trimmed;
 }
 
+function mapsToPaths(mapsTo) {
+  if (!mapsTo) return [];
+  return Array.isArray(mapsTo) ? mapsTo.filter(Boolean) : [mapsTo];
+}
+
 /** Mirror of FieldMapper.getValue for PKU-critical paths */
 function resolveValue(field) {
   if (field.type === 'file') {
@@ -168,41 +175,79 @@ function resolveValue(field) {
 
   if (field.selector?.includes('studyStartDate')) return '2026-09-01';
   if (field.selector?.includes('studyEndDate')) return '2027-06-30';
+  if (field.selector?.includes('yydjzsScore')) return 'N/A';
+  if (field.selector?.includes('yydjzsIssueDate')) return '2020-01-01';
   if (field.selector?.includes('advisorEn')) return 'To be assigned';
   if (field.selector?.includes('advisorConnect')) return 'N/A';
   if (field.selector?.includes('advisor')) return '待定';
 
-  if (!field.mapsTo) {
+  const paths = mapsToPaths(field.mapsTo);
+  if (paths.length === 0) {
     if (field.type === 'checkbox') return true;
     return firstRealOption(field.options);
   }
 
-  if (field.mapsTo === 'personal.maritalStatus') {
-    return 'Unmarried';
-  }
-  if (
-    field.mapsTo === 'personal.studiedInChina' ||
-    field.mapsTo === 'personal.beenToChina'
-  ) {
-    return normalizeYesNo(getByPath(profile, field.mapsTo), 'No');
+  for (const path of paths) {
+    if (path === 'personal.maritalStatus') return 'Unmarried';
+    if (path === 'personal.studiedInChina' || path === 'personal.beenToChina') {
+      return normalizeYesNo(getByPath(profile, path), 'No');
+    }
+
+    let mapped = getByPath(profile, path);
+    if (
+      mapped &&
+      /date|borned|birth|expire|expiry|passportExpire|periodStart|periodEnd/i.test(
+        `${field.selector} ${field.labelHint} ${path}`,
+      )
+    ) {
+      mapped = normalizeDate(mapped);
+    }
+    if (mapped !== undefined && mapped !== null && mapped !== '') {
+      return mapped;
+    }
   }
 
-  if (field.mapsTo === 'emergencyContact.name' && field.required) {
+  if (
+    paths.includes('guarantor.relationship') ||
+    paths.includes('emergencyContact.relationship') ||
+    /guarRelation|guarSecRelative/i.test(field.selector || '')
+  ) {
+    return field.selector?.includes('Sec') ? 'Father' : 'Mother';
+  }
+  if (
+    paths.includes('guarantor.company') ||
+    paths.includes('emergencyContact.company') ||
+    /guarWorkplace|guarSecWork/i.test(field.selector || '')
+  ) {
+    return 'N/A';
+  }
+  if (
+    paths.includes('guarantor.nationality') ||
+    paths.includes('emergencyContact.nationality') ||
+    /guarCountryId/i.test(field.selector || '')
+  ) {
+    return profile.personal.nationality || 'Russian Federation';
+  }
+  if (
+    paths.includes('guarantor.name') ||
+    paths.includes('emergencyContact.name')
+  ) {
     return (
-      getByPath(profile, field.mapsTo) ||
-      `${profile.personal.surname} ${profile.personal.givenName}`
+      `${profile.personal.surname} ${profile.personal.givenName}`.trim() ||
+      'Recommender'
     );
   }
   if (
-    (field.mapsTo === 'emergencyContact.phone' ||
-      field.selector?.includes('emergencyMobile')) &&
-    field.required
+    paths.includes('guarantor.phone') ||
+    paths.includes('emergencyContact.phone')
   ) {
-    return (
-      getByPath(profile, 'emergencyContact.phone') ||
-      profile.personal.phone ||
-      '13800000000'
-    );
+    return profile.personal.phone || '13800000000';
+  }
+  if (
+    paths.includes('guarantor.email') ||
+    paths.includes('emergencyContact.email')
+  ) {
+    return profile.personal.email || 'recommender@example.com';
   }
 
   if (
@@ -214,39 +259,6 @@ function resolveValue(field) {
       profile.education[0]?.institution ||
       'Higher Education Institution'
     );
-  }
-
-  let mapped = getByPath(profile, field.mapsTo);
-  if (
-    mapped &&
-    /date|borned|birth|expire|expiry|passportExpire|periodStart|periodEnd/i.test(
-      `${field.selector} ${field.labelHint} ${field.mapsTo}`,
-    )
-  ) {
-    mapped = normalizeDate(mapped);
-  }
-
-  if (mapped !== undefined && mapped !== null && mapped !== '') {
-    return mapped;
-  }
-
-  if (
-    field.mapsTo === 'guarantor.relationship' ||
-    field.selector?.includes('guarRelation')
-  ) {
-    return 'Mother';
-  }
-  if (
-    field.mapsTo === 'guarantor.company' ||
-    field.selector?.includes('guarWorkplace')
-  ) {
-    return 'N/A';
-  }
-  if (
-    field.mapsTo === 'guarantor.nationality' ||
-    field.selector?.includes('guarCountryId')
-  ) {
-    return profile.personal.nationality || 'Russian Federation';
   }
 
   if (field.type === 'checkbox') return true;
@@ -335,8 +347,15 @@ const step2Must = [
   ['apply.hskOralId', 'None'],
   ['apply.englishLanguageSkillId', 'Good'],
   ['apply.yydjzs', 'Native Language'],
+  ['apply.yydjzsScore', 'N/A'],
+  ['apply.yydjzsIssueDate', '2020-01-01'],
   ['apply.guarRelation', 'Mother'],
   ['apply.guarWorkplace', 'N/A'],
+  ['apply.guarSecEnname', 'Ivan Petrov'],
+  ['apply.guarSecRelative', 'Father'],
+  ['apply.guarSecWork', 'N/A'],
+  ['apply.guarSecPhone', '+79007654321'],
+  ['apply.guarSecEmail', 'ivan@example.com'],
 ];
 for (const [selPart, expected] of step2Must) {
   const field = fieldsForStep(2).find((f) => f.selector?.includes(selPart));

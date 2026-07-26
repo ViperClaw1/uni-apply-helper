@@ -711,7 +711,11 @@ export class FormFiller {
   }
 
   private expandSelectCandidates(field: FieldConfig, value: string): string[] {
-    const hint = [field.labelHint, field.selector, field.mapsTo]
+    const hint = [
+      field.labelHint,
+      field.selector,
+      Array.isArray(field.mapsTo) ? field.mapsTo.join(' ') : field.mapsTo,
+    ]
       .filter(Boolean)
       .join(' ');
 
@@ -1251,6 +1255,28 @@ export class FormFiller {
       profile.education?.[0]?.major?.trim() ||
       'Molecular Medicine';
 
+    const rec1Name =
+      profile.guarantor?.name?.trim() ||
+      [profile.personal.surname, profile.personal.givenName]
+        .filter(Boolean)
+        .join(' ')
+        .trim() ||
+      'Recommender';
+    const rec1Phone =
+      profile.guarantor?.phone?.trim() ||
+      profile.personal.phone ||
+      '13800000000';
+    const rec1Email =
+      profile.guarantor?.email?.trim() ||
+      profile.personal.email ||
+      'recommender@example.com';
+    const rec2Name =
+      profile.emergencyContact?.name?.trim() || rec1Name;
+    const rec2Phone =
+      profile.emergencyContact?.phone?.trim() || rec1Phone;
+    const rec2Email =
+      profile.emergencyContact?.email?.trim() || rec1Email;
+
     const fills: Array<[string, string]> = [
       ['apply.fieldEnglish', area],
       ['apply.fieldName', area],
@@ -1259,63 +1285,90 @@ export class FormFiller {
       ['apply.advisorEn', 'To be assigned'],
       ['apply.advisor', '待定'],
       ['apply.advisorConnect', 'N/A'],
+      ['apply.yydjzsScore', 'N/A'],
+      ['apply.yydjzsIssueDate', '2020-01-01'],
       [
         'apply.guarRelation',
         profile.guarantor?.relationship?.trim() || 'Mother',
       ],
       ['apply.guarWorkplace', profile.guarantor?.company?.trim() || 'N/A'],
+      ['apply.guarantorEnname', rec1Name],
+      ['apply.guarPhone', rec1Phone],
+      ['apply.guarMobile', rec1Phone],
+      ['apply.guarEmail', rec1Email],
+      // Recommender #2 — emergencyContact with guarantor fallback
+      ['apply.guarSecEnname', rec2Name],
       [
-        'apply.guarantorEnname',
-        profile.guarantor?.name?.trim() ||
-          [profile.personal.surname, profile.personal.givenName]
-            .filter(Boolean)
-            .join(' ')
-            .trim() ||
-          'Recommender',
+        'apply.guarSecRelative',
+        profile.emergencyContact?.relationship?.trim() ||
+          profile.guarantor?.relationship?.trim() ||
+          'Father',
       ],
       [
-        'apply.guarPhone',
-        profile.guarantor?.phone?.trim() ||
-          profile.personal.phone ||
-          '13800000000',
+        'apply.guarSecWork',
+        profile.emergencyContact?.company?.trim() ||
+          profile.guarantor?.company?.trim() ||
+          'N/A',
       ],
+      ['apply.guarMobile2', rec2Phone],
+      ['apply.guarSecPhone', rec2Phone],
+      ['apply.guarSecEmail', rec2Email],
       [
-        'apply.guarMobile',
-        profile.guarantor?.phone?.trim() ||
-          profile.personal.phone ||
-          '13800000000',
-      ],
-      [
-        'apply.guarEmail',
-        profile.guarantor?.email?.trim() ||
-          profile.personal.email ||
-          'recommender@example.com',
+        'apply.guarAddress2',
+        profile.emergencyContact?.homeAddress?.trim() ||
+          profile.guarantor?.homeAddress?.trim() ||
+          profile.personal.permanentAddress ||
+          '',
       ],
     ];
 
     for (const [name, value] of fills) {
-      await this.setInputValueJs(page, `input[name="${name}"]`, value).catch(
-        () => undefined,
-      );
+      if (!value) {
+        continue;
+      }
+      await page
+        .evaluate(
+          ({ sel, nextValue }) => {
+            const el = document.querySelector(sel) as HTMLInputElement | null;
+            if (!el || el.value?.trim()) {
+              return;
+            }
+            el.value = nextValue;
+            el.setAttribute('value', nextValue);
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+            el.dispatchEvent(new Event('blur', { bubbles: true }));
+          },
+          { sel: `input[name="${name}"]`, nextValue: value },
+        )
+        .catch(() => undefined);
     }
 
-    // Nationality select for recommender
+    // Nationality selects for both recommenders
     const nationality =
       profile.guarantor?.nationality ||
       profile.personal.nationality ||
       'Russian Federation';
-    await this.fillSelectControl(
-      page,
-      {
-        selector: 'select[name="apply.guarCountryId"]',
-        type: 'select',
-        required: false,
-        mapsTo: null,
-        labelHint: 'Nationality',
-      },
-      page.locator('select[name="apply.guarCountryId"]').first(),
-      nationality,
-    ).catch(() => undefined);
+    const nationality2 =
+      profile.emergencyContact?.nationality || nationality;
+
+    for (const [sel, nat] of [
+      ['select[name="apply.guarCountryId"]', nationality],
+      ['select[name="apply.guarCountryId2"]', nationality2],
+    ] as const) {
+      await this.fillSelectControl(
+        page,
+        {
+          selector: sel,
+          type: 'select',
+          required: false,
+          mapsTo: null,
+          labelHint: 'Nationality',
+        },
+        page.locator(sel).first(),
+        nat,
+      ).catch(() => undefined);
+    }
 
     await this.closeDatePickers(page);
     await this.dismissFormOverlays(page);

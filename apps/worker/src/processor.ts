@@ -554,7 +554,10 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
 
     return (
       typeof field.selector === 'string' &&
-      (typeof field.mapsTo === 'string' || field.mapsTo === null) &&
+      (field.mapsTo === null ||
+        typeof field.mapsTo === 'string' ||
+        (Array.isArray(field.mapsTo) &&
+          field.mapsTo.every((p) => typeof p === 'string'))) &&
       typeof field.type === 'string' &&
       typeof field.required === 'boolean'
     );

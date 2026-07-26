@@ -36,7 +36,9 @@ export class SemanticFieldMapper {
     }
 
     const observation = await this.observer.observe(page);
-    const label = field.labelHint ?? field.mapsTo ?? field.selector;
+    const label = field.labelHint ??
+      (Array.isArray(field.mapsTo) ? field.mapsTo[0] : field.mapsTo) ??
+      field.selector;
 
     try {
       const target = await this.planner.mapFieldTarget(observation, {
