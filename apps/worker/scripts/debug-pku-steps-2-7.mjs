@@ -531,10 +531,16 @@ console.log(
   'LIVE NEEDED: capture:pku-session → recon steps 2-7 field names & * required marks',
 );
 console.log(
-  'NOTE: PKU Step2 UI title is "Study Plan" — may differ from ZZU language/guarantor layout',
+  'NOTE: 17gz AJAX Next (saveStudyPlanAndNextStep etc.) — URL stays /apply/index.do',
 );
 console.log(
-  'NOTE: Step6 attachTypeIds copied from ZZU — verify on first live upload step',
+  'NOTE: Step6 Add Document + filechooser (FileAttacher); verify attachTypeIds live',
+);
+console.log(
+  'NOTE: Step7 final click = Submit OR Save and Next; URL stays /apply/index.do (AJAX)',
+);
+console.log(
+  'AFTER SUBMIT: no redirect expected — success = dialog/content change',
 );
 
 console.log('\n=== done ===');

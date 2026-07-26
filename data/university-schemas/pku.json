@@ -477,6 +477,14 @@
       "wizardStep": 4
     },
     {
+      "selector": "input[name=\"apply.selfSupporter\"]",
+      "mapsTo": "personal.fullName",
+      "type": "text",
+      "required": false,
+      "wizardStep": 4,
+      "labelHint": "Self Supporter"
+    },
+    {
       "selector": "input[name=\"apply.homeMobile\"]",
       "mapsTo": "personal.phone",
       "type": "text",
@@ -512,6 +520,19 @@
       "required": false,
       "wizardStep": 5,
       "labelHint": "Home Country"
+    },
+    {
+      "selector": "input[type=\"radio\"][name=\"apply.receiverType\"]",
+      "mapsTo": null,
+      "type": "radio",
+      "required": true,
+      "wizardStep": 5,
+      "labelHint": "Collect from Peking University in Person",
+      "options": [
+        "Collect from Peking University in Person",
+        "in Person",
+        "Collect from"
+      ]
     },
     {
       "selector": "[attachTypeId=\"ATTACH_TYPE_passportImage\"] input[type=\"file\"]",
@@ -600,7 +621,7 @@
   "wizard": {
     "totalSteps": 7,
     "nextButtonSelector": "input[value=\"Save and Next\"], input[value=\"Next\"], input[value=\"下一步\"], input[value=\"保存并下一步\"]",
-    "submitButtonSelector": "input[value=\"Submit\"], input[value=\"提交\"]"
+    "submitButtonSelector": "input[value=\"Submit\"], input[value=\"提交\"], input[value=\"Save and Next\"], input[value=\"保存并下一步\"]"
   },
   "agent": {
     "fillMode": "hybrid",
@@ -609,5 +630,5 @@
     "goal": "Complete and submit the Peking University online application form"
   },
   "requiresEssay": false,
-  "notes": "17gz 7-step wizard. Step1: OCR passport + photo + Basic Info. Steps2-5: language/guarantor, education/work, emergency/criminal, contact. Step6 uploads (CSCA optional for Research Scholar — not ZZU-required). Step7 Submit only. Live attachTypeIds may differ — verify after first capture."
+  "notes": "17gz 7-step AJAX wizard (same URL always). Next/final both often Save and Next — no URL change after submit. Handlers: saveBase / saveStudyPlanAndNextStep / saveStudyWork / saveFamilyMember / postTag / saveApplyAttachs. Step6 via Add Document + filechooser. Step5 apply.receiverType = collect in person."
 }
