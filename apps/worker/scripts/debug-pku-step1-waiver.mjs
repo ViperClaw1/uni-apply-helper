@@ -212,6 +212,7 @@ const requiredHints = [
   'educationId',
   'lastSchool',
   'careerId',
+  'careerName',
   'religionId',
   'passportExpire',
   'isOversea',

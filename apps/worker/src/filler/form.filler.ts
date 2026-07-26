@@ -943,6 +943,22 @@ export class FormFiller {
     await this.checkRadioGroupNo(page, 'apply.isOversea');
     await this.checkRadioGroupNo(page, 'applyEx.inChinaOnApply');
 
+    // Current Employer / Educational Institution — required on PKU when Occupation=Student
+    await page.evaluate(() => {
+      const input = document.querySelector(
+        'input[name="apply.careerName"]',
+      ) as HTMLInputElement | null;
+      if (!input || input.value?.trim()) {
+        return;
+      }
+      const fallback = 'High school graduate, no employer';
+      input.value = fallback;
+      input.setAttribute('value', fallback);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      input.dispatchEvent(new Event('blur', { bubbles: true }));
+    });
+
     // Label-near radios if names differ on some 17gz skins
     await this.checkRadioNearLabel(page, /Ethnic Chinese/i, 'No');
     await this.checkRadioNearLabel(
