@@ -117,6 +117,7 @@ export class FormFiller {
         }
 
         const fields = this.wizardFieldGroups.fieldsForStep(university, step);
+        await this.dismissFormOverlays(page);
         await this.fillFieldBatch(
           page,
           profile,
@@ -128,6 +129,7 @@ export class FormFiller {
         if (step === 1) {
           await this.ensureChineseNameWaiver(page, profile);
         }
+        await this.dismissFormOverlays(page);
 
         // Photo already attached in OCR Step-1 hook — skip duplicate.
         const fileFields = fields.filter((field) => {
@@ -198,6 +200,8 @@ export class FormFiller {
     fillMode: 'schema' | 'agent' | 'hybrid',
   ): Promise<void> {
     for (const field of fields) {
+      await this.dismissFormOverlays(page);
+
       const value = this.fieldMapper.getValue(
         profile,
         field,
@@ -248,8 +252,8 @@ export class FormFiller {
             .evaluate(() =>
               [...document.querySelectorAll('input[name], select[name], textarea[name]')]
                 .map((el) => (el as HTMLInputElement).name)
-                .filter((name) => name.startsWith('apply'))
-                .slice(0, 25)
+                .filter((name) => name.startsWith('apply') || name.startsWith('applyEx'))
+                .slice(0, 40)
                 .join(', '),
             )
             .catch(() => '');
@@ -263,7 +267,66 @@ export class FormFiller {
       }
 
       await this.fillField(page, field, locator, value);
+
+      // Date fills often open My97/WdatePicker — close so next fields are clickable.
+      if (this.isDateField(field)) {
+        await this.closeDatePickers(page);
+      }
     }
+  }
+
+  private isDateField(field: FieldConfig): boolean {
+    const key = `${field.selector || ''} ${field.labelHint || ''}`;
+    return /date|borned|birth|expire|expiry|passportExpire/i.test(key);
+  }
+
+  private async dismissFormOverlays(page: Page): Promise<void> {
+    await page.evaluate(() => {
+      const isVisible = (el: Element) => {
+        const style = getComputedStyle(el as HTMLElement);
+        if (style.display === 'none' || style.visibility === 'hidden') {
+          return false;
+        }
+        const rect = (el as HTMLElement).getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+
+      for (const win of document.querySelectorAll(
+        '.messager-window, .panel.window',
+      )) {
+        if (!isVisible(win)) {
+          continue;
+        }
+        const text = (win.textContent || '').replace(/\s+/g, ' ');
+        if (/It'?s processing|请求正在处理中|processing your request/i.test(text)) {
+          continue;
+        }
+        const ok = [
+          ...win.querySelectorAll(
+            'input.okButton, input[value="Ok"], input[value="OK"], button, a.l-btn',
+          ),
+        ].find((el) =>
+          /^(Ok|OK|确定)$/i.test(
+            ((el as HTMLInputElement).value || el.textContent || '').trim(),
+          ),
+        ) as HTMLElement | undefined;
+        ok?.click();
+      }
+    });
+
+    await this.closeDatePickers(page);
+  }
+
+  private async closeDatePickers(page: Page): Promise<void> {
+    await page.keyboard.press('Escape').catch(() => undefined);
+    await page.evaluate(() => {
+      for (const el of document.querySelectorAll(
+        '.WdateDiv, #_my97DP, div[id*="dp"], .datebox-calendar-panel',
+      )) {
+        (el as HTMLElement).style.display = 'none';
+      }
+      (document.activeElement as HTMLElement | null)?.blur?.();
+    });
   }
 
   private async fillField(
@@ -562,10 +625,23 @@ export class FormFiller {
   ): Promise<void> {
     await locator.scrollIntoViewIfNeeded().catch(() => undefined);
 
+    // Date inputs on 17gz use My97 WdatePicker — Playwright fill() opens the
+    // calendar and blocks the rest of the form. Set value via JS instead.
+    if (this.isDateField(field) && field.selector) {
+      const ok = await this.setInputValueJs(page, field.selector, value);
+      await this.closeDatePickers(page);
+      if (ok) {
+        return;
+      }
+    }
+
     const visible = await locator.isVisible().catch(() => false);
     if (visible) {
       try {
         await locator.fill(value, { timeout: 5_000 });
+        if (this.isDateField(field)) {
+          await this.closeDatePickers(page);
+        }
         return;
       } catch {
         // fall through
@@ -574,6 +650,9 @@ export class FormFiller {
 
     try {
       await locator.fill(value, { force: true, timeout: 5_000 });
+      if (this.isDateField(field)) {
+        await this.closeDatePickers(page);
+      }
       return;
     } catch {
       // fall through to JS
@@ -583,14 +662,28 @@ export class FormFiller {
       throw new Error(`Cannot fill hidden field without selector: ${value}`);
     }
 
-    const ok = await page.evaluate(
-      ({ selector, nextValue }) => {
-        const el = document.querySelector(selector) as HTMLInputElement | null;
+    const ok = await this.setInputValueJs(page, field.selector, value);
+    await this.closeDatePickers(page);
+
+    if (!ok) {
+      throw new Error(
+        `Failed to fill ${field.selector}${field.labelHint ? ` ("${field.labelHint}")` : ''} via JS fallback`,
+      );
+    }
+  }
+
+  private async setInputValueJs(
+    page: Page,
+    selector: string,
+    value: string,
+  ): Promise<boolean> {
+    return page.evaluate(
+      ({ sel, nextValue }) => {
+        const el = document.querySelector(sel) as HTMLInputElement | null;
         if (!el) {
           return false;
         }
 
-        el.focus();
         el.value = nextValue;
         el.setAttribute('value', nextValue);
 
@@ -617,16 +710,11 @@ export class FormFiller {
         el.dispatchEvent(new Event('input', { bubbles: true }));
         el.dispatchEvent(new Event('change', { bubbles: true }));
         el.dispatchEvent(new Event('blur', { bubbles: true }));
+        el.blur();
         return true;
       },
-      { selector: field.selector, nextValue: value },
+      { sel: selector, nextValue: value },
     );
-
-    if (!ok) {
-      throw new Error(
-        `Failed to fill ${field.selector}${field.labelHint ? ` ("${field.labelHint}")` : ''} via JS fallback`,
-      );
-    }
   }
 
   private normalizeTextValue(field: FieldConfig, value: string): string {

@@ -134,8 +134,8 @@ for (const hint of requiredHints) {
   );
 }
 assert(
-  step1.some((f) => f.selector?.includes('apply.name')),
-  'apply.name (Chinese Name) present',
+  !step1.some((f) => /passportTypeId|hzlb|passportId/.test(f.selector || '')),
+  'pku.json must NOT require non-existent Passport Type select',
 );
 
 console.log('\n=== playwright DOM waiver ===');

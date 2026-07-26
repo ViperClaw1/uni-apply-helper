@@ -63,9 +63,13 @@ export class OcrPassportUploader {
     this.logger.log('OCR step 3/4: Confirm Passport Information');
     await this.confirmPassportOcr(page);
 
-    this.logger.log('OCR step 4/4: wait apply.* sync + upload photo');
+    this.logger.log('OCR step 4/4: dismiss copy dialog + wait apply.* + photo');
+    await this.dismissInfoDialogs(page);
     await this.waitForApplySync(page);
+    await this.dismissInfoDialogs(page);
+    await this.closeDatePickers(page);
     await this.uploadPhoto(page, profile.documents.photo);
+    await this.dismissInfoDialogs(page);
   }
 
   private async uploadPassportViaButton(
@@ -151,6 +155,82 @@ export class OcrPassportUploader {
     }
 
     await page.waitForTimeout(800);
+  }
+
+  private async dismissInfoDialogs(page: Page): Promise<void> {
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      const clicked = await page.evaluate(() => {
+        const isVisible = (el: Element) => {
+          const style = getComputedStyle(el as HTMLElement);
+          if (style.display === 'none' || style.visibility === 'hidden') {
+            return false;
+          }
+          const rect = (el as HTMLElement).getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        };
+
+        // Prefer Ok on visible messager windows (e.g. "Successfully copied...")
+        const windows = [
+          ...document.querySelectorAll(
+            '.messager-window, .panel.window, .messager-body',
+          ),
+        ].filter(isVisible);
+
+        for (const win of windows) {
+          const text = (win.textContent || '').replace(/\s+/g, ' ');
+          // Never dismiss an in-flight processing dialog via Ok.
+          if (/It'?s processing|请求正在处理中|processing your request/i.test(text)) {
+            continue;
+          }
+
+          const ok = [
+            ...win.querySelectorAll(
+              'input.okButton, input[value="Ok"], input[value="OK"], a.l-btn, button',
+            ),
+          ].find((el) =>
+            /^(Ok|OK|确定)$/i.test(
+              ((el as HTMLInputElement).value || el.textContent || '').trim(),
+            ),
+          ) as HTMLElement | undefined;
+
+          if (ok) {
+            ok.click();
+            return true;
+          }
+        }
+
+        // Global Ok fallback
+        const globalOk = [
+          ...document.querySelectorAll(
+            'input.okButton, .messager-button input[value="Ok"], .messager-button input[value="OK"]',
+          ),
+        ].find(isVisible) as HTMLElement | undefined;
+        if (globalOk) {
+          globalOk.click();
+          return true;
+        }
+
+        return false;
+      });
+
+      if (!clicked) {
+        break;
+      }
+      await page.waitForTimeout(400);
+    }
+  }
+
+  private async closeDatePickers(page: Page): Promise<void> {
+    await page.keyboard.press('Escape').catch(() => undefined);
+    await page.evaluate(() => {
+      for (const el of document.querySelectorAll(
+        '.WdateDiv, #_my97DP, .datebox-calendar-inner, .calendar',
+      )) {
+        (el as HTMLElement).style.display = 'none';
+      }
+      const active = document.activeElement as HTMLElement | null;
+      active?.blur?.();
+    });
   }
 
   private async waitForApplySync(page: Page): Promise<void> {

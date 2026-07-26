@@ -150,15 +150,6 @@
       "options": ["None", "Atheism", "Christianity", "Islam", "Buddhism", "Other"]
     },
     {
-      "selector": "select[name=\"apply.passportTypeId\"], select[name=\"apply.hzlb\"], select[name=\"apply.passportId\"]",
-      "mapsTo": null,
-      "type": "select",
-      "required": true,
-      "wizardStep": 1,
-      "labelHint": "Passport Type",
-      "options": ["Ordinary Passport", "Diplomatic Passport", "Service Passport", "Ordinary", "Private"]
-    },
-    {
       "selector": "input[name=\"apply.passportNo\"]",
       "mapsTo": "personal.passportNo",
       "type": "text",
@@ -179,14 +170,18 @@
       "mapsTo": null,
       "type": "select",
       "required": false,
-      "wizardStep": 2
+      "wizardStep": 2,
+      "labelHint": "English Proficiency",
+      "options": ["Good", "Excellent", "Fair", "Poor", "None"]
     },
     {
       "selector": "select[name=\"apply.yydjzs\"]",
       "mapsTo": null,
       "type": "select",
       "required": false,
-      "wizardStep": 2
+      "wizardStep": 2,
+      "labelHint": "Language Certificate",
+      "options": ["Native Speaker", "IELTS", "TOEFL", "Other", "None"]
     },
     {
       "selector": "input[name=\"apply.yydjzsScore\"]",
@@ -200,7 +195,8 @@
       "mapsTo": "guarantor.name",
       "type": "text",
       "required": false,
-      "wizardStep": 2
+      "wizardStep": 2,
+      "labelHint": "Guarantor Name"
     },
     {
       "selector": "input[name=\"apply.guarPhone\"]",
@@ -211,17 +207,41 @@
     },
     {
       "selector": "input[name=\"apply.guarMobile\"]",
-      "mapsTo": null,
+      "mapsTo": "guarantor.phone",
       "type": "text",
       "required": false,
       "wizardStep": 2
+    },
+    {
+      "selector": "input[name=\"apply.guarEmail\"]",
+      "mapsTo": "guarantor.email",
+      "type": "text",
+      "required": false,
+      "wizardStep": 2
+    },
+    {
+      "selector": "input[name=\"sh.startDate\"]",
+      "mapsTo": "education.0.periodStart",
+      "type": "text",
+      "required": false,
+      "wizardStep": 3,
+      "labelHint": "Study Start Date"
+    },
+    {
+      "selector": "input[name=\"sh.endDate\"]",
+      "mapsTo": "education.0.periodEnd",
+      "type": "text",
+      "required": false,
+      "wizardStep": 3,
+      "labelHint": "Study End Date"
     },
     {
       "selector": "input[name=\"sh.studyPlace\"]",
       "mapsTo": "education.0.institution",
       "type": "text",
       "required": false,
-      "wizardStep": 3
+      "wizardStep": 3,
+      "labelHint": "Institution"
     },
     {
       "selector": "input[name=\"sh.stuhisMajor\"]",
@@ -235,21 +255,42 @@
       "mapsTo": "education.0.degree",
       "type": "select",
       "required": false,
-      "wizardStep": 3
+      "wizardStep": 3,
+      "options": ["Bachelor", "Master", "Dr.", "Senior high", "Vocational College"]
     },
     {
       "selector": "input[type=\"radio\"][name=\"applyEx.haveStudiedInChina\"]",
       "mapsTo": "personal.studiedInChina",
       "type": "radio",
       "required": false,
-      "wizardStep": 3
+      "wizardStep": 3,
+      "options": ["No", "Yes"]
+    },
+    {
+      "selector": "input[type=\"radio\"][name=\"haveWorkHistory\"]",
+      "mapsTo": null,
+      "type": "radio",
+      "required": false,
+      "wizardStep": 3,
+      "labelHint": "Work History",
+      "options": ["No", "Yes"]
+    },
+    {
+      "selector": "input[type=\"radio\"][name=\"applyEx.hasCriminalRecord\"]",
+      "mapsTo": null,
+      "type": "radio",
+      "required": false,
+      "wizardStep": 4,
+      "labelHint": "Criminal Record",
+      "options": ["No", "Yes"]
     },
     {
       "selector": "input[name=\"apply.emergencyName\"]",
       "mapsTo": "emergencyContact.name",
       "type": "text",
-      "required": false,
-      "wizardStep": 4
+      "required": true,
+      "wizardStep": 4,
+      "labelHint": "Emergency Contact Name"
     },
     {
       "selector": "input[name=\"apply.emergencyPhone\"]",
@@ -260,7 +301,15 @@
     },
     {
       "selector": "input[name=\"apply.emergencyMobile\"]",
-      "mapsTo": null,
+      "mapsTo": "emergencyContact.phone",
+      "type": "text",
+      "required": true,
+      "wizardStep": 4,
+      "labelHint": "Emergency Mobile"
+    },
+    {
+      "selector": "input[name=\"apply.emergencyEmail\"]",
+      "mapsTo": "emergencyContact.email",
       "type": "text",
       "required": false,
       "wizardStep": 4
@@ -270,7 +319,8 @@
       "mapsTo": "personal.phone",
       "type": "text",
       "required": true,
-      "wizardStep": 5
+      "wizardStep": 5,
+      "labelHint": "Mobile"
     },
     {
       "selector": "input[name=\"apply.homeAddress\"]",
@@ -287,6 +337,21 @@
       "wizardStep": 5
     },
     {
+      "selector": "input[name=\"apply.homeCity\"]",
+      "mapsTo": "personal.cityOfBirth",
+      "type": "text",
+      "required": false,
+      "wizardStep": 5
+    },
+    {
+      "selector": "select[name=\"apply.homeCountryId\"]",
+      "mapsTo": "personal.nationality",
+      "type": "select",
+      "required": false,
+      "wizardStep": 5,
+      "labelHint": "Home Country"
+    },
+    {
       "selector": "[attachTypeId=\"ATTACH_TYPE_passportImage\"] input[type=\"file\"]",
       "mapsTo": null,
       "type": "file",
@@ -298,7 +363,7 @@
       "selector": "[attachTypeId=\"ATTACH_TYPE_8135227092\"] input[type=\"file\"]",
       "mapsTo": null,
       "type": "file",
-      "required": true,
+      "required": false,
       "wizardStep": 6
     },
     {
@@ -372,8 +437,8 @@
   ],
   "wizard": {
     "totalSteps": 7,
-    "nextButtonSelector": "input[value=\"Save and Next\"]",
-    "submitButtonSelector": "input[value=\"Submit\"]"
+    "nextButtonSelector": "input[value=\"Save and Next\"], input[value=\"Next\"], input[value=\"下一步\"], input[value=\"保存并下一步\"]",
+    "submitButtonSelector": "input[value=\"Submit\"], input[value=\"提交\"]"
   },
   "agent": {
     "fillMode": "hybrid",
@@ -382,5 +447,5 @@
     "goal": "Complete and submit the Peking University online application form"
   },
   "requiresEssay": false,
-  "notes": "17gz 7-step wizard (same platform as ZZU/KMMC). Research Scholar Program open 2026-01-01~2026-12-31 — selected via navigationHints.programText. Step 1 requires OCR passport (ATTACH_TYPE_passportImage + Confirm Passport Information) and personal photo before Next. Study Plan List has Department only (no Major/Language filter). Verify attachTypeIds on Step 6 after first live capture if Field not found."
+  "notes": "17gz 7-step wizard. Step1: OCR passport + photo + Basic Info. Steps2-5: language/guarantor, education/work, emergency/criminal, contact. Step6 uploads (CSCA optional for Research Scholar — not ZZU-required). Step7 Submit only. Live attachTypeIds may differ — verify after first capture."
 }

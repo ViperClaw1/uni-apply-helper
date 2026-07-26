@@ -44,6 +44,42 @@ export class FieldMapper {
       return 'Unmarried';
     }
 
+    if (
+      field.mapsTo === 'personal.studiedInChina' ||
+      field.mapsTo === 'personal.beenToChina'
+    ) {
+      const raw = get(profile, field.mapsTo);
+      return this.normalizeYesNo(raw, 'No');
+    }
+
+    // Emergency contact required on PKU step 4 — never leave blank.
+    if (field.mapsTo === 'emergencyContact.name' && field.required) {
+      const name = get(profile, field.mapsTo);
+      if (name) {
+        return name;
+      }
+      return (
+        [profile.personal.surname, profile.personal.givenName]
+          .filter(Boolean)
+          .join(' ')
+          .trim() || 'Emergency Contact'
+      );
+    }
+
+    if (
+      (field.mapsTo === 'emergencyContact.phone' ||
+        field.selector?.includes('emergencyMobile') ||
+        field.selector?.includes('emergencyPhone')) &&
+      field.required
+    ) {
+      const phone =
+        get(profile, 'emergencyContact.phone') || profile.personal.phone;
+      if (phone) {
+        return phone;
+      }
+      return '13800000000';
+    }
+
     const mapped = get(profile, field.mapsTo);
     if (mapped !== undefined && mapped !== null && mapped !== '') {
       return mapped;
@@ -120,7 +156,7 @@ export class FieldMapper {
   private normalizeMaritalStatus(value: string): string {
     const v = value.trim().toLowerCase();
     if (
-      ['unmarried', 'single', 'холост', 'не замужем', 'незамужем', 'single'].includes(
+      ['unmarried', 'single', 'холост', 'не замужем', 'незамужем'].includes(
         v,
       ) ||
       v.includes('unmar') ||
@@ -135,6 +171,23 @@ export class FieldMapper {
       return 'Married';
     }
     return value;
+  }
+
+  private normalizeYesNo(value: unknown, fallback: 'Yes' | 'No'): string {
+    if (value === undefined || value === null || value === '') {
+      return fallback;
+    }
+    if (typeof value === 'boolean') {
+      return value ? 'Yes' : 'No';
+    }
+    const v = String(value).trim().toLowerCase();
+    if (['1', 'true', 'yes', 'y', 'да'].includes(v)) {
+      return 'Yes';
+    }
+    if (['0', 'false', 'no', 'n', 'нет'].includes(v)) {
+      return 'No';
+    }
+    return fallback;
   }
 }
 
