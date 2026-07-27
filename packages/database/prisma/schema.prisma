@@ -29,6 +29,7 @@ model Student {
   currentInstitution String?
   beenToChina        Boolean   @default(false)
   studiedInChina     Boolean   @default(false)
+  desiredField       String?
   createdAt          DateTime  @default(now())
 
   education          Education[]

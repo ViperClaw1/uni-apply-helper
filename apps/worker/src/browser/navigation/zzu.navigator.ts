@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { GeminiClient } from '../../agent/gemini/gemini.client.js';
 import { navigateToZzuApplication } from '../zzu-navigation.js';
 import { isZzuFormUrl } from '../zzu-session.loader.js';
 import type {
@@ -8,6 +9,8 @@ import type {
 
 @Injectable()
 export class ZzuNavigator implements UniversityNavigator {
+  constructor(private readonly gemini: GeminiClient) {}
+
   matches(formUrl: string): boolean {
     return isZzuFormUrl(formUrl);
   }
@@ -20,6 +23,7 @@ export class ZzuNavigator implements UniversityNavigator {
       context.universityId,
       context.university.defaultProgram,
       context.university.navigationHints?.programText,
+      this.gemini,
     );
   }
 }

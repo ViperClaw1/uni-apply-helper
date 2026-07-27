@@ -88,6 +88,9 @@ export class StudentsService {
         currentInstitution: data.personal?.currentInstitution,
         beenToChina: this.toBoolean(data.personal?.beenToChina),
         studiedInChina: this.toBoolean(data.personal?.studiedInChina),
+        desiredField: data.personal?.desiredField
+          ? String(data.personal.desiredField).trim() || null
+          : null,
         education: {
           create:
             this.toArray<EducationInput>(data.education)
@@ -192,6 +195,7 @@ export class StudentsService {
         currentInstitution: student.currentInstitution ?? undefined,
         beenToChina: student.beenToChina,
         studiedInChina: student.studiedInChina,
+        desiredField: student.desiredField ?? undefined,
       },
       education: student.education.map((education) => ({
         degree: education.degree,

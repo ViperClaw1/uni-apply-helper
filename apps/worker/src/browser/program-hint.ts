@@ -4,6 +4,11 @@ export function resolveProgramHint(
   profile: StudentProfile,
   universityId: string,
 ): string | undefined {
+  const desired = profile.personal?.desiredField?.trim();
+  if (desired) {
+    return desired;
+  }
+
   const target =
     profile.applicationTargets.find(
       (applicationTarget) => applicationTarget.universityId === universityId,

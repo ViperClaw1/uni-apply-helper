@@ -15,5 +15,8 @@
   "type": "module",
   "devDependencies": {
     "turbo": "^2.10.4"
+  },
+  "dependencies": {
+    "prisma": "^7.9.0"
   }
 }

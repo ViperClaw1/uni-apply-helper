@@ -440,7 +440,178 @@ async function isProgramSelectionEmpty(page: Page): Promise<boolean> {
   return page.evaluate(() => /Total:\s*0/i.test(document.body?.innerText ?? ''));
 }
 
-async function selectStudyPlanRow(page: Page): Promise<string | null> {
+async function expandStudyPlanPageSize(page: Page): Promise<void> {
+  const changed = await page.evaluate(() => {
+    const selects = [
+      ...document.querySelectorAll('select'),
+    ] as HTMLSelectElement[];
+    const perPage = selects.find((sel) => {
+      const opts = [...sel.options].map((o) => o.text.trim());
+      const nearLabel =
+        sel.closest('td, div, span, label')?.textContent?.toLowerCase() || '';
+      return (
+        /per\s*page|page\s*size|条/i.test(nearLabel) ||
+        opts.includes('20') ||
+        opts.includes('50') ||
+        opts.includes('100')
+      );
+    });
+    if (!perPage) {
+      return false;
+    }
+    const preferred = ['100', '50', '30', '20'].find((v) =>
+      [...perPage.options].some((o) => o.value === v || o.text.trim() === v),
+    );
+    if (!preferred || perPage.value === preferred) {
+      return false;
+    }
+    perPage.value = preferred;
+    perPage.dispatchEvent(new Event('change', { bubbles: true }));
+    const jq = (
+      window as unknown as {
+        jQuery?: (el: Element) => {
+          val: (v: string) => { trigger: (e: string) => unknown };
+        };
+      }
+    ).jQuery;
+    if (typeof jq === 'function') {
+      try {
+        jq(perPage).val(preferred).trigger('change');
+      } catch {
+        // ignore
+      }
+    }
+    return true;
+  });
+
+  if (changed) {
+    await page.waitForTimeout(1500);
+  }
+}
+
+type StudyPlanRow = {
+  index: number;
+  text: string;
+};
+
+export type StudyPlanMatcher = {
+  isAvailable: () => boolean;
+  generateJson: <T>(options: {
+    prompt: string;
+    temperature?: number;
+  }) => Promise<T>;
+};
+
+async function collectStudyPlanRows(page: Page): Promise<StudyPlanRow[]> {
+  return page.evaluate(() => {
+    const labelOf = (el: Element) =>
+      ((el as HTMLInputElement).value || el.textContent || '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    const isApplyLink = (el: Element) => {
+      const onclick = el.getAttribute('onclick') || '';
+      const href = el.getAttribute('href') || '';
+      return (
+        /saveChoose|StudyPlan|ChooseProject|choose/i.test(onclick) ||
+        /^(Apply|申请|选择|Select)$/i.test(labelOf(el)) ||
+        /apply/i.test(href)
+      );
+    };
+
+    const rows: StudyPlanRow[] = [];
+    const trs = [...document.querySelectorAll('tr')];
+    for (const tr of trs) {
+      const link = [...tr.querySelectorAll('a, input[type="button"]')].find(
+        isApplyLink,
+      );
+      if (!link) {
+        continue;
+      }
+      const text = (tr.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 240);
+      if (!text || /study plan name|department|application deadline/i.test(text)) {
+        continue;
+      }
+      rows.push({ index: rows.length, text });
+    }
+    return rows;
+  });
+}
+
+async function clickStudyPlanRowByIndex(
+  page: Page,
+  rowIndex: number,
+): Promise<string | null> {
+  return page.evaluate((index) => {
+    const labelOf = (el: Element) =>
+      ((el as HTMLInputElement).value || el.textContent || '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    const isApplyLink = (el: Element) => {
+      const onclick = el.getAttribute('onclick') || '';
+      const href = el.getAttribute('href') || '';
+      return (
+        /saveChoose|StudyPlan|ChooseProject|choose/i.test(onclick) ||
+        /^(Apply|申请|选择|Select)$/i.test(labelOf(el)) ||
+        /apply/i.test(href)
+      );
+    };
+
+    const applyRows = [...document.querySelectorAll('tr')].filter((tr) =>
+      [...tr.querySelectorAll('a, input[type="button"]')].some(isApplyLink),
+    );
+
+    const tr = applyRows[index];
+    if (!tr) {
+      return null;
+    }
+
+    const link = [...tr.querySelectorAll('a, input[type="button"]')].find(
+      isApplyLink,
+    ) as HTMLElement | undefined;
+    if (!link) {
+      return null;
+    }
+
+    link.scrollIntoView({ block: 'center', inline: 'nearest' });
+    link.dispatchEvent(
+      new MouseEvent('click', {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+      }),
+    );
+    const onclick = link.getAttribute('onclick') || '';
+    return `Apply:row${index}:${onclick.slice(0, 48)}`;
+  }, rowIndex);
+}
+
+function scoreStudyPlanRow(text: string, hint: string): number {
+  const hay = text.toLowerCase();
+  const needles = hint
+    .toLowerCase()
+    .split(/[\s,/|;]+/)
+    .map((n) => n.trim())
+    .filter((n) => n.length >= 3);
+
+  let score = 0;
+  for (const n of needles) {
+    if (hay.includes(n)) {
+      score += n.length >= 6 ? 3 : 2;
+    }
+  }
+  if (hay.includes(hint.toLowerCase())) {
+    score += 10;
+  }
+  return score;
+}
+
+async function selectStudyPlanRow(
+  page: Page,
+  programHint?: string,
+  gemini?: StudyPlanMatcher,
+): Promise<string | null> {
   const APPLY_LINK_SELECTOR = [
     'a[onclick*="saveChooseProjectBind"]',
     'a[onclick*="StudyPlan"]',
@@ -450,8 +621,6 @@ async function selectStudyPlanRow(page: Page): Promise<string | null> {
     'td a',
   ].join(', ');
 
-  // Study Plan table often lazy-loads Apply rows after AJAX (PKU Total:N shown
-  // before links exist). Retry wait+click — first miss is usually timing.
   for (let attempt = 0; attempt < 4; attempt += 1) {
     await page
       .waitForSelector(APPLY_LINK_SELECTOR, {
@@ -461,10 +630,64 @@ async function selectStudyPlanRow(page: Page): Promise<string | null> {
       .catch(() => undefined);
     await page.waitForTimeout(attempt === 0 ? 500 : 1200);
 
-    // Prefer DOM dispatchEvent: PKU onclick is
-    //   saveChooseProjectBind(this, arguments[0], 'ID')
-    // and needs a real MouseEvent as arguments[0].
-    const clicked = await page.evaluate(() => {
+    if (attempt === 0) {
+      await expandStudyPlanPageSize(page);
+    }
+
+    const rows = await collectStudyPlanRows(page);
+    if (rows.length === 0) {
+      continue;
+    }
+
+    let chosenIndex = 0;
+
+    // Lexical match first (cheap)
+    if (programHint?.trim()) {
+      let bestScore = 0;
+      let bestIndex = -1;
+      for (const row of rows) {
+        const score = scoreStudyPlanRow(row.text, programHint);
+        if (score > bestScore) {
+          bestScore = score;
+          bestIndex = row.index;
+        }
+      }
+      if (bestIndex >= 0 && bestScore > 0) {
+        chosenIndex = bestIndex;
+      } else if (gemini?.isAvailable()) {
+        try {
+          const result = await gemini.generateJson<{ rowIndex?: number }>({
+            prompt: [
+              'You pick the best matching university study-plan row for a student.',
+              'Return ONLY JSON: {"rowIndex":<number>}. Use -1 if nothing is reasonably close.',
+              `Student desired field / program hint: "${programHint}"`,
+              'Available study plans (index: text):',
+              ...rows.map((r) => `${r.index}: ${r.text}`),
+            ].join('\n'),
+            temperature: 0,
+          });
+          const idx = result.rowIndex;
+          if (
+            typeof idx === 'number' &&
+            Number.isInteger(idx) &&
+            idx >= 0 &&
+            idx < rows.length
+          ) {
+            chosenIndex = idx;
+          }
+        } catch {
+          // fall through to first row
+        }
+      }
+    }
+
+    const clicked = await clickStudyPlanRowByIndex(page, chosenIndex);
+    if (clicked) {
+      return clicked;
+    }
+
+    // Legacy first-Apply fallback
+    const clickedLegacy = await page.evaluate(() => {
       const labelOf = (el: Element) =>
         ((el as HTMLInputElement).value || el.textContent || '')
           .replace(/\s+/g, ' ')
@@ -520,11 +743,10 @@ async function selectStudyPlanRow(page: Page): Promise<string | null> {
       return null;
     });
 
-    if (clicked) {
-      return clicked;
+    if (clickedLegacy) {
+      return clickedLegacy;
     }
 
-    // Playwright locator fallback between retries
     const applyLink = page
       .locator('td a, table a, a')
       .filter({ hasText: /^(Apply|申请|选择|Select)$/i })
@@ -774,7 +996,8 @@ export async function fillPreWizardScreen(
 async function clickPreWizardNext(
   page: Page,
   screen: PreWizardScreen,
-  _programHint?: string,
+  programHint?: string,
+  gemini?: StudyPlanMatcher,
 ): Promise<string | null> {
   if (screen === 'application_notes') {
     const agreeButton = page
@@ -869,7 +1092,7 @@ async function clickPreWizardNext(
       return 'empty_list';
     }
 
-    const row = await selectStudyPlanRow(page);
+    const row = await selectStudyPlanRow(page, programHint, gemini);
     if (row) {
       return row;
     }
@@ -937,6 +1160,7 @@ export async function advancePreWizardScreen(
   page: Page,
   screen: PreWizardScreen | null = null,
   programHint?: string,
+  gemini?: StudyPlanMatcher,
 ): Promise<boolean> {
   await waitForUiReady(page);
   await dismissBlockingDialogs(page);
@@ -970,7 +1194,7 @@ export async function advancePreWizardScreen(
     }
   }
 
-  const clicked = await clickPreWizardNext(page, current, programHint);
+  const clicked = await clickPreWizardNext(page, current, programHint, gemini);
   if (!clicked || clicked === 'empty_list') {
     return false;
   }
@@ -1034,7 +1258,7 @@ export async function clearStuckProcessing(page: Page): Promise<boolean> {
 export async function advanceThroughPreWizard(
   page: Page,
   programHint?: string,
-  { maxSteps = 20 } = {},
+  { maxSteps = 20, gemini }: { maxSteps?: number; gemini?: StudyPlanMatcher } = {},
 ): Promise<boolean> {
   const MAX_CONSECUTIVE_FAILS = 4;
   let consecutiveFails = 0;
@@ -1057,7 +1281,12 @@ export async function advanceThroughPreWizard(
       continue;
     }
 
-    const advanced = await advancePreWizardScreen(page, screen, programHint);
+    const advanced = await advancePreWizardScreen(
+      page,
+      screen,
+      programHint,
+      gemini,
+    );
     if (advanced || (await isMainWizard(page))) {
       consecutiveFails = 0;
       continue;

@@ -9,6 +9,7 @@ import {
   describeNavigationState,
   detectPreWizardScreen,
   isMainWizard,
+  type StudyPlanMatcher,
 } from './zzu-pre-wizard.js';
 
 function memberUrlFromForm(formUrl: string): string {
@@ -97,6 +98,7 @@ async function isWizardStep(page: Page): Promise<boolean> {
 async function advanceIntermediateSteps(
   page: Page,
   programHint?: string,
+  gemini?: StudyPlanMatcher,
 ): Promise<boolean> {
   for (let step = 0; step < 6; step += 1) {
     if (await isWizardStep(page)) {
@@ -105,7 +107,9 @@ async function advanceIntermediateSteps(
 
     // Prefer DOM detection over body-text heuristics (KMMC / 17gz).
     if (await detectPreWizardScreen(page)) {
-      const advanced = await advanceThroughPreWizard(page, programHint);
+      const advanced = await advanceThroughPreWizard(page, programHint, {
+        gemini,
+      });
       if (advanced || (await isWizardStep(page))) {
         return true;
       }
@@ -141,16 +145,17 @@ async function advanceToWizard(
   page: Page,
   formUrl: string,
   programHint?: string,
+  gemini?: StudyPlanMatcher,
 ): Promise<void> {
   for (let attempt = 0; attempt < 2; attempt += 1) {
-    if (await advanceIntermediateSteps(page, programHint)) {
+    if (await advanceIntermediateSteps(page, programHint, gemini)) {
       return;
     }
 
     await clickIfVisible(page, START_APPLICATION, { force: true });
     await clickEditApplication(page);
 
-    if (await advanceIntermediateSteps(page, programHint)) {
+    if (await advanceIntermediateSteps(page, programHint, gemini)) {
       return;
     }
   }
@@ -165,7 +170,7 @@ async function advanceToWizard(
       await page
         .waitForLoadState('networkidle', { timeout: 60_000 })
         .catch(() => undefined);
-      await advanceIntermediateSteps(page, programHint);
+      await advanceIntermediateSteps(page, programHint, gemini);
     }
   }
 }
@@ -177,6 +182,7 @@ export async function navigateToZzuApplication(
   universityId = 'zhengzhou-university',
   defaultProgram?: string,
   programTextHint?: string,
+  gemini?: StudyPlanMatcher,
 ): Promise<void> {
   const programHint =
     (profile ? resolveProgramHint(profile, universityId) : undefined) ??
@@ -220,11 +226,11 @@ export async function navigateToZzuApplication(
   await clickIfVisible(page, START_APPLICATION, { force: true });
   await clickEditApplication(page);
 
-  await advanceToWizard(page, formUrl, programHint);
+  await advanceToWizard(page, formUrl, programHint, gemini);
 
   // Final sweep through any remaining pre-wizard screens.
   if (!(await isWizardStep(page))) {
-    await advanceThroughPreWizard(page, programHint);
+    await advanceThroughPreWizard(page, programHint, { gemini });
   }
 
   if (!(await isWizardStep(page))) {

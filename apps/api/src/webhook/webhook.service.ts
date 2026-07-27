@@ -29,6 +29,7 @@ const FIELD_MAP: Record<string, string> = {
     'personal.beenToChina',
 
   // Section 2: Education
+  'Желаемое направление / Desired field of study': 'personal.desiredField',
   'Учились или работали ли вы в Китае? / Have you ever studied or worked in China?':
     'personal.studiedInChina',
   'Высшее образование (степень) / Highest Degree': 'education.0.degree',
@@ -97,6 +98,7 @@ const FORM_VALUES_PATHS = [
   'personal.currentInstitution',
   'personal.beenToChina',
   // Section 2
+  'personal.desiredField',
   'personal.studiedInChina',
   'education.0.degree',
   'education.0.institution',
@@ -316,6 +318,18 @@ export class WebhookService {
 
     if (this.hasAny(normalizedKey, ['chinese name', 'китайское имя'])) {
       return 'personal.chineseName';
+    }
+
+    if (
+      this.hasAny(normalizedKey, [
+        'desired field',
+        'field of study',
+        'желаемое направление',
+        'направление',
+      ]) &&
+      !this.hasAny(normalizedKey, ['studied', 'учились', 'worked', 'работали'])
+    ) {
+      return 'personal.desiredField';
     }
 
     if (

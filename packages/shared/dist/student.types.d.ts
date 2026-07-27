@@ -21,6 +21,8 @@ export interface StudentProfile {
         currentInstitution?: string;
         beenToChina?: boolean;
         studiedInChina?: boolean;
+        /** Desired major / department / research area (Google Form). */
+        desiredField?: string;
     };
     education: Array<{
         degree: string;
