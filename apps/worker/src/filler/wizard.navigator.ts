@@ -344,11 +344,19 @@ export class WizardNavigator {
             '.messager-button .okButton',
             '.messager-button input[value="Ok"]',
             '.messager-button input[value="OK"]',
+            '.messager-button a.l-btn:has-text("Ok")',
+            '.messager-button a.l-btn:has-text("OK")',
+            '.messager-button a:has-text("Ok")',
+            '.messager-button a:has-text("OK")',
+            '.messager-button a:has-text("确定")',
             'input.okButton',
             'button:has-text("OK")',
+            'button:has-text("Ok")',
             'button:has-text("Continue")',
             'button:has-text("Accept")',
             'button:has-text("确定")',
+            'a.l-btn:has-text("Ok")',
+            'a.l-btn:has-text("OK")',
           ].join(', '),
         )
         .first();
@@ -364,12 +372,18 @@ export class WizardNavigator {
       // Never click Ok on a still-processing dialog.
       const isProcessingDialog = await page
         .evaluate(() => {
-          const win = document.querySelector(
-            '.messager-window, .panel.window',
-          );
-          return /It'?s processing|please wait|请求正在处理/i.test(
-            win?.textContent || '',
-          );
+          const wins = [
+            ...document.querySelectorAll('.messager-window, .panel.window'),
+          ];
+          return wins.some((win) => {
+            const style = getComputedStyle(win as HTMLElement);
+            if (style.display === 'none' || style.visibility === 'hidden') {
+              return false;
+            }
+            return /It'?s processing|please wait|请求正在处理/i.test(
+              win.textContent || '',
+            );
+          });
         })
         .catch(() => false);
       if (isProcessingDialog) {
@@ -399,6 +413,8 @@ export class WizardNavigator {
     await submit.click({ force: true });
 
     await page.waitForTimeout(300);
+    // PKU: "Submitted information can not be revised. Are you sure…?" → must Ok.
+    await this.confirmSubmitDialog(page);
     await this.waitForProcessingDone(page, 90_000);
     await this.dismissBlockingDialogs(page);
 
@@ -408,11 +424,22 @@ export class WizardNavigator {
         (before) => {
           const text = (document.body?.innerText || '').replace(/\s+/g, ' ');
           if (
-            /successfully submitted|submit(ted)? successfully|application (has been )?submitted|申请.*成功|提交成功|has been received/i.test(
+            /successfully submitted|submit(ted)? successfully|application (has been )?submitted|申请.*成功|提交成功|has been received|status\s*[:：]\s*submitted/i.test(
               text,
             )
           ) {
             return true;
+          }
+          // Still on confirm / filled-in preview → not done
+          if (
+            /are you sure you want to submit|can not be revised|cannot be revised/i.test(
+              text,
+            )
+          ) {
+            return false;
+          }
+          if (/\bfilled in\b/i.test(text) && /Application Status/i.test(text)) {
+            return false;
           }
           const content =
             document.querySelector(
@@ -459,22 +486,88 @@ export class WizardNavigator {
       .then(() => true)
       .catch(() => false);
 
+    await this.confirmSubmitDialog(page);
     await this.dismissBlockingDialogs(page);
     await page.waitForTimeout(500);
 
-    if (!success) {
-      // Soft-ok: URL never changes on 17gz; processing finished without error dialog.
+    const stillPending = await page.evaluate(() => {
+      const text = (document.body?.innerText || '').replace(/\s+/g, ' ');
+      return (
+        /are you sure you want to submit|can not be revised|cannot be revised/i.test(
+          text,
+        ) ||
+        (/\bfilled in\b/i.test(text) && /Application Status/i.test(text))
+      );
+    });
+
+    if (stillPending || !success) {
       const hasError = await page.evaluate(() => {
         const text = (document.body?.innerText || '').replace(/\s+/g, ' ');
-        return /failed|error|invalid|必填|不能为空/i.test(text) &&
-          document.querySelector(
-            'span.error:not(:empty), label.error:not(:empty), .validate-error',
-          );
-      });
-      if (hasError) {
-        throw new Error(
-          'Final submit did not succeed (validation/error still on page, URL unchanged as expected for 17gz AJAX).',
+        return (
+          /failed|error|invalid|必填|不能为空/i.test(text) &&
+          Boolean(
+            document.querySelector(
+              'span.error:not(:empty), label.error:not(:empty), .validate-error',
+            ),
+          )
         );
+      });
+      if (hasError || stillPending) {
+        throw new Error(
+          stillPending
+            ? 'Final submit stopped on Confirm dialog or status still "filled in" — Ok was not confirmed.'
+            : 'Final submit did not succeed (validation/error still on page, URL unchanged as expected for 17gz AJAX).',
+        );
+      }
+    }
+  }
+
+  /** EasyUI confirm: "Are you sure you want to submit?" → Ok */
+  private async confirmSubmitDialog(page: Page): Promise<void> {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const visible = await page.evaluate(() => {
+        const wins = [
+          ...document.querySelectorAll('.messager-window, .panel.window'),
+        ];
+        return wins.some((win) => {
+          const style = getComputedStyle(win as HTMLElement);
+          if (style.display === 'none' || style.visibility === 'hidden') {
+            return false;
+          }
+          const rect = (win as HTMLElement).getBoundingClientRect();
+          if (rect.width === 0 || rect.height === 0) {
+            return false;
+          }
+          return /are you sure you want to submit|can not be revised|cannot be revised|确认提交|无法修改/i.test(
+            win.textContent || '',
+          );
+        });
+      });
+
+      if (!visible) {
+        return;
+      }
+
+      const ok = page
+        .locator(
+          [
+            '.messager-window:visible .messager-button a.l-btn:has-text("Ok")',
+            '.messager-window:visible .messager-button a:has-text("Ok")',
+            '.messager-window:visible .messager-button input[value="Ok"]',
+            '.messager-window:visible .messager-button a:has-text("确定")',
+            '.messager-button a.l-btn:has-text("Ok")',
+            '.messager-button a:has-text("Ok")',
+            'input.okButton',
+          ].join(', '),
+        )
+        .first();
+
+      if ((await ok.count()) > 0) {
+        await ok.click({ force: true }).catch(() => undefined);
+        await page.waitForTimeout(500);
+        await this.waitForProcessingDone(page, 60_000);
+      } else {
+        await this.dismissBlockingDialogs(page);
       }
     }
   }
