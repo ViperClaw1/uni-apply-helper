@@ -11,6 +11,7 @@ import { FileAttacher } from './file.attacher.js';
 import { OcrPassportUploader } from './ocr-passport.uploader.js';
 import { WizardFieldGroups } from './wizard-field-groups.js';
 import { WizardNavigator } from './wizard.navigator.js';
+import { GeocodingService } from '../geocoding/geocoding.service.js';
 
 @Injectable()
 export class FormFiller {
@@ -23,6 +24,7 @@ export class FormFiller {
     private readonly wizardFieldGroups: WizardFieldGroups,
     private readonly semanticFieldMapper: SemanticFieldMapper,
     private readonly formAgent: FormAgent,
+    private readonly geocoding: GeocodingService,
   ) {}
   async fillFields(
     page: Page,
@@ -143,6 +145,9 @@ export class FormFiller {
         }
         if (step === 4 && this.isPkuLike(university)) {
           await this.ensurePkuStep4RequiredGaps(page, profile);
+        }
+        if (step === 5 && this.isPkuLike(university)) {
+          await this.ensurePkuStep5RequiredGaps(page, profile);
         }
         await this.dismissFormOverlays(page);
 
@@ -1476,6 +1481,190 @@ export class FormFiller {
       Boolean(university.navigationHints?.ocrPassportUpload) ||
       /pku\.17gz\.org/i.test(university.formUrl || '')
     );
+  }
+
+  /**
+   * Step 5: homePhone (not only Mobile), isSame=Same, contact+receiver backups.
+   * Address/city/zip enriched via Google Geocoding when key is set.
+   */
+  private async ensurePkuStep5RequiredGaps(
+    page: Page,
+    profile: StudentProfile,
+  ): Promise<void> {
+    await this.wizardNavigator.waitForProcessingDone(page, 60_000);
+    await this.dismissFormOverlays(page);
+    await this.closeDatePickers(page);
+
+    const fullName =
+      [profile.personal.surname, profile.personal.givenName]
+        .filter(Boolean)
+        .join(' ')
+        .trim() || 'Applicant';
+    const phone =
+      profile.personal.phone?.trim() ||
+      profile.guarantor?.phone?.trim() ||
+      '13800000000';
+    const nationality =
+      profile.personal.nationality?.trim() || 'Russian Federation';
+    const rawAddress =
+      profile.personal.permanentAddress?.trim() ||
+      profile.guarantor?.homeAddress?.trim() ||
+      'N/A';
+
+    const geo = await this.geocoding.resolve(rawAddress, {
+      city: profile.personal.cityOfBirth?.trim(),
+      zip: profile.personal.postCode?.trim(),
+      country: nationality,
+    });
+
+    // Prefer structured street; keep profile text if geocode returned only city-level.
+    const address =
+      (geo.streetAddress && geo.streetAddress !== geo.city
+        ? geo.streetAddress
+        : rawAddress) || rawAddress;
+    const city =
+      geo.city && !/^n\/?a$/i.test(geo.city) ? geo.city : profile.personal.cityOfBirth?.trim() || 'N/A';
+    const zip = geo.zip || profile.personal.postCode?.trim() || '000000';
+    const country = geo.country || nationality;
+
+    // Permanent + contact phones / address / zip
+    const fills: Array<[string, string]> = [
+      ['apply.homePhone', phone],
+      ['apply.homeMobile', phone],
+      ['apply.homeAddress', address],
+      ['apply.homeCity', city],
+      ['apply.homeZip', zip],
+      ['apply.contactPhone', phone],
+      ['apply.contactAddress', address],
+      ['apply.contactZip', zip],
+      ['apply.receiverName', fullName],
+      ['apply.receiverMobile', phone],
+      ['apply.receiverCity', city],
+      ['apply.receiverAddress', address],
+      ['apply.receiverZip', zip],
+    ];
+
+    await page.evaluate((rows) => {
+      const jq = (
+        window as unknown as {
+          jQuery?: (el: Element) => {
+            val: (v?: string) => { trigger: (e: string) => unknown };
+          };
+        }
+      ).jQuery;
+      for (const [name, value] of rows) {
+        const el = document.querySelector(
+          `input[name="${name}"]`,
+        ) as HTMLInputElement | null;
+        if (!el || !value) {
+          continue;
+        }
+        el.value = value;
+        el.setAttribute('value', value);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        if (typeof jq === 'function') {
+          try {
+            jq(el).val(value).trigger('change');
+          } catch {
+            // ignore
+          }
+        }
+      }
+    }, fills);
+
+    for (const [name, value] of fills) {
+      const empty = await page.evaluate((n) => {
+        const el = document.querySelector(
+          `input[name="${n}"]`,
+        ) as HTMLInputElement | null;
+        return !el || !el.value?.trim();
+      }, name);
+      if (empty) {
+        await this.setInputValueJs(page, `input[name="${name}"]`, value);
+      }
+    }
+
+    // Country selects
+    for (const [sel, label] of [
+      ['select[name="apply.homeCountryId"]', country],
+      ['select[name="apply.receiverCountryId"]', country],
+    ] as const) {
+      if ((await page.locator(sel).count()) === 0) {
+        continue;
+      }
+      await this.fillSelectControl(
+        page,
+        {
+          selector: sel,
+          type: 'select',
+          required: false,
+          mapsTo: 'personal.nationality',
+          labelHint: 'Country',
+        },
+        page.locator(sel).first(),
+        label,
+      ).catch(() => undefined);
+    }
+
+    // isSame → "Same as the Permanent address" (hides contact requireds)
+    await page.evaluate(() => {
+      const radios = [
+        ...document.querySelectorAll('input[name="apply.isSame"]'),
+      ] as HTMLInputElement[];
+      const labelOf = (radio: HTMLInputElement) => {
+        const wrap = radio.closest('label');
+        if (wrap?.textContent) {
+          return wrap.textContent;
+        }
+        return radio.parentElement?.textContent || '';
+      };
+      const same = radios.find((r) =>
+        /same as|permanent address/i.test(labelOf(r)),
+      );
+      const target =
+        same ||
+        radios.find((r) => r.value === '1') ||
+        radios[0];
+      if (!target) {
+        return;
+      }
+      for (const r of radios) {
+        r.checked = false;
+      }
+      target.checked = true;
+      target.click();
+      target.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    // Keep Collect-in-person selected, but receiver* still required on PKU — already filled.
+    await page.evaluate(() => {
+      const radios = [
+        ...document.querySelectorAll('input[name="apply.receiverType"]'),
+      ] as HTMLInputElement[];
+      const labelOf = (radio: HTMLInputElement) => {
+        const wrap = radio.closest('label');
+        if (wrap?.textContent) {
+          return wrap.textContent;
+        }
+        return radio.parentElement?.textContent || '';
+      };
+      const inPerson = radios.find((r) =>
+        /collect.*in person|in person/i.test(labelOf(r)),
+      );
+      if (!inPerson) {
+        return;
+      }
+      for (const r of radios) {
+        r.checked = false;
+      }
+      inPerson.checked = true;
+      inPerson.click();
+      inPerson.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    await this.closeDatePickers(page);
+    await this.dismissFormOverlays(page);
   }
 
   /**

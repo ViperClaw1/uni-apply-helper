@@ -25,6 +25,7 @@ import { FormFiller } from './filler/form.filler.js';
 import { OcrPassportUploader } from './filler/ocr-passport.uploader.js';
 import { WizardFieldGroups } from './filler/wizard-field-groups.js';
 import { WizardNavigator } from './filler/wizard.navigator.js';
+import { GeocodingService } from './geocoding/geocoding.service.js';
 import { NotificationsService } from './notifications/notifications.service.js';
 import { Processor } from './processor.js';
 import { ReloginProcessor } from './relogin/relogin.processor.js';
@@ -53,6 +54,7 @@ import { ScreenshotService } from './screenshot/screenshot.service.js';
     OcrPassportUploader,
     WizardNavigator,
     WizardFieldGroups,
+    GeocodingService,
     FormFiller,
     OpenFormStep,
     FillFieldsStep,

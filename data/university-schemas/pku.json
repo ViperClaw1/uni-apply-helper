@@ -687,6 +687,14 @@
       "wizardStep": 4
     },
     {
+      "selector": "input[name=\"apply.homePhone\"]",
+      "mapsTo": "personal.phone",
+      "type": "text",
+      "required": true,
+      "wizardStep": 5,
+      "labelHint": "Phone Number"
+    },
+    {
       "selector": "input[name=\"apply.homeMobile\"]",
       "mapsTo": "personal.phone",
       "type": "text",
@@ -698,30 +706,107 @@
       "selector": "input[name=\"apply.homeAddress\"]",
       "mapsTo": "personal.permanentAddress",
       "type": "text",
+      "required": true,
+      "wizardStep": 5,
+      "labelHint": "Street Address"
+    },
+    {
+      "selector": "input[name=\"apply.homeZip\"]",
+      "mapsTo": "personal.postCode",
+      "type": "text",
+      "required": true,
+      "wizardStep": 5,
+      "labelHint": "Zip Code"
+    },
+    {
+      "selector": "input[name=\"apply.homeCity\"]",
+      "mapsTo": "personal.cityOfBirth",
+      "type": "text",
+      "required": true,
+      "wizardStep": 5,
+      "labelHint": "City/Province"
+    },
+    {
+      "selector": "select[name=\"apply.homeCountryId\"]",
+      "mapsTo": "personal.nationality",
+      "type": "select",
+      "required": true,
+      "wizardStep": 5,
+      "labelHint": "Home Country"
+    },
+    {
+      "selector": "input[type=\"radio\"][name=\"apply.isSame\"]",
+      "mapsTo": null,
+      "type": "radio",
+      "required": true,
+      "wizardStep": 5,
+      "labelHint": "Same as the Permanent address",
+      "options": ["Same as the Permanent address", "Other"]
+    },
+    {
+      "selector": "input[name=\"apply.contactPhone\"]",
+      "mapsTo": "personal.phone",
+      "type": "text",
+      "required": false,
+      "wizardStep": 5,
+      "labelHint": "Phone/Mobile Number"
+    },
+    {
+      "selector": "input[name=\"apply.contactAddress\"]",
+      "mapsTo": "personal.permanentAddress",
+      "type": "text",
       "required": false,
       "wizardStep": 5
     },
     {
-      "selector": "input[name=\"apply.homeZip\"]",
+      "selector": "input[name=\"apply.contactZip\"]",
       "mapsTo": "personal.postCode",
       "type": "text",
       "required": false,
       "wizardStep": 5
     },
     {
-      "selector": "input[name=\"apply.homeCity\"]",
-      "mapsTo": "personal.cityOfBirth",
+      "selector": "input[name=\"apply.receiverName\"]",
+      "mapsTo": "personal.fullName",
       "type": "text",
-      "required": false,
+      "required": true,
+      "wizardStep": 5,
+      "labelHint": "Receiver Name"
+    },
+    {
+      "selector": "input[name=\"apply.receiverMobile\"]",
+      "mapsTo": "personal.phone",
+      "type": "text",
+      "required": true,
       "wizardStep": 5
     },
     {
-      "selector": "select[name=\"apply.homeCountryId\"]",
+      "selector": "input[name=\"apply.receiverCity\"]",
+      "mapsTo": "personal.cityOfBirth",
+      "type": "text",
+      "required": true,
+      "wizardStep": 5
+    },
+    {
+      "selector": "select[name=\"apply.receiverCountryId\"]",
       "mapsTo": "personal.nationality",
       "type": "select",
-      "required": false,
-      "wizardStep": 5,
-      "labelHint": "Home Country"
+      "required": true,
+      "wizardStep": 5
+    },
+    {
+      "selector": "input[name=\"apply.receiverAddress\"]",
+      "mapsTo": "personal.permanentAddress",
+      "type": "text",
+      "required": true,
+      "wizardStep": 5
+    },
+    {
+      "selector": "input[name=\"apply.receiverZip\"]",
+      "mapsTo": "personal.postCode",
+      "type": "text",
+      "required": true,
+      "wizardStep": 5
     },
     {
       "selector": "input[type=\"radio\"][name=\"apply.receiverType\"]",
