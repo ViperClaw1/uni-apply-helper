@@ -492,6 +492,14 @@
       "labelHint": "Institution"
     },
     {
+      "selector": "select[name=\"sh.countryId\"]",
+      "mapsTo": "personal.nationality",
+      "type": "select",
+      "required": true,
+      "wizardStep": 3,
+      "labelHint": "Institute Location"
+    },
+    {
       "selector": "input[name=\"sh.stuhisMajor\"]",
       "mapsTo": "education.0.major",
       "type": "text",

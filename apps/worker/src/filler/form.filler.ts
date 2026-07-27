@@ -135,6 +135,9 @@ export class FormFiller {
           await this.ensurePkuStep2RequiredGaps(page, profile);
           await this.assertPkuStep2CriticalFilled(page, profile);
         }
+        if (step === 3 && this.isPkuLike(university)) {
+          await this.ensurePkuStep3RequiredGaps(page, profile);
+        }
         await this.dismissFormOverlays(page);
 
         // Photo already attached in OCR Step-1 hook — skip duplicate.
@@ -466,135 +469,124 @@ export class FormFiller {
 
   /**
    * 17gz radios use numeric values (0/1, 1/2) while schema/profile give
-   * "No"/"Unmarried". Match by adjacent label text — never blindly pick .first()
-   * (that selects Yes on Ethnic Chinese / in-mainland pairs).
+   * "No"/"Unmarried". Match within the named group only — never page-wide
+   * getByRole (picks wrong Yes/No) and never locator.first() (Yes on 17gz).
    */
   private async fillRadioControl(
     page: Page,
     field: FieldConfig,
-    locator: Locator,
+    _locator: Locator,
     normalizedValue: string,
   ): Promise<void> {
     const selector = field.selector;
-
-    if (selector) {
-      const byValue = page
-        .locator(`${selector}[value="${normalizedValue}"]`)
-        .first();
-      if ((await byValue.count()) > 0) {
-        await byValue.check({ force: true });
-        return;
-      }
+    if (!selector) {
+      throw new Error(
+        `Radio field needs selector to avoid ambiguous Yes/No match` +
+          `${field.labelHint ? ` ("${field.labelHint}")` : ''}`,
+      );
     }
 
-    {
-      const byRole = page
-        .getByRole('radio', { name: normalizedValue, exact: false })
-        .first();
-      if ((await byRole.count()) > 0) {
-        await byRole.check({ force: true }).catch(() => undefined);
-        if (await byRole.isChecked().catch(() => false)) {
+    const want = normalizedValue.trim();
+    const wantLower = want.toLowerCase();
+    const valueAliases: Record<string, string[]> = {
+      no: ['0', 'n', 'no', 'false', '2'],
+      yes: ['1', 'y', 'yes', 'true'],
+      unmarried: ['1', 'unmarried', 'single'],
+      married: ['2', 'married'],
+      female: ['2', 'f', 'female'],
+      male: ['1', 'm', 'male'],
+    };
+    const aliasValues = valueAliases[wantLower] ?? [want];
+
+    for (const v of aliasValues) {
+      const byValue = page.locator(`${selector}[value="${v}"]`).first();
+      if ((await byValue.count()) > 0) {
+        await byValue.check({ force: true });
+        if (await byValue.isChecked().catch(() => false)) {
           return;
         }
       }
     }
 
-    if (selector) {
-      const matched = await page.evaluate(
-        ({ sel, want }) => {
-          const radios = [
-            ...document.querySelectorAll(sel),
-          ] as HTMLInputElement[];
-          if (radios.length === 0) {
-            return false;
+    const matched = await page.evaluate(
+      ({ sel, want: wantRaw, aliases }) => {
+        const radios = [
+          ...document.querySelectorAll(sel),
+        ] as HTMLInputElement[];
+        if (radios.length === 0) {
+          return false;
+        }
+
+        const norm = (s: string) => s.replace(/\s+/g, ' ').trim().toLowerCase();
+        const wantN = norm(wantRaw);
+
+        const labelOf = (radio: HTMLInputElement): string => {
+          if (radio.id) {
+            const forLab = document.querySelector(`label[for="${radio.id}"]`);
+            if (forLab?.textContent) {
+              return forLab.textContent;
+            }
           }
-
-          const norm = (s: string) => s.replace(/\s+/g, ' ').trim().toLowerCase();
-          const wantN = norm(want);
-
-          const labelOf = (radio: HTMLInputElement): string => {
-            if (radio.id) {
-              const forLab = document.querySelector(`label[for="${radio.id}"]`);
-              if (forLab?.textContent) {
-                return forLab.textContent;
-              }
-            }
-            const wrap = radio.closest('label');
-            if (wrap?.textContent) {
-              return wrap.textContent;
-            }
-            const parent = radio.parentElement;
-            if (parent) {
-              return parent.textContent || '';
-            }
-            let sib = radio.nextSibling;
-            let acc = '';
-            while (sib && acc.length < 40) {
-              if (sib.nodeType === Node.TEXT_NODE) {
-                acc += sib.textContent || '';
-              } else if (sib.nodeType === Node.ELEMENT_NODE) {
-                const el = sib as Element;
-                if (el.tagName === 'INPUT') {
-                  break;
-                }
-                acc += el.textContent || '';
-              }
-              sib = sib.nextSibling;
-            }
-            return acc;
-          };
-
-          const match = radios.find((radio) => {
-            const lab = norm(labelOf(radio));
-            return (
-              lab === wantN ||
-              lab.startsWith(wantN) ||
-              new RegExp(`\\b${wantN}\\b`, 'i').test(lab)
-            );
-          });
-
-          // Yes/No aliases → common 17gz values
-          const aliases: Record<string, string[]> = {
-            no: ['0', 'n', 'no', 'false', '2'],
-            yes: ['1', 'y', 'yes', 'true'],
-            unmarried: ['1', 'unmarried', 'single'],
-            married: ['2', 'married'],
-            female: ['2', 'f', 'female'],
-            male: ['1', 'm', 'male'],
-          };
-          const byAlias =
-            match ||
-            radios.find((radio) =>
-              (aliases[wantN] || []).includes(norm(radio.value)),
-            );
-
-          // Prefer last option for bare "No" when still ambiguous (Yes=first on 17gz)
-          const target =
-            byAlias ||
-            (wantN === 'no' ? radios[radios.length - 1] : undefined);
-
-          if (!target) {
-            return false;
+          const wrap = radio.closest('label');
+          if (wrap?.textContent) {
+            return wrap.textContent;
           }
+          const parent = radio.parentElement;
+          if (parent) {
+            return parent.textContent || '';
+          }
+          let sib = radio.nextSibling;
+          let acc = '';
+          while (sib && acc.length < 40) {
+            if (sib.nodeType === Node.TEXT_NODE) {
+              acc += sib.textContent || '';
+            } else if (sib.nodeType === Node.ELEMENT_NODE) {
+              const el = sib as Element;
+              if (el.tagName === 'INPUT') {
+                break;
+              }
+              acc += el.textContent || '';
+            }
+            sib = sib.nextSibling;
+          }
+          return acc;
+        };
 
-          target.checked = true;
-          target.click();
-          target.dispatchEvent(new Event('input', { bubbles: true }));
-          target.dispatchEvent(new Event('change', { bubbles: true }));
-          return target.checked;
-        },
-        { sel: selector, want: normalizedValue },
+        const byLabel = radios.find((radio) => {
+          const lab = norm(labelOf(radio));
+          // Exact / word-boundary only — avoid "No" matching "Norwegian"
+          return lab === wantN || new RegExp(`\\b${wantN}\\b`, 'i').test(lab);
+        });
+
+        const byAlias = radios.find((radio) =>
+          aliases.includes(norm(radio.value)),
+        );
+
+        // Prefer last option for bare "No" when still ambiguous (Yes=first on 17gz)
+        const target =
+          byLabel ||
+          byAlias ||
+          (wantN === 'no' ? radios[radios.length - 1] : undefined);
+
+        if (!target) {
+          return false;
+        }
+
+        target.checked = true;
+        target.click();
+        target.dispatchEvent(new Event('input', { bubbles: true }));
+        target.dispatchEvent(new Event('change', { bubbles: true }));
+        return target.checked;
+      },
+      { sel: selector, want, aliases: aliasValues.map((v) => v.toLowerCase()) },
+    );
+
+    if (!matched) {
+      throw new Error(
+        `Failed to select radio "${want}" for ${selector}` +
+          `${field.labelHint ? ` ("${field.labelHint}")` : ''}`,
       );
-
-      if (matched) {
-        return;
-      }
     }
-
-    // Last resort only when a single radio locator was resolved (not a group).
-    await locator
-      .check({ force: true })
-      .catch(async () => locator.click({ force: true }));
   }
 
   /**
@@ -705,6 +697,16 @@ export class FormFiller {
     );
 
     if (!ok) {
+      const semanticOk = await this.trySemanticSelectMatch(
+        page,
+        field,
+        value,
+        candidates,
+      );
+      if (semanticOk) {
+        return;
+      }
+
       throw new Error(
         `Failed to select "${value}"` +
           (value !== candidates[0] ? ` (tried: ${candidates.slice(0, 5).join(' | ')})` : '') +
@@ -712,6 +714,82 @@ export class FormFiller {
           `${field.labelHint ? ` ("${field.labelHint}")` : ''}`,
       );
     }
+  }
+
+  private async trySemanticSelectMatch(
+    page: Page,
+    field: FieldConfig,
+    value: string,
+    candidates: string[],
+  ): Promise<boolean> {
+    if (!field.selector || !this.semanticFieldMapper.isAvailable()) {
+      return false;
+    }
+
+    const selectOptions = await page.evaluate((selector) => {
+      const sel = document.querySelector(selector) as HTMLSelectElement | null;
+      if (!sel) {
+        return [] as Array<{ value: string; label: string }>;
+      }
+      const isPlaceholder = (text: string) =>
+        !text ||
+        /please\s*(choose|select)/i.test(text) ||
+        /^-+$/.test(text) ||
+        /^-choose-$/i.test(text) ||
+        /^\.\.\./.test(text);
+
+      return Array.from(sel.options)
+        .map((o) => ({
+          value: o.value,
+          label: o.text.replace(/\s+/g, ' ').trim(),
+        }))
+        .filter((o) => o.value && !isPlaceholder(o.label));
+    }, field.selector);
+
+    if (selectOptions.length === 0) {
+      return false;
+    }
+
+    const matched = await this.semanticFieldMapper.semanticSelectMatch({
+      desiredValue: value,
+      candidates,
+      selectOptions,
+      fieldLabel: field.labelHint ?? field.selector,
+    });
+
+    if (!matched) {
+      return false;
+    }
+
+    return page.evaluate(
+      ({ selector, optionValue }) => {
+        const sel = document.querySelector(selector) as HTMLSelectElement | null;
+        if (!sel) {
+          return false;
+        }
+        sel.value = optionValue;
+        sel.dispatchEvent(new Event('input', { bubbles: true }));
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+        const jq = (
+          window as unknown as {
+            jQuery?: (el: Element) => {
+              val: (v: string) => { trigger: (e: string) => unknown };
+            };
+          }
+        ).jQuery;
+        if (typeof jq === 'function') {
+          try {
+            jq(sel).val(optionValue).trigger('chosen:updated');
+            jq(sel).val(optionValue).trigger('change');
+            jq(sel).val(optionValue).trigger('liszt:updated');
+          } catch {
+            // ignore
+          }
+        }
+        return sel.value === optionValue;
+      },
+      { selector: field.selector, optionValue: matched.value },
+    );
   }
 
   private applyValueMap(field: FieldConfig, value: string): string {
@@ -1317,6 +1395,72 @@ export class FormFiller {
    * PKU Step 2 gaps — FORCE-write critical fields by name (schema/mapsTo can lag deploy).
    * Rec#2 + yydjzs score/date must be non-empty or Save and Next shows a Warning dialog.
    */
+  /**
+   * Step 3: force China/work history = No (hides conditional required fields),
+   * fill Institute Location (sh.countryId).
+   */
+  private async ensurePkuStep3RequiredGaps(
+    page: Page,
+    profile: StudentProfile,
+  ): Promise<void> {
+    await this.dismissFormOverlays(page);
+    await this.closeDatePickers(page);
+
+    for (const [name, value] of [
+      ['applyEx.haveStudiedInChina', '0'],
+      ['applyEx.haveWorkHistory', '0'],
+      ['haveWorkHistory', '0'],
+    ] as const) {
+      const radio = page.locator(
+        `input[type="radio"][name="${name}"][value="${value}"]`,
+      );
+      if ((await radio.count()) > 0) {
+        await radio.first().check({ force: true }).catch(() => undefined);
+      }
+    }
+
+    // Hide conditional China-study block if Yes was previously selected.
+    await page.evaluate(() => {
+      const yes = document.querySelector(
+        'input[name="applyEx.haveStudiedInChina"][value="1"]',
+      ) as HTMLInputElement | null;
+      const no = document.querySelector(
+        'input[name="applyEx.haveStudiedInChina"][value="0"]',
+      ) as HTMLInputElement | null;
+      if (no && !no.checked) {
+        no.checked = true;
+        no.click();
+        no.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      if (yes?.checked && no) {
+        yes.checked = false;
+        no.checked = true;
+        no.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+
+    const nationality =
+      profile.personal.nationality?.trim() || 'Russian Federation';
+    const countrySel = 'select[name="sh.countryId"]';
+    if ((await page.locator(countrySel).count()) > 0) {
+      await this.fillSelectControl(
+        page,
+        {
+          selector: countrySel,
+          type: 'select',
+          required: false,
+          mapsTo: 'personal.nationality',
+          labelHint: 'Institute Location',
+        },
+        page.locator(countrySel).first(),
+        nationality,
+      ).catch(() => undefined);
+    }
+
+    await this.closeDatePickers(page);
+    await this.dismissFormOverlays(page);
+  }
+
   private async ensurePkuStep2RequiredGaps(
     page: Page,
     profile: StudentProfile,

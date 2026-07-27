@@ -1,17 +1,28 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.navigateToZzuApplication = navigateToZzuApplication;
+const session_expired_error_js_1 = require("../errors/session-expired.error.js");
 const program_hint_js_1 = require("./program-hint.js");
-const MEMBER_URL = 'https://zzu.17gz.org/member/index.do';
+const zzu_session_loader_js_1 = require("./zzu-session.loader.js");
+const zzu_pre_wizard_js_1 = require("./zzu-pre-wizard.js");
+function memberUrlFromForm(formUrl) {
+    return `${new URL(formUrl).origin}/member/index.do`;
+}
 const NAV_APPLICATION = [
     'a:has-text("Application"):not(:has-text("Status"))',
     'a[href*="apply"]:has-text("Application")',
+    'a:has-text("报名申请")',
+    'a[href*="apply"]:has-text("报名")',
 ].join(', ');
 const START_APPLICATION = [
     'a:has-text("Start Application")',
     'button:has-text("Start Application")',
+    'input[value="Start Application"]',
     'a:has-text("Online Application")',
     'a:has-text("New Application")',
+    'a:has-text("开始申请")',
+    'a:has-text("在线申请")',
+    'input[value="开始申请"]',
 ].join(', ');
 const EDIT_APPLICATION = [
     'table a:has-text("Edit")',
@@ -19,13 +30,8 @@ const EDIT_APPLICATION = [
     'a:has-text("Edit")',
     'button:has-text("Edit")',
     'input[value="Edit"]',
-].join(', ');
-const AGREE_SELECTORS = [
-    'button:has-text("Agree and continue")',
-    'button:has-text("Agree and Continue")',
-    'input[value="Agree and Continue"]',
-    'a:has-text("Agree and Continue")',
-    'button:has-text("Agree")',
+    'a:has-text("编辑")',
+    'input[value="编辑"]',
 ].join(', ');
 async function waitForUiReady(page) {
     await page
@@ -43,9 +49,9 @@ async function clickIfVisible(page, selector, { force = false } = {}) {
     await waitForUiReady(page);
     await locator.click({ force });
     await page
-        .waitForLoadState('networkidle', { timeout: 30_000 })
+        .waitForLoadState('domcontentloaded', { timeout: 12_000 })
         .catch(() => undefined);
-    await page.waitForTimeout(800);
+    await page.waitForTimeout(500);
     return true;
 }
 async function clickEditApplication(page) {
@@ -56,126 +62,38 @@ async function clickEditApplication(page) {
     if ((await editButton.count()) > 0) {
         await editButton.click({ force: true });
         await page
-            .waitForLoadState('networkidle', { timeout: 30_000 })
+            .waitForLoadState('domcontentloaded', { timeout: 12_000 })
             .catch(() => undefined);
-        await page.waitForTimeout(800);
+        await page.waitForTimeout(500);
         return true;
     }
     return clickIfVisible(page, EDIT_APPLICATION, { force: true });
 }
-async function acceptApplicationNotes(page) {
-    const bodyText = await page.locator('body').innerText();
-    if (!/application notes|application instructions/i.test(bodyText)) {
-        return false;
-    }
-    const label = page.getByText(/I have carefully read/i).first();
-    if ((await label.count()) > 0) {
-        await label.click({ force: true });
-    }
-    else {
-        const checkbox = page.locator('.el-checkbox, input[type="checkbox"]').first();
-        if ((await checkbox.count()) > 0) {
-            await checkbox.click({ force: true });
-        }
-    }
-    await page.waitForTimeout(500);
-    const agreeButton = page.getByRole('button', { name: /agree and continue/i }).first();
-    if ((await agreeButton.count()) === 0) {
-        return clickIfVisible(page, AGREE_SELECTORS, { force: true });
-    }
-    await page
-        .waitForFunction(() => {
-        const buttons = [...document.querySelectorAll('button')];
-        const agree = buttons.find((button) => /agree and continue/i.test(button.textContent ?? ''));
-        return Boolean(agree && !agree.disabled);
-    }, { timeout: 10_000 })
-        .catch(() => undefined);
-    await agreeButton.click({ force: true });
-    await page
-        .waitForLoadState('networkidle', { timeout: 30_000 })
-        .catch(() => undefined);
-    await page.waitForTimeout(800);
-    return true;
-}
 async function isWizardStep(page) {
-    const bodyText = await page.locator('body').innerText();
-    if (/basic info(rmation)?/i.test(bodyText)) {
-        return true;
-    }
-    if (/save and next/i.test(bodyText)) {
-        return true;
-    }
-    const formFields = await page
-        .locator([
-        'input[name="apply.lastName"]',
-        'input[name="apply.givenName"]',
-        'input[name="apply.passportNo"]',
-        'select[name*="sex"]',
-        'input[name="surname"]',
-        'input[name="givenName"]',
-    ].join(', '))
-        .count();
-    return formFields > 0;
-}
-async function selectNextOption(page, programHint) {
-    const bodyText = await page.locator('body').innerText();
-    if (!/please choose your (program|type)/i.test(bodyText)) {
-        return false;
-    }
-    if (programHint) {
-        const labeledOption = page
-            .locator('.el-radio, .el-radio__label, label')
-            .filter({ hasText: programHint })
-            .first();
-        if ((await labeledOption.count()) > 0) {
-            await labeledOption.click({ force: true });
-        }
-        else {
-            const textMatch = page.getByText(programHint, { exact: false }).first();
-            if ((await textMatch.count()) > 0) {
-                await textMatch.click({ force: true });
-            }
-        }
-    }
-    const selectedRadio = page.locator('.el-radio.is-checked, input[type="radio"]:checked');
-    if ((await selectedRadio.count()) === 0) {
-        const fallback = page
-            .locator('.el-radio, .el-radio__label, input[type="radio"]')
-            .first();
-        if ((await fallback.count()) > 0) {
-            await fallback.click({ force: true });
-        }
-    }
-    await page.waitForTimeout(500);
-    const nextButton = page.getByRole('button', { name: /^Next$/i }).first();
-    if ((await nextButton.count()) > 0) {
-        await nextButton.click({ force: true });
-        await page
-            .waitForLoadState('networkidle', { timeout: 30_000 })
-            .catch(() => undefined);
-        await page.waitForTimeout(800);
-        return true;
-    }
-    return clickIfVisible(page, 'button:has-text("Next"), input[value="Next"]', {
-        force: true,
-    });
+    return (0, zzu_pre_wizard_js_1.isMainWizard)(page);
 }
 async function advanceIntermediateSteps(page, programHint) {
-    for (let step = 0; step < 8; step += 1) {
+    for (let step = 0; step < 6; step += 1) {
         if (await isWizardStep(page)) {
             return true;
         }
+        if (await (0, zzu_pre_wizard_js_1.detectPreWizardScreen)(page)) {
+            const advanced = await (0, zzu_pre_wizard_js_1.advanceThroughPreWizard)(page, programHint);
+            if (advanced || (await isWizardStep(page))) {
+                return true;
+            }
+            await page.waitForTimeout(1000);
+            continue;
+        }
         const bodyText = await page.locator('body').innerText();
-        if (/application status|application list/i.test(bodyText)) {
-            await clickEditApplication(page);
-            continue;
-        }
-        if (/please choose your (program|type)/i.test(bodyText)) {
-            await selectNextOption(page, programHint);
-            continue;
-        }
-        if (/application notes|application instructions/i.test(bodyText)) {
-            await acceptApplicationNotes(page);
+        if (/application status|application list|my application|start application/i.test(bodyText)) {
+            const started = await clickIfVisible(page, START_APPLICATION, {
+                force: true,
+            });
+            const edited = await clickEditApplication(page);
+            if (!started && !edited) {
+                return false;
+            }
             continue;
         }
         break;
@@ -183,10 +101,11 @@ async function advanceIntermediateSteps(page, programHint) {
     return isWizardStep(page);
 }
 async function advanceToWizard(page, formUrl, programHint) {
-    for (let attempt = 0; attempt < 3; attempt += 1) {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
         if (await advanceIntermediateSteps(page, programHint)) {
             return;
         }
+        await clickIfVisible(page, START_APPLICATION, { force: true });
         await clickEditApplication(page);
         if (await advanceIntermediateSteps(page, programHint)) {
             return;
@@ -205,23 +124,41 @@ async function advanceToWizard(page, formUrl, programHint) {
         }
     }
 }
-async function navigateToZzuApplication(page, formUrl, profile, universityId = 'zhengzhou-university') {
-    const programHint = profile
-        ? (0, program_hint_js_1.resolveProgramHint)(profile, universityId)
-        : undefined;
+async function navigateToZzuApplication(page, formUrl, profile, universityId = 'zhengzhou-university', defaultProgram, programTextHint) {
+    const programHint = (profile ? (0, program_hint_js_1.resolveProgramHint)(profile, universityId) : undefined) ??
+        programTextHint ??
+        defaultProgram;
     await page.goto(formUrl, {
-        waitUntil: 'networkidle',
+        waitUntil: 'domcontentloaded',
         timeout: 60_000,
-        referer: MEMBER_URL,
+        referer: memberUrlFromForm(formUrl),
     });
+    if ((0, zzu_session_loader_js_1.isLoginRedirect)(page.url())) {
+        throw new session_expired_error_js_1.SessionExpiredError(`Session expired for ${universityId}`, universityId);
+    }
+    if (await (0, zzu_session_loader_js_1.isLoginPage)(page)) {
+        throw new session_expired_error_js_1.SessionExpiredError(`Login form detected — session expired for ${universityId}`, universityId);
+    }
+    if (await (0, zzu_session_loader_js_1.isCsrfBlocked)(page)) {
+        throw new session_expired_error_js_1.SessionExpiredError(`CSRF protection triggered — re-login required for ${universityId}`, universityId);
+    }
+    await (0, zzu_pre_wizard_js_1.clearStuckProcessing)(page);
     if (await isWizardStep(page)) {
         return;
     }
-    const onApplySection = page.url().includes('/apply/');
-    if (!onApplySection) {
-        await clickIfVisible(page, NAV_APPLICATION);
-        await clickIfVisible(page, START_APPLICATION);
-    }
+    await clickIfVisible(page, NAV_APPLICATION);
+    await clickIfVisible(page, START_APPLICATION, { force: true });
+    await clickEditApplication(page);
     await advanceToWizard(page, formUrl, programHint);
+    if (!(await isWizardStep(page))) {
+        await (0, zzu_pre_wizard_js_1.advanceThroughPreWizard)(page, programHint);
+    }
+    if (!(await isWizardStep(page))) {
+        const shotPath = `nav-stuck-${universityId}-${Date.now()}.png`;
+        await page.screenshot({ path: shotPath, fullPage: true }).catch(() => undefined);
+        const diagnostics = await (0, zzu_pre_wizard_js_1.describeNavigationState)(page).catch(() => 'diagnostics unavailable');
+        throw new Error('17gz wizard Step 1 (Basic Info) not reached after navigation. ' +
+            `URL: ${page.url()}. Screenshot: ${shotPath}. ${diagnostics}`);
+    }
 }
 //# sourceMappingURL=zzu-navigation.js.map

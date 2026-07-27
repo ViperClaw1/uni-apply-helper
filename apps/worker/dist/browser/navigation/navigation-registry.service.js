@@ -11,22 +11,26 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.NavigationRegistry = void 0;
 const common_1 = require("@nestjs/common");
+const cucas_navigator_js_1 = require("./cucas.navigator.js");
 const generic_navigator_js_1 = require("./generic.navigator.js");
 const sdu_navigator_js_1 = require("./sdu.navigator.js");
 const zzu_navigator_js_1 = require("./zzu.navigator.js");
 let NavigationRegistry = class NavigationRegistry {
     zzuNavigator;
     sduNavigator;
+    cucasNavigator;
     genericNavigator;
-    constructor(zzuNavigator, sduNavigator, genericNavigator) {
+    constructor(zzuNavigator, sduNavigator, cucasNavigator, genericNavigator) {
         this.zzuNavigator = zzuNavigator;
         this.sduNavigator = sduNavigator;
+        this.cucasNavigator = cucasNavigator;
         this.genericNavigator = genericNavigator;
     }
     resolve(formUrl) {
         const navigators = [
             this.zzuNavigator,
             this.sduNavigator,
+            this.cucasNavigator,
             this.genericNavigator,
         ];
         return (navigators.find((navigator) => navigator.matches(formUrl)) ??
@@ -38,6 +42,7 @@ exports.NavigationRegistry = NavigationRegistry = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [zzu_navigator_js_1.ZzuNavigator,
         sdu_navigator_js_1.SduNavigator,
+        cucas_navigator_js_1.CucasNavigator,
         generic_navigator_js_1.GenericNavigator])
 ], NavigationRegistry);
 //# sourceMappingURL=navigation-registry.service.js.map

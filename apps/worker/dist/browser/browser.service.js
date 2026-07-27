@@ -15,7 +15,6 @@ const config_1 = require("@nestjs/config");
 const stealth_config_js_1 = require("./stealth.config.js");
 const profile_path_js_1 = require("./profile-path.js");
 const zzu_session_meta_js_1 = require("./zzu-session-meta.js");
-const zzu_session_loader_js_1 = require("./zzu-session.loader.js");
 const session_loader_js_1 = require("./session.loader.js");
 let BrowserService = class BrowserService {
     configService;
@@ -49,27 +48,17 @@ let BrowserService = class BrowserService {
         return (0, profile_path_js_1.resolveProfileDir)(this.configService, universityId);
     }
     async createSession(options) {
-        const profileDir = (0, profile_path_js_1.resolveProfileDir)(this.configService, options.universityId);
         const headed = options.headed ?? this.configService.get('BROWSER_HEADED') === '1';
-        if (profileDir) {
-            const launchOptions = {
+        const storageState = (0, session_loader_js_1.loadUniversityStorageState)(this.configService, options.universityId);
+        const profileDir = (0, profile_path_js_1.resolveProfileDir)(this.configService, options.universityId);
+        if (profileDir && !storageState) {
+            const context = await stealth_config_js_1.chromium.launchPersistentContext(profileDir, {
                 headless: !headed,
                 args: ['--disable-blink-features=AutomationControlled'],
                 acceptDownloads: true,
                 viewport: { width: 1440, height: 1200 },
                 ...(0, zzu_session_meta_js_1.getZzuContextOptions)((0, zzu_session_meta_js_1.loadZzuSessionMeta)(this.configService)),
-            };
-            const channel = this.configService.get('BROWSER_CHANNEL');
-            if (channel) {
-                launchOptions.channel = channel;
-            }
-            else {
-                const legacyChannel = this.configService.get('ZZU_BROWSER_CHANNEL');
-                if (legacyChannel) {
-                    launchOptions.channel = legacyChannel;
-                }
-            }
-            const context = await stealth_config_js_1.chromium.launchPersistentContext(profileDir, launchOptions);
+            });
             this.activeContexts.add(context);
             const page = context.pages()[0] ?? (await context.newPage());
             return { context, page };
@@ -85,8 +74,6 @@ let BrowserService = class BrowserService {
             return { browser, context, page };
         }
         const browser = await this.getBrowser(headed);
-        const storageState = (0, session_loader_js_1.loadUniversityStorageState)(this.configService, options.universityId) ??
-            (0, zzu_session_loader_js_1.loadZzuStorageState)(this.configService);
         const context = await browser.newContext({
             acceptDownloads: true,
             viewport: { width: 1440, height: 1200 },
@@ -101,11 +88,8 @@ let BrowserService = class BrowserService {
         if (this.browser) {
             return this.browser;
         }
-        const channel = this.configService.get('BROWSER_CHANNEL') ??
-            this.configService.get('ZZU_BROWSER_CHANNEL');
         this.browser = await stealth_config_js_1.chromium.launch({
             headless: !headed,
-            ...(channel ? { channel: channel } : {}),
             args: ['--disable-blink-features=AutomationControlled'],
         });
         return this.browser;

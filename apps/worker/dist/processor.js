@@ -116,36 +116,58 @@ let Processor = Processor_1 = class Processor {
         });
         try {
             await this.browserService.withPage(university.id, async (page) => {
-                const context = {
-                    applicationId: application.id,
-                    batchId: application.batchId,
-                    studentId: profile.id,
-                    universityId: university.id,
-                    profile,
-                    university,
-                    motivationLetterContent,
-                    page,
-                };
-                for (const step of this.getSteps(university)) {
-                    await this.runStep(application.id, step, context);
-                    if (step.name === 'open_form') {
-                        context.screenshotBefore = await this.screenshotService.capture(page, application.id, 'before');
-                        await this.prisma.application.update({
-                            where: { id: application.id },
-                            data: { screenshotBefore: context.screenshotBefore },
-                        });
+                try {
+                    const context = {
+                        applicationId: application.id,
+                        batchId: application.batchId,
+                        studentId: profile.id,
+                        universityId: university.id,
+                        profile,
+                        university,
+                        motivationLetterContent,
+                        page,
+                    };
+                    for (const step of this.getSteps(university)) {
+                        await this.runStep(application.id, step, context);
+                        if (step.name === 'open_form') {
+                            context.screenshotBefore = await this.screenshotService.capture(page, application.id, 'before');
+                            await this.prisma.application.update({
+                                where: { id: application.id },
+                                data: { screenshotBefore: context.screenshotBefore },
+                            });
+                        }
                     }
+                    await this.prisma.application.update({
+                        where: { id: application.id },
+                        data: {
+                            status: 'submitted',
+                            submittedAt: new Date(),
+                            screenshotAfter: context.screenshotAfter,
+                        },
+                    });
+                    await this.recalculateBatchCounters(application.batchId);
+                    await this.notificationsService.notifySubmitted(university.displayName, studentName, context.screenshotAfter);
                 }
-                await this.prisma.application.update({
-                    where: { id: application.id },
-                    data: {
-                        status: 'submitted',
-                        submittedAt: new Date(),
-                        screenshotAfter: context.screenshotAfter,
-                    },
-                });
-                await this.recalculateBatchCounters(application.batchId);
-                await this.notificationsService.notifySubmitted(university.displayName, studentName, context.screenshotAfter);
+                catch (innerError) {
+                    const baseMessage = innerError instanceof Error ? innerError.message : 'Unknown error';
+                    const fromMessage = baseMessage.match(/Screenshot:\s*(https?:\/\/\S+)/i)?.[1];
+                    const shotUrl = fromMessage ??
+                        (await this.screenshotService.captureSafe(page, application.id, 'failed'));
+                    const message = shotUrl && !fromMessage
+                        ? `${baseMessage} Screenshot: ${shotUrl}`
+                        : baseMessage;
+                    if (shotUrl) {
+                        await this.prisma.application
+                            .update({
+                            where: { id: application.id },
+                            data: { screenshotAfter: shotUrl },
+                        })
+                            .catch(() => undefined);
+                    }
+                    throw message === baseMessage
+                        ? innerError
+                        : new Error(message, { cause: innerError });
+                }
             });
         }
         catch (error) {
@@ -158,11 +180,16 @@ let Processor = Processor_1 = class Processor {
                 },
             });
             await this.recalculateBatchCounters(application.batchId);
-            if (error instanceof session_expired_error_js_1.SessionExpiredError) {
-                await this.notificationsService.notifySessionExpired(university.displayName, university.id);
-            }
-            else {
-                await this.notificationsService.notifyFailed(university.displayName, studentName, message);
+            const maxAttempts = job.opts.attempts ?? 1;
+            const attemptNumber = job.attemptsStarted || job.attemptsMade + 1;
+            const isFinalAttempt = attemptNumber >= maxAttempts;
+            if (isFinalAttempt) {
+                if (error instanceof session_expired_error_js_1.SessionExpiredError) {
+                    await this.notificationsService.notifySessionExpired(university.displayName, university.id);
+                }
+                else {
+                    await this.notificationsService.notifyFailed(university.displayName, studentName, message);
+                }
             }
             throw error;
         }
@@ -233,18 +260,26 @@ let Processor = Processor_1 = class Processor {
         });
         if (university) {
             const fileSchema = await this.findFileSchema(universityId);
+            const fields = fileSchema?.fields?.length
+                ? fileSchema.fields
+                : this.toFieldConfigArray(university.fields);
+            const requiredDocuments = fileSchema?.requiredDocuments?.length
+                ? fileSchema.requiredDocuments
+                : this.toStringArray(university.requiredDocuments);
             return {
                 id: university.id,
-                displayName: university.displayName,
-                formUrl: university.formUrl,
-                requiredDocuments: this.toStringArray(university.requiredDocuments),
-                fields: this.toFieldConfigArray(university.fields),
+                displayName: fileSchema?.displayName ?? university.displayName,
+                formUrl: fileSchema?.formUrl || university.formUrl,
+                requiredDocuments,
+                fields,
                 wizard: fileSchema?.wizard,
                 session: fileSchema?.session,
                 agent: fileSchema?.agent,
-                requiresEssay: university.requiresEssay,
-                essayPrompt: university.essayPrompt ?? undefined,
-                notes: university.notes ?? undefined,
+                defaultProgram: fileSchema?.defaultProgram,
+                navigationHints: fileSchema?.navigationHints,
+                requiresEssay: fileSchema?.requiresEssay ?? university.requiresEssay,
+                essayPrompt: fileSchema?.essayPrompt ?? university.essayPrompt ?? undefined,
+                notes: fileSchema?.notes ?? university.notes ?? undefined,
             };
         }
         const fileSchema = await this.findFileSchema(universityId);
@@ -272,6 +307,8 @@ let Processor = Processor_1 = class Processor {
                     wizard: schema.wizard,
                     session: schema.session,
                     agent: schema.agent,
+                    defaultProgram: schema.defaultProgram,
+                    navigationHints: schema.navigationHints,
                     requiresEssay: schema.requiresEssay ?? false,
                     essayPrompt: schema.essayPrompt,
                     notes: schema.notes,
@@ -407,7 +444,10 @@ let Processor = Processor_1 = class Processor {
         }
         const field = value;
         return (typeof field.selector === 'string' &&
-            (typeof field.mapsTo === 'string' || field.mapsTo === null) &&
+            (field.mapsTo === null ||
+                typeof field.mapsTo === 'string' ||
+                (Array.isArray(field.mapsTo) &&
+                    field.mapsTo.every((p) => typeof p === 'string'))) &&
             typeof field.type === 'string' &&
             typeof field.required === 'boolean');
     }

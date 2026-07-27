@@ -79,7 +79,12 @@ let NotificationsService = NotificationsService_1 = class NotificationsService {
             this.logger.debug(`Skipped Telegram notification: ${text}`);
             return;
         }
-        await this.bot.api.sendMessage(this.chatId, text, { parse_mode: 'HTML' });
+        try {
+            await this.bot.api.sendMessage(this.chatId, text, { parse_mode: 'HTML' });
+        }
+        catch (error) {
+            this.logger.error(`Telegram sendMessage failed (chat ${this.chatId}): ${error instanceof Error ? error.message : String(error)}`);
+        }
     }
     escapeHtml(value) {
         return String(value ?? '')

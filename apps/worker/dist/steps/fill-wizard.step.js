@@ -19,7 +19,7 @@ let FillWizardStep = class FillWizardStep {
         this.formFiller = formFiller;
     }
     async execute(context) {
-        await this.formFiller.processWizard(context.page, context.profile, context.university, context.motivationLetterContent);
+        await this.formFiller.processWizard(context.page, context.profile, context.university, context.motivationLetterContent, context.applicationId);
     }
 };
 exports.FillWizardStep = FillWizardStep;

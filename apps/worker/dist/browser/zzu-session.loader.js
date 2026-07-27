@@ -39,6 +39,6 @@ async function isCsrfBlocked(page) {
     return /CSRF attack protection|security department/i.test(body);
 }
 function isZzuFormUrl(formUrl) {
-    return /zzu\.17gz\.org/i.test(formUrl);
+    return /(?:^|\.)17gz\.org|kmmc\.cn/i.test(formUrl);
 }
 //# sourceMappingURL=zzu-session.loader.js.map

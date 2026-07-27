@@ -16,6 +16,7 @@ const gemini_client_js_1 = require("./agent/gemini/gemini.client.js");
 const page_observer_js_1 = require("./agent/observe/page.observer.js");
 const agent_planner_js_1 = require("./agent/think/agent.planner.js");
 const browser_service_js_1 = require("./browser/browser.service.js");
+const cucas_navigator_js_1 = require("./browser/navigation/cucas.navigator.js");
 const generic_navigator_js_1 = require("./browser/navigation/generic.navigator.js");
 const navigation_registry_service_js_1 = require("./browser/navigation/navigation-registry.service.js");
 const sdu_navigator_js_1 = require("./browser/navigation/sdu.navigator.js");
@@ -30,6 +31,7 @@ const log_result_step_js_1 = require("./steps/log-result.step.js");
 const field_mapper_js_1 = require("./filler/field.mapper.js");
 const file_attacher_js_1 = require("./filler/file.attacher.js");
 const form_filler_js_1 = require("./filler/form.filler.js");
+const ocr_passport_uploader_js_1 = require("./filler/ocr-passport.uploader.js");
 const wizard_field_groups_js_1 = require("./filler/wizard-field-groups.js");
 const wizard_navigator_js_1 = require("./filler/wizard.navigator.js");
 const notifications_service_js_1 = require("./notifications/notifications.service.js");
@@ -48,6 +50,7 @@ exports.AppModule = AppModule = __decorate([
             pre_wizard_navigator_js_1.PreWizardNavigator,
             zzu_navigator_js_1.ZzuNavigator,
             sdu_navigator_js_1.SduNavigator,
+            cucas_navigator_js_1.CucasNavigator,
             generic_navigator_js_1.GenericNavigator,
             navigation_registry_service_js_1.NavigationRegistry,
             screenshot_service_js_1.ScreenshotService,
@@ -59,6 +62,7 @@ exports.AppModule = AppModule = __decorate([
             form_agent_js_1.FormAgent,
             field_mapper_js_1.FieldMapper,
             file_attacher_js_1.FileAttacher,
+            ocr_passport_uploader_js_1.OcrPassportUploader,
             wizard_navigator_js_1.WizardNavigator,
             wizard_field_groups_js_1.WizardFieldGroups,
             form_filler_js_1.FormFiller,

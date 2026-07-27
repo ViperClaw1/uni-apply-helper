@@ -8,14 +8,16 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var ScreenshotService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ScreenshotService = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const client_s3_1 = require("@aws-sdk/client-s3");
 const node_crypto_1 = require("node:crypto");
-let ScreenshotService = class ScreenshotService {
+let ScreenshotService = ScreenshotService_1 = class ScreenshotService {
     configService;
+    logger = new common_1.Logger(ScreenshotService_1.name);
     s3;
     bucket;
     publicUrl;
@@ -56,9 +58,21 @@ let ScreenshotService = class ScreenshotService {
         }));
         return `${this.publicUrl.replace(/\/$/, '')}/${key}`;
     }
+    async captureSafe(page, applicationId, label) {
+        try {
+            if (page.isClosed()) {
+                return undefined;
+            }
+            return await this.capture(page, applicationId, label);
+        }
+        catch (error) {
+            this.logger.warn(`Screenshot capture failed (${label}): ${error instanceof Error ? error.message : String(error)}`);
+            return undefined;
+        }
+    }
 };
 exports.ScreenshotService = ScreenshotService;
-exports.ScreenshotService = ScreenshotService = __decorate([
+exports.ScreenshotService = ScreenshotService = ScreenshotService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [config_1.ConfigService])
 ], ScreenshotService);

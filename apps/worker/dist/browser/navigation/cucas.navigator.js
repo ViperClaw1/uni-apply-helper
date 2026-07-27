@@ -6,20 +6,19 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ZzuNavigator = void 0;
+exports.CucasNavigator = void 0;
 const common_1 = require("@nestjs/common");
-const zzu_navigation_js_1 = require("../zzu-navigation.js");
-const zzu_session_loader_js_1 = require("../zzu-session.loader.js");
-let ZzuNavigator = class ZzuNavigator {
+const cucas_navigation_js_1 = require("../cucas-navigation.js");
+let CucasNavigator = class CucasNavigator {
     matches(formUrl) {
-        return (0, zzu_session_loader_js_1.isZzuFormUrl)(formUrl);
+        return (0, cucas_navigation_js_1.isCucasChiwestUrl)(formUrl);
     }
     async navigate(context) {
-        await (0, zzu_navigation_js_1.navigateToZzuApplication)(context.page, context.university.formUrl, context.profile, context.universityId, context.university.defaultProgram, context.university.navigationHints?.programText);
+        await (0, cucas_navigation_js_1.navigateToCucasApplication)(context.page, context.university.formUrl, context.profile, context.universityId);
     }
 };
-exports.ZzuNavigator = ZzuNavigator;
-exports.ZzuNavigator = ZzuNavigator = __decorate([
+exports.CucasNavigator = CucasNavigator;
+exports.CucasNavigator = CucasNavigator = __decorate([
     (0, common_1.Injectable)()
-], ZzuNavigator);
-//# sourceMappingURL=zzu.navigator.js.map
+], CucasNavigator);
+//# sourceMappingURL=cucas.navigator.js.map

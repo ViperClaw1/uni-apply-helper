@@ -55,12 +55,15 @@ let PreWizardNavigator = class PreWizardNavigator {
             .map((field) => field.selector)
             .slice(0, 8);
         for (const selector of selectors) {
-            if ((await page.locator(selector).count()) > 0) {
+            const locator = page.locator(selector).first();
+            if ((await locator.count()) === 0) {
+                continue;
+            }
+            if (await locator.isVisible().catch(() => false)) {
                 return true;
             }
         }
-        const bodyText = await page.locator('body').innerText();
-        return /save and next|basic info(rmation)?/i.test(bodyText);
+        return false;
     }
     async chooseProgramIfNeeded(page) {
         const bodyText = await page.locator('body').innerText();
@@ -74,7 +77,9 @@ let PreWizardNavigator = class PreWizardNavigator {
             await option.click({ force: true });
         }
         await page.waitForTimeout(400);
-        const nextButton = page.getByRole('button', { name: /^Next$/i }).first();
+        const nextButton = page
+            .getByRole('button', { name: /^(Next|下一步)$/i })
+            .first();
         if ((await nextButton.count()) > 0) {
             await nextButton.click({ force: true });
             await page
@@ -83,7 +88,7 @@ let PreWizardNavigator = class PreWizardNavigator {
             return true;
         }
         const fallback = page
-            .locator('button:has-text("Next"), input[value="Next"]')
+            .locator('button:has-text("Next"), button:has-text("下一步"), input[value="Next"], input[value="下一步"]')
             .first();
         if ((await fallback.count()) > 0) {
             await fallback.click({ force: true });

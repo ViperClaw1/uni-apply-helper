@@ -17,6 +17,13 @@ export class AgentPlanner {
     return this.gemini.isAvailable();
   }
 
+  async generateJson<T>(options: {
+    prompt: string;
+    temperature?: number;
+  }): Promise<T> {
+    return this.gemini.generateJson<T>(options);
+  }
+
   async decideNextAction(
     observation: AgentObservation,
     context: AgentContext,

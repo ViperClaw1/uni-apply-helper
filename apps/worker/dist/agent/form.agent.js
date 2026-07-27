@@ -144,7 +144,11 @@ let FormAgent = FormAgent_1 = class FormAgent {
             }
             hints.push({
                 mapsTo: field.mapsTo,
-                label: field.labelHint ?? field.mapsTo ?? field.selector,
+                label: field.labelHint ??
+                    (Array.isArray(field.mapsTo)
+                        ? field.mapsTo[0]
+                        : field.mapsTo) ??
+                    field.selector,
                 type: field.type,
                 value: String(value),
                 required: field.required,

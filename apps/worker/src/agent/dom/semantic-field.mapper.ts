@@ -20,6 +20,68 @@ export class SemanticFieldMapper {
     return this.planner.isAvailable();
   }
 
+  /**
+   * When lexical select matching fails, ask Gemini which option best matches
+   * the desired value semantically (e.g. "High school diploma" → "Senior high").
+   */
+  async semanticSelectMatch(options: {
+    desiredValue: string;
+    candidates: string[];
+    selectOptions: Array<{ value: string; label: string }>;
+    fieldLabel?: string;
+  }): Promise<{ value: string; label: string } | null> {
+    if (!this.isAvailable() || options.selectOptions.length === 0) {
+      return null;
+    }
+
+    try {
+      const response = await this.planner.generateJson<{
+        value?: string;
+        label?: string;
+        confidence?: number;
+      }>({
+        prompt: [
+          'You match a desired form value to the closest option in a <select>.',
+          'Return ONLY JSON: {"value":"<option value>","label":"<option text>","confidence":0-1}',
+          'Pick the semantically closest option. Prefer exact/near-exact meaning over vague matches.',
+          'If nothing is reasonably close, return {"value":"","label":"","confidence":0}.',
+          `Field: ${options.fieldLabel ?? '(unknown)'}`,
+          `Desired value: ${options.desiredValue}`,
+          `Also tried aliases: ${options.candidates.join(' | ')}`,
+          'Available options (value || label):',
+          ...options.selectOptions.map((o) => `- ${o.value} || ${o.label}`),
+        ].join('\n'),
+        temperature: 0,
+      });
+
+      const matched = options.selectOptions.find(
+        (o) =>
+          (response.value && o.value === response.value) ||
+          (response.label &&
+            o.label.trim().toLowerCase() === response.label.trim().toLowerCase()),
+      );
+
+      if (!matched || (response.confidence ?? 0) < 0.4) {
+        this.logger.warn(
+          `Semantic select match rejected for "${options.desiredValue}"` +
+            ` (confidence=${response.confidence ?? 'n/a'})`,
+        );
+        return null;
+      }
+
+      this.logger.log(
+        `Semantic select: "${options.desiredValue}" → "${matched.label}"` +
+          ` (confidence=${response.confidence})`,
+      );
+      return matched;
+    } catch (error) {
+      this.logger.warn(
+        `Semantic select match failed: ${error instanceof Error ? error.message : 'unknown'}`,
+      );
+      return null;
+    }
+  }
+
   async resolveLocator(
     page: Page,
     field: FieldConfig,
