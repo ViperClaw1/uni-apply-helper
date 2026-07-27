@@ -549,14 +549,54 @@
       "selector": "input[type=\"radio\"][name=\"applyEx.hasCriminalRecord\"]",
       "mapsTo": null,
       "type": "radio",
-      "required": false,
+      "required": true,
       "wizardStep": 4,
       "labelHint": "Criminal Record",
       "options": ["No", "Yes"]
     },
     {
+      "selector": "input[name=\"fm.name\"]",
+      "mapsTo": "familyMembers.0.fullName",
+      "type": "text",
+      "required": true,
+      "wizardStep": 4,
+      "labelHint": "Family Member Name"
+    },
+    {
+      "selector": "input[name=\"fm.phone\"]",
+      "mapsTo": ["familyMembers.0.phone", "personal.phone"],
+      "type": "text",
+      "required": true,
+      "wizardStep": 4,
+      "labelHint": "Family Member Phone"
+    },
+    {
+      "selector": "input[name=\"fm.email\"]",
+      "mapsTo": ["familyMembers.0.email", "personal.email"],
+      "type": "text",
+      "required": true,
+      "wizardStep": 4,
+      "labelHint": "Family Member Email"
+    },
+    {
+      "selector": "input[name=\"fm.duty\"]",
+      "mapsTo": "familyMembers.0.position",
+      "type": "text",
+      "required": true,
+      "wizardStep": 4,
+      "labelHint": "Family Member Position"
+    },
+    {
+      "selector": "input[name=\"fm.workPlace\"]",
+      "mapsTo": "familyMembers.0.company",
+      "type": "text",
+      "required": true,
+      "wizardStep": 4,
+      "labelHint": "Family Member Work Place"
+    },
+    {
       "selector": "input[name=\"apply.emergencyName\"]",
-      "mapsTo": "emergencyContact.name",
+      "mapsTo": ["emergencyContact.name", "guarantor.name"],
       "type": "text",
       "required": true,
       "wizardStep": 4,
@@ -564,14 +604,14 @@
     },
     {
       "selector": "input[name=\"apply.emergencyPhone\"]",
-      "mapsTo": "emergencyContact.phone",
+      "mapsTo": ["emergencyContact.phone", "guarantor.phone", "personal.phone"],
       "type": "text",
       "required": false,
       "wizardStep": 4
     },
     {
       "selector": "input[name=\"apply.emergencyMobile\"]",
-      "mapsTo": "emergencyContact.phone",
+      "mapsTo": ["emergencyContact.phone", "guarantor.phone", "personal.phone"],
       "type": "text",
       "required": true,
       "wizardStep": 4,
@@ -579,18 +619,72 @@
     },
     {
       "selector": "input[name=\"apply.emergencyEmail\"]",
-      "mapsTo": "emergencyContact.email",
+      "mapsTo": ["emergencyContact.email", "guarantor.email", "personal.email"],
       "type": "text",
       "required": false,
       "wizardStep": 4
     },
     {
+      "selector": "input[name=\"apply.emergencyAddress\"]",
+      "mapsTo": ["emergencyContact.homeAddress", "guarantor.homeAddress", "personal.permanentAddress"],
+      "type": "text",
+      "required": true,
+      "wizardStep": 4,
+      "labelHint": "Guarantor Address"
+    },
+    {
+      "selector": "input[name=\"apply.emergencyZip\"]",
+      "mapsTo": "personal.postCode",
+      "type": "text",
+      "required": true,
+      "wizardStep": 4,
+      "labelHint": "Emergency Zip"
+    },
+    {
       "selector": "input[name=\"apply.selfSupporter\"]",
       "mapsTo": "personal.fullName",
       "type": "text",
+      "required": true,
+      "wizardStep": 4,
+      "labelHint": "Financial Supporter Name"
+    },
+    {
+      "selector": "input[name=\"apply.selfphone\"]",
+      "mapsTo": "personal.phone",
+      "type": "text",
+      "required": true,
+      "wizardStep": 4,
+      "labelHint": "Financial Supporter Tel"
+    },
+    {
+      "selector": "input[name=\"apply.selfwork\"]",
+      "mapsTo": "personal.currentInstitution",
+      "type": "text",
+      "required": true,
+      "wizardStep": 4,
+      "labelHint": "Financial Supporter Organization"
+    },
+    {
+      "selector": "input[name=\"apply.ssrelative\"]",
+      "mapsTo": "guarantor.relationship",
+      "type": "text",
       "required": false,
       "wizardStep": 4,
-      "labelHint": "Self Supporter"
+      "labelHint": "Relationship with applicant"
+    },
+    {
+      "selector": "input[name=\"apply.selfaddress\"]",
+      "mapsTo": "personal.permanentAddress",
+      "type": "text",
+      "required": false,
+      "wizardStep": 4
+    },
+    {
+      "selector": "input[name=\"apply.selfemail\"]",
+      "mapsTo": "personal.email",
+      "type": "text",
+      "required": false,
+      "wizardStep": 4
     },
     {
       "selector": "input[name=\"apply.homeMobile\"]",

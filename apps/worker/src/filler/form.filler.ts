@@ -141,6 +141,9 @@ export class FormFiller {
         if (step === 3 && this.isPkuLike(university)) {
           await this.ensurePkuStep3RequiredGaps(page, profile);
         }
+        if (step === 4 && this.isPkuLike(university)) {
+          await this.ensurePkuStep4RequiredGaps(page, profile);
+        }
         await this.dismissFormOverlays(page);
 
         // Photo already attached in OCR Step-1 hook — skip duplicate.
@@ -1476,9 +1479,330 @@ export class FormFiller {
   }
 
   /**
-   * PKU Step 2 gaps — FORCE-write critical fields by name (schema/mapsTo can lag deploy).
-   * Rec#2 + yydjzs score/date must be non-empty or Save and Next shows a Warning dialog.
+   * Step 4: criminal record = No; fill both Family rows (duplicate fm.* names);
+   * financial supporter + emergency zip. Missing duty/workplace → "unemployed".
    */
+  private async ensurePkuStep4RequiredGaps(
+    page: Page,
+    profile: StudentProfile,
+  ): Promise<void> {
+    await this.wizardNavigator.waitForProcessingDone(page, 60_000);
+    await this.dismissFormOverlays(page);
+    await this.closeDatePickers(page);
+
+    // Criminal record → No (value=0 on 17gz)
+    await page.evaluate(() => {
+      const no = document.querySelector(
+        'input[name="applyEx.hasCriminalRecord"][value="0"]',
+      ) as HTMLInputElement | null;
+      const yes = document.querySelector(
+        'input[name="applyEx.hasCriminalRecord"][value="1"]',
+      ) as HTMLInputElement | null;
+      if (no) {
+        if (yes) {
+          yes.checked = false;
+        }
+        no.checked = true;
+        no.click();
+        no.dispatchEvent(new Event('input', { bubbles: true }));
+        no.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+
+    const fullName =
+      [profile.personal.surname, profile.personal.givenName]
+        .filter(Boolean)
+        .join(' ')
+        .trim() || 'Applicant';
+    const phone =
+      profile.personal.phone?.trim() ||
+      profile.guarantor?.phone?.trim() ||
+      '13800000000';
+    const email =
+      profile.personal.email?.trim() ||
+      profile.guarantor?.email?.trim() ||
+      'applicant@example.com';
+    const nationality =
+      profile.personal.nationality?.trim() || 'Russian Federation';
+    const address =
+      profile.personal.permanentAddress?.trim() ||
+      profile.guarantor?.homeAddress?.trim() ||
+      'N/A';
+    const zip = profile.personal.postCode?.trim() || '000000';
+
+    const familySlots = [0, 1].map((i) => {
+      const fm = profile.familyMembers?.[i];
+      const fallbackName =
+        i === 0
+          ? profile.guarantor?.name?.trim() || fullName
+          : profile.emergencyContact?.name?.trim() ||
+            profile.guarantor?.name?.trim() ||
+            fullName;
+      const fallbackPhone =
+        i === 0
+          ? profile.guarantor?.phone?.trim() || phone
+          : profile.emergencyContact?.phone?.trim() ||
+            profile.guarantor?.phone?.trim() ||
+            phone;
+      const fallbackEmail =
+        i === 0
+          ? profile.guarantor?.email?.trim() || email
+          : profile.emergencyContact?.email?.trim() ||
+            profile.guarantor?.email?.trim() ||
+            email;
+      const fallbackCompany =
+        i === 0
+          ? profile.guarantor?.company?.trim()
+          : profile.emergencyContact?.company?.trim() ||
+            profile.guarantor?.company?.trim();
+      const fallbackPosition =
+        i === 0
+          ? profile.guarantor?.position?.trim()
+          : profile.emergencyContact?.company
+            ? undefined
+            : profile.guarantor?.position?.trim();
+
+      const relationshipRaw =
+        fm?.relationship?.trim() ||
+        (i === 0
+          ? profile.guarantor?.relationship?.trim()
+          : profile.emergencyContact?.relationship?.trim()) ||
+        (i === 0 ? 'Father' : 'Mother');
+
+      return {
+        relative: this.normalizeFamilyRelationship(relationshipRaw),
+        name: fm?.fullName?.trim() || fallbackName,
+        phone: fm?.phone?.trim() || fallbackPhone,
+        email: fm?.email?.trim() || fallbackEmail,
+        duty: fm?.position?.trim() || fallbackPosition || 'unemployed',
+        workPlace: fm?.company?.trim() || fallbackCompany || 'unemployed',
+        nationality: fm?.nationality?.trim() || nationality,
+        bornedDate: this.familyBirthDateFromAge(fm?.age),
+      };
+    });
+
+    await page.evaluate((slots) => {
+      const jq = (
+        window as unknown as {
+          jQuery?: (el: Element) => {
+            val: (v?: string) => { trigger: (e: string) => unknown };
+          };
+        }
+      ).jQuery;
+
+      const setInput = (name: string, index: number, value: string) => {
+        const els = [
+          ...document.querySelectorAll(`input[name="${name}"]`),
+        ] as HTMLInputElement[];
+        const el = els[index];
+        if (!el || !value) {
+          return;
+        }
+        el.focus();
+        el.value = value;
+        el.setAttribute('value', value);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        el.dispatchEvent(new Event('blur', { bubbles: true }));
+        if (typeof jq === 'function') {
+          try {
+            jq(el).val(value).trigger('input');
+            jq(el).val(value).trigger('change');
+          } catch {
+            // ignore
+          }
+        }
+      };
+
+      const setSelectByLabel = (name: string, index: number, label: string) => {
+        const sels = [
+          ...document.querySelectorAll(`select[name="${name}"]`),
+        ] as HTMLSelectElement[];
+        const sel = sels[index];
+        if (!sel || !label) {
+          return;
+        }
+        const want = label.trim().toLowerCase();
+        const opt = Array.from(sel.options).find((o) => {
+          const t = o.text.replace(/\s+/g, ' ').trim().toLowerCase();
+          return t === want || t.includes(want) || want.includes(t);
+        });
+        if (!opt?.value) {
+          return;
+        }
+        sel.value = opt.value;
+        sel.dispatchEvent(new Event('input', { bubbles: true }));
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+        if (typeof jq === 'function') {
+          try {
+            jq(sel).val(opt.value).trigger('chosen:updated');
+            jq(sel).val(opt.value).trigger('change');
+          } catch {
+            // ignore
+          }
+        }
+      };
+
+      for (let i = 0; i < slots.length; i += 1) {
+        const s = slots[i];
+        setSelectByLabel('fm.relativeId', i, s.relative);
+        setSelectByLabel('fm.countryId', i, s.nationality);
+        setInput('fm.name', i, s.name);
+        setInput('fm.phone', i, s.phone);
+        setInput('fm.email', i, s.email);
+        setInput('fm.duty', i, s.duty);
+        setInput('fm.workPlace', i, s.workPlace);
+        if (s.bornedDate) {
+          setInput('fm.bornedDate', i, s.bornedDate);
+        }
+      }
+    }, familySlots);
+
+    const selfWork =
+      profile.personal.currentInstitution?.trim() ||
+      profile.workExperience?.[0]?.company?.trim() ||
+      profile.education?.[0]?.institution?.trim() ||
+      'unemployed';
+
+    const singleFills: Array<[string, string]> = [
+      ['apply.selfSupporter', fullName],
+      ['apply.selfphone', phone],
+      ['apply.selfwork', selfWork],
+      [
+        'apply.ssrelative',
+        profile.guarantor?.relationship?.trim() || 'Self',
+      ],
+      ['apply.selfaddress', address],
+      ['apply.selfemail', email],
+      [
+        'apply.emergencyName',
+        profile.emergencyContact?.name?.trim() ||
+          profile.guarantor?.name?.trim() ||
+          fullName,
+      ],
+      [
+        'apply.emergencyMobile',
+        profile.emergencyContact?.phone?.trim() ||
+          profile.guarantor?.phone?.trim() ||
+          phone,
+      ],
+      [
+        'apply.emergencyPhone',
+        profile.emergencyContact?.phone?.trim() ||
+          profile.guarantor?.phone?.trim() ||
+          phone,
+      ],
+      [
+        'apply.emergencyEmail',
+        profile.emergencyContact?.email?.trim() ||
+          profile.guarantor?.email?.trim() ||
+          email,
+      ],
+      [
+        'apply.emergencyAddress',
+        profile.emergencyContact?.homeAddress?.trim() ||
+          profile.guarantor?.homeAddress?.trim() ||
+          address,
+      ],
+      ['apply.emergencyZip', zip],
+    ];
+
+    await page.evaluate((rows) => {
+      const jq = (
+        window as unknown as {
+          jQuery?: (el: Element) => {
+            val: (v?: string) => { trigger: (e: string) => unknown };
+          };
+        }
+      ).jQuery;
+      for (const [name, value] of rows) {
+        const el = document.querySelector(
+          `input[name="${name}"], textarea[name="${name}"]`,
+        ) as HTMLInputElement | null;
+        if (!el || !value) {
+          continue;
+        }
+        // Don't wipe a longer already-filled value (OCR / prior fill).
+        if (el.value?.trim() && el.value.trim().length >= value.trim().length) {
+          continue;
+        }
+        el.value = value;
+        el.setAttribute('value', value);
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        if (typeof jq === 'function') {
+          try {
+            jq(el).val(value).trigger('change');
+          } catch {
+            // ignore
+          }
+        }
+      }
+    }, singleFills);
+
+    // Force-empty requireds that skip-if-filled left blank
+    for (const [name, value] of singleFills) {
+      const empty = await page.evaluate((n) => {
+        const el = document.querySelector(
+          `input[name="${n}"]`,
+        ) as HTMLInputElement | null;
+        return !el || !el.value?.trim();
+      }, name);
+      if (empty) {
+        await this.setInputValueJs(page, `input[name="${name}"]`, value);
+      }
+    }
+
+    await this.closeDatePickers(page);
+    await this.dismissFormOverlays(page);
+  }
+
+  private normalizeFamilyRelationship(raw: string): string {
+    const v = raw.trim().toLowerCase();
+    if (/father|папа|отец|dad/.test(v)) {
+      return 'Father';
+    }
+    if (/mother|мама|мать|mom/.test(v)) {
+      return 'Mother';
+    }
+    if (/spouse|husband|wife|супруг|муж|жена/.test(v)) {
+      return 'Spouse';
+    }
+    if (/brother|брат/.test(v)) {
+      return 'Brother';
+    }
+    if (/sister|сестра/.test(v)) {
+      return 'Sister';
+    }
+    if (/uncle|дядя/.test(v)) {
+      return 'Uncle';
+    }
+    if (/child|сын|дочь|дети/.test(v)) {
+      return 'Children';
+    }
+    // Already a valid 17gz option?
+    const known = [
+      'Father',
+      'Mother',
+      'Spouse',
+      'Uncle',
+      'Brother',
+      'Sister',
+      'Others',
+      'Children',
+    ];
+    const hit = known.find((k) => k.toLowerCase() === v);
+    return hit || 'Others';
+  }
+
+  private familyBirthDateFromAge(age?: number): string | undefined {
+    if (age === undefined || age === null || Number.isNaN(age) || age < 1) {
+      return undefined;
+    }
+    const year = new Date().getFullYear() - Math.floor(age);
+    return `${year}-01-01`;
+  }
+
   /**
    * Step 3: force China/work history = No (hides conditional required fields),
    * fill Institute Location (sh.countryId).

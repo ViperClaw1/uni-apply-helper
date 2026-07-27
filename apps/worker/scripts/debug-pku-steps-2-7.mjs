@@ -188,6 +188,14 @@ function resolveValue(field) {
   }
 
   for (const path of paths) {
+    if (path === 'personal.fullName') {
+      const full = [profile.personal.surname, profile.personal.givenName]
+        .filter(Boolean)
+        .join(' ')
+        .trim();
+      if (full) return full;
+      continue;
+    }
     if (path === 'personal.maritalStatus') return 'Unmarried';
     if (path === 'personal.studiedInChina' || path === 'personal.beenToChina') {
       return normalizeYesNo(getByPath(profile, path), 'No');
@@ -233,6 +241,8 @@ function resolveValue(field) {
     paths.includes('emergencyContact.name')
   ) {
     return (
+      profile.guarantor?.name ||
+      profile.emergencyContact?.name ||
       `${profile.personal.surname} ${profile.personal.givenName}`.trim() ||
       'Recommender'
     );
@@ -248,6 +258,88 @@ function resolveValue(field) {
     paths.includes('emergencyContact.email')
   ) {
     return profile.personal.email || 'recommender@example.com';
+  }
+
+  // Family member gaps (PKU step 4) — mirror FieldMapper soft defaults
+  if (
+    /familyMembers\.\d+\.position/.test(paths.join('|')) ||
+    /fm\.duty/i.test(field.selector || '')
+  ) {
+    return 'unemployed';
+  }
+  if (
+    /familyMembers\.\d+\.company/.test(paths.join('|')) ||
+    /fm\.workPlace/i.test(field.selector || '')
+  ) {
+    return 'unemployed';
+  }
+  if (
+    (/familyMembers\.\d+\.fullName/.test(paths.join('|')) ||
+      /fm\.name/i.test(field.selector || '')) &&
+    field.required
+  ) {
+    return (
+      profile.guarantor?.name?.trim() ||
+      profile.emergencyContact?.name?.trim() ||
+      `${profile.personal.surname} ${profile.personal.givenName}`.trim() ||
+      'Family Member'
+    );
+  }
+  if (
+    (/familyMembers\.\d+\.phone/.test(paths.join('|')) ||
+      /fm\.phone/i.test(field.selector || '')) &&
+    field.required
+  ) {
+    return (
+      profile.guarantor?.phone?.trim() ||
+      profile.personal.phone ||
+      '13800000000'
+    );
+  }
+  if (
+    (/familyMembers\.\d+\.email/.test(paths.join('|')) ||
+      /fm\.email/i.test(field.selector || '')) &&
+    field.required
+  ) {
+    return (
+      profile.guarantor?.email?.trim() ||
+      profile.personal.email ||
+      'family@example.com'
+    );
+  }
+  if (
+    paths.includes('personal.postCode') ||
+    /emergencyZip|homeZip/i.test(field.selector || '')
+  ) {
+    return profile.personal.postCode?.trim() || '000000';
+  }
+  if (
+    (paths.includes('personal.currentInstitution') ||
+      /selfwork/i.test(field.selector || '')) &&
+    field.required
+  ) {
+    return (
+      profile.personal.currentInstitution?.trim() ||
+      profile.education[0]?.institution?.trim() ||
+      'unemployed'
+    );
+  }
+  if (
+    (paths.includes('personal.phone') ||
+      /selfphone|homeMobile/i.test(field.selector || '')) &&
+    field.required
+  ) {
+    return (
+      profile.personal.phone?.trim() ||
+      profile.guarantor?.phone?.trim() ||
+      '13800000000'
+    );
+  }
+  if (paths.includes('personal.fullName') && field.required) {
+    return (
+      `${profile.personal.surname} ${profile.personal.givenName}`.trim() ||
+      'Applicant'
+    );
   }
 
   if (
@@ -387,8 +479,41 @@ const homeMobile = fieldsForStep(5).find((f) =>
 );
 assert(Boolean(resolveValue(homeMobile)), 'homeMobile resolved');
 
+const fmName = fieldsForStep(4).find((f) => f.selector?.includes('fm.name'));
+const fmDuty = fieldsForStep(4).find((f) => f.selector?.includes('fm.duty'));
+const fmWork = fieldsForStep(4).find((f) => f.selector?.includes('fm.workPlace'));
+const selfName = fieldsForStep(4).find((f) =>
+  f.selector?.includes('selfSupporter'),
+);
+assert(
+  resolveValue(fmName) === 'Kvochkina Tatiana Fedorovna',
+  `fm.name → guarantor (got ${resolveValue(fmName)})`,
+);
+assert(
+  resolveValue(fmDuty) === 'unemployed',
+  `fm.duty → unemployed (got ${resolveValue(fmDuty)})`,
+);
+assert(
+  resolveValue(fmWork) === 'unemployed',
+  `fm.workPlace → unemployed (got ${resolveValue(fmWork)})`,
+);
+assert(
+  resolveValue(selfName) === 'KVOCHKINA ALINA',
+  `selfSupporter → fullName (got ${resolveValue(selfName)})`,
+);
+
 console.log('\n=== Playwright fixtures: step 2 study plan + step 3–4 radios ===');
-const browser = await chromium.launch({ headless: true });
+let browser;
+try {
+  browser = await chromium.launch({ headless: true });
+} catch (err) {
+  console.warn(
+    `SKIP: Playwright browser unavailable (${err instanceof Error ? err.message.split('\n')[0] : err})`,
+  );
+  console.warn('  Run: pnpm exec playwright install');
+}
+
+if (browser) {
 const page = await browser.newPage();
 await page.setContent(`<!DOCTYPE html><html><body>
   <h3>Step 2</h3>
@@ -544,6 +669,7 @@ assert(
 );
 
 await browser.close();
+}
 
 console.log('\n=== Risks / live follow-ups ===');
 console.log(
