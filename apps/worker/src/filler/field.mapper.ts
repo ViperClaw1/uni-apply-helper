@@ -313,15 +313,20 @@ export class FieldMapper {
 
   private normalizeSex(value: string): string {
     const v = value.trim().toLowerCase();
+    // Handles "Женский (Female)", "Female", "f", etc.
     if (
       ['f', 'female', 'woman', 'ж', 'жен', 'женский'].includes(v) ||
-      v.startsWith('fem')
+      v.startsWith('fem') ||
+      /\bfemale\b/.test(v) ||
+      /женск/.test(v)
     ) {
       return 'Female';
     }
     if (
       ['m', 'male', 'man', 'м', 'муж', 'мужской'].includes(v) ||
-      v.startsWith('mal')
+      (v.startsWith('mal') && !v.startsWith('mar')) ||
+      (/\bmale\b/.test(v) && !/\bfemale\b/.test(v)) ||
+      (/мужск/.test(v) && !/женск/.test(v))
     ) {
       return 'Male';
     }

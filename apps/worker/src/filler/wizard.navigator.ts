@@ -518,9 +518,10 @@ export class WizardNavigator {
     await this.waitForProcessingDone(page, 60_000);
   }
 
-  private async waitForProcessingDone(
+  /** Wait out 17gz "It's processing! Please wait..." messager/mask. */
+  async waitForProcessingDone(
     page: Page,
-    timeoutMs: number,
+    timeoutMs = 60_000,
   ): Promise<void> {
     await page
       .waitForFunction(() => {

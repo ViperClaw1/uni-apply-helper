@@ -113,9 +113,12 @@ export class FormFiller {
           this.isPkuLike(university)
         ) {
           await this.ocrPassportUploader.upload(page, profile);
+          // Photo OCR often leaves "It's processing!" up — don't fill under it.
+          await this.wizardNavigator.waitForProcessingDone(page, 90_000);
         }
 
         const fields = this.wizardFieldGroups.fieldsForStep(university, step);
+        await this.wizardNavigator.waitForProcessingDone(page, 60_000);
         await this.dismissFormOverlays(page);
         await this.fillFieldBatch(
           page,
@@ -209,6 +212,7 @@ export class FormFiller {
     fillMode: 'schema' | 'agent' | 'hybrid',
   ): Promise<void> {
     for (const field of fields) {
+      await this.wizardNavigator.waitForProcessingDone(page, 60_000);
       await this.dismissFormOverlays(page);
 
       const value = this.fieldMapper.getValue(
@@ -469,8 +473,8 @@ export class FormFiller {
 
   /**
    * 17gz radios use numeric values (0/1, 1/2) while schema/profile give
-   * "No"/"Unmarried". Match within the named group only — never page-wide
-   * getByRole (picks wrong Yes/No) and never locator.first() (Yes on 17gz).
+   * "No"/"Unmarried"/"Женский (Female)". Match within the named group only —
+   * never page-wide getByRole and never locator.first() (Yes on 17gz).
    */
   private async fillRadioControl(
     page: Page,
@@ -486,10 +490,12 @@ export class FormFiller {
       );
     }
 
-    const want = normalizedValue.trim();
+    await this.wizardNavigator.waitForProcessingDone(page, 60_000);
+
+    const want = this.canonicalizeRadioValue(normalizedValue.trim());
     const wantLower = want.toLowerCase();
     const valueAliases: Record<string, string[]> = {
-      no: ['0', 'n', 'no', 'false', '2'],
+      no: ['0', 'n', 'no', 'false'],
       yes: ['1', 'y', 'yes', 'true'],
       unmarried: ['1', 'unmarried', 'single'],
       married: ['2', 'married'],
@@ -497,19 +503,39 @@ export class FormFiller {
       male: ['1', 'm', 'male'],
     };
     const aliasValues = valueAliases[wantLower] ?? [want];
+    const labelNeedles = [
+      wantLower,
+      ...aliasValues.map((v) => v.toLowerCase()).filter((v) => !/^\d+$/.test(v)),
+    ];
 
     for (const v of aliasValues) {
       const byValue = page.locator(`${selector}[value="${v}"]`).first();
       if ((await byValue.count()) > 0) {
-        await byValue.check({ force: true });
-        if (await byValue.isChecked().catch(() => false)) {
+        // JS set — works even under a leftover mask; Playwright check can flake.
+        const ok = await page.evaluate(
+          ({ sel, value }) => {
+            const el = document.querySelector(
+              `${sel}[value="${value}"]`,
+            ) as HTMLInputElement | null;
+            if (!el) {
+              return false;
+            }
+            el.checked = true;
+            el.click();
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+            return el.checked;
+          },
+          { sel: selector, value: v },
+        );
+        if (ok) {
           return;
         }
       }
     }
 
     const matched = await page.evaluate(
-      ({ sel, want: wantRaw, aliases }) => {
+      ({ sel, want: wantRaw, aliases, needles }) => {
         const radios = [
           ...document.querySelectorAll(sel),
         ] as HTMLInputElement[];
@@ -554,8 +580,12 @@ export class FormFiller {
 
         const byLabel = radios.find((radio) => {
           const lab = norm(labelOf(radio));
-          // Exact / word-boundary only — avoid "No" matching "Norwegian"
-          return lab === wantN || new RegExp(`\\b${wantN}\\b`, 'i').test(lab);
+          if (lab === wantN || new RegExp(`\\b${wantN}\\b`, 'i').test(lab)) {
+            return true;
+          }
+          return needles.some(
+            (n) => n.length >= 2 && (lab === n || new RegExp(`\\b${n}\\b`, 'i').test(lab)),
+          );
         });
 
         const byAlias = radios.find((radio) =>
@@ -578,15 +608,61 @@ export class FormFiller {
         target.dispatchEvent(new Event('change', { bubbles: true }));
         return target.checked;
       },
-      { sel: selector, want, aliases: aliasValues.map((v) => v.toLowerCase()) },
+      {
+        sel: selector,
+        want,
+        aliases: aliasValues.map((v) => v.toLowerCase()),
+        needles: labelNeedles,
+      },
     );
 
     if (!matched) {
       throw new Error(
-        `Failed to select radio "${want}" for ${selector}` +
+        `Failed to select radio "${normalizedValue.trim()}"` +
+          (want !== normalizedValue.trim() ? ` (as "${want}")` : '') +
+          ` for ${selector}` +
           `${field.labelHint ? ` ("${field.labelHint}")` : ''}`,
       );
     }
+  }
+
+  /** Collapse compound labels like "Женский (Female)" → Female / No / Unmarried. */
+  private canonicalizeRadioValue(value: string): string {
+    const v = value.trim().toLowerCase();
+    if (
+      v === 'female' ||
+      /\bfemale\b/.test(v) ||
+      /женск/.test(v) ||
+      v === 'f' ||
+      v === 'woman'
+    ) {
+      return 'Female';
+    }
+    if (
+      (v === 'male' || /\bmale\b/.test(v) || /мужск/.test(v) || v === 'm' || v === 'man') &&
+      !/\bfemale\b/.test(v) &&
+      !/женск/.test(v)
+    ) {
+      return 'Male';
+    }
+    if (
+      v === 'unmarried' ||
+      v === 'single' ||
+      /\bunmarried\b/.test(v) ||
+      /\bsingle\b/.test(v)
+    ) {
+      return 'Unmarried';
+    }
+    if (v === 'married' || /\bmarried\b/.test(v)) {
+      return 'Married';
+    }
+    if (v === 'yes' || v === 'y' || v === 'true' || v === 'да') {
+      return 'Yes';
+    }
+    if (v === 'no' || v === 'n' || v === 'false' || v === 'нет') {
+      return 'No';
+    }
+    return value.trim();
   }
 
   /**
@@ -960,10 +1036,18 @@ export class FormFiller {
 
   private normalizeSexLabel(value: string): string {
     const v = value.trim().toLowerCase();
-    if (['f', 'female', 'woman', 'ж', 'жен', 'женский', 'female'].includes(v)) {
+    if (
+      ['f', 'female', 'woman', 'ж', 'жен', 'женский'].includes(v) ||
+      /\bfemale\b/.test(v) ||
+      /женск/.test(v)
+    ) {
       return 'Female';
     }
-    if (['m', 'male', 'man', 'м', 'муж', 'мужской'].includes(v)) {
+    if (
+      ['m', 'male', 'man', 'м', 'муж', 'мужской'].includes(v) ||
+      (/\bmale\b/.test(v) && !/\bfemale\b/.test(v)) ||
+      (/мужск/.test(v) && !/женск/.test(v))
+    ) {
       return 'Male';
     }
     return value;
