@@ -377,7 +377,8 @@ async function setHiddenSelectByName(
       }
 
       const option = sel.options[index];
-      if (!option?.value) {
+      // index 0 is often "Please choose" with empty value — still valid to clear filters
+      if (!option || (index > 0 && !option.value)) {
         return null;
       }
 
@@ -433,40 +434,59 @@ async function setHiddenSelectByName(
   );
 }
 
-async function fillProgramSelection(page: Page): Promise<void> {
-  const hasNativeOptions = await page.evaluate(() => {
-    const college = document.querySelector(
-      'select[name="collegeId"]',
-    ) as HTMLSelectElement | null;
-    return Boolean(college && college.options.length > 1);
-  });
+/** Reset query filters to blank / "Please choose" (index 0). */
+async function clearStudyPlanFilters(page: Page): Promise<void> {
+  for (const name of ['collegeId', 'majorId', 'teachLanguage'] as const) {
+    await setHiddenSelectByName(page, name, 0);
+  }
 
-  if (!hasNativeOptions) {
+  await page
+    .locator('input[name="researchArea"], input[name="research"], input[name*="research" i]')
+    .first()
+    .fill('')
+    .catch(() => undefined);
+}
+
+async function clickStudyPlanFind(page: Page): Promise<boolean> {
+  const find = page
+    .locator(
+      [
+        'input[type="button"][value="Find"]',
+        'input[type="submit"][value="Find"]',
+        'input[value="查询"]',
+        'button:has-text("Find")',
+        'button:has-text("查询")',
+        'a:has-text("Find")',
+      ].join(', '),
+    )
+    .first();
+
+  if ((await find.count()) === 0) {
+    return false;
+  }
+  if (!(await find.isVisible().catch(() => false))) {
+    return false;
+  }
+
+  await find.click({ force: true });
+  await page.waitForTimeout(1200);
+  await waitForUiReady(page);
+  return true;
+}
+
+/**
+ * Study-plan query: NEVER guess Department/Major/Language.
+ * Blind index=1 picks (e.g. Metallurgy + English) wipe CSU's Chinese list → Total:0.
+ * Keep the default unfiltered list; only clear+Find when already empty.
+ */
+async function fillProgramSelection(page: Page): Promise<void> {
+  const rows = await collectStudyPlanRows(page);
+  if (rows.length > 0 && !(await isProgramSelectionEmpty(page))) {
     return;
   }
 
-  // chosen-select hides the native <select> — Playwright selectOption times out.
-  await setHiddenSelectByName(page, 'collegeId', 1);
-
-  const hasMajor = await page.evaluate(
-    () => Boolean(document.querySelector('select[name="majorId"]')),
-  );
-  if (hasMajor) {
-    await page.waitForTimeout(1500);
-    await page
-      .waitForFunction(() => {
-        const major = document.querySelector(
-          'select[name="majorId"]',
-        ) as HTMLSelectElement | null;
-        return Boolean(major && major.options.length > 1);
-      }, { timeout: 15_000 })
-      .catch(() => undefined);
-
-    await setHiddenSelectByName(page, 'majorId', 1);
-  }
-
-  await setHiddenSelectByName(page, 'teachLanguage', 1);
-  await page.waitForTimeout(500);
+  await clearStudyPlanFilters(page);
+  await clickStudyPlanFind(page);
 }
 
 async function isProgramSelectionEmpty(page: Page): Promise<boolean> {
@@ -1225,13 +1245,14 @@ export async function advancePreWizardScreen(
     return false;
   }
 
-  if (current === 'program_selection' && (await isProgramSelectionEmpty(page))) {
-    return false;
-  }
-
   const before = await getPreWizardSignature(page, current);
   await fillPreWizardScreen(page, current, hints);
   await page.waitForTimeout(400);
+
+  // After fill (clear+Find if needed) — only then treat empty as hard fail.
+  if (current === 'program_selection' && (await isProgramSelectionEmpty(page))) {
+    return false;
+  }
 
   if (current === 'program_type') {
     const selected = await page
