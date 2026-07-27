@@ -8,7 +8,10 @@
   },
   "session": {
     "loginUrlPattern": "/member/login\\.do",
-    "expiredIndicators": ["CSRF attack protection", "Account Sign In"]
+    "expiredIndicators": [
+      "CSRF attack protection",
+      "Account Sign In"
+    ]
   },
   "aliases": [
     "Peking University",
@@ -71,7 +74,10 @@
       "type": "radio",
       "required": true,
       "wizardStep": 1,
-      "options": ["Unmarried", "Married"]
+      "options": [
+        "Unmarried",
+        "Married"
+      ]
     },
     {
       "selector": "select[name=\"apply.countryId\"]",
@@ -112,7 +118,11 @@
       "required": true,
       "wizardStep": 1,
       "labelHint": "Native Language",
-      "options": ["Russian", "English", "Chinese"]
+      "options": [
+        "Russian",
+        "English",
+        "Chinese"
+      ]
     },
     {
       "selector": "select[name=\"apply.educationId\"]",
@@ -121,7 +131,12 @@
       "required": true,
       "wizardStep": 1,
       "labelHint": "Highest Level of Education Completed",
-      "options": ["Bachelor", "Master", "Dr.", "Senior high"],
+      "options": [
+        "Bachelor",
+        "Master",
+        "Dr.",
+        "Senior high"
+      ],
       "valueMap": {
         "High school diploma": "Senior high",
         "High school": "Senior high",
@@ -150,7 +165,12 @@
       "required": true,
       "wizardStep": 1,
       "labelHint": "Occupation",
-      "options": ["Student", "Scholars", "Employee", "Others"]
+      "options": [
+        "Student",
+        "Scholars",
+        "Employee",
+        "Others"
+      ]
     },
     {
       "selector": "input[name=\"apply.workplace\"]",
@@ -167,7 +187,14 @@
       "required": true,
       "wizardStep": 1,
       "labelHint": "Religion",
-      "options": ["None", "Atheism", "Christianity", "Islam", "Buddhism", "Other"]
+      "options": [
+        "None",
+        "Atheism",
+        "Christianity",
+        "Islam",
+        "Buddhism",
+        "Other"
+      ]
     },
     {
       "selector": "input[type=\"radio\"][name=\"apply.isOversea\"]",
@@ -176,7 +203,10 @@
       "required": true,
       "wizardStep": 1,
       "labelHint": "Are you Ethnic Chinese?",
-      "options": ["No", "Yes"]
+      "options": [
+        "No",
+        "Yes"
+      ]
     },
     {
       "selector": "input[type=\"radio\"][name=\"applyEx.inChinaOnApply\"]",
@@ -185,7 +215,10 @@
       "required": true,
       "wizardStep": 1,
       "labelHint": "Whether in Chinese mainland now?",
-      "options": ["No", "Yes"]
+      "options": [
+        "No",
+        "Yes"
+      ]
     },
     {
       "selector": "select[name=\"apply.passportTypeId\"], select[name=\"apply.hzlb\"], select[name=\"apply.passportType\"], select[name=\"apply.hslb\"]",
@@ -194,7 +227,13 @@
       "required": false,
       "wizardStep": 1,
       "labelHint": "Passport Type",
-      "options": ["Ordinary Passport", "Ordinary", "Private Passport", "Diplomatic Passport", "Service Passport"]
+      "options": [
+        "Ordinary Passport",
+        "Ordinary",
+        "Private Passport",
+        "Diplomatic Passport",
+        "Service Passport"
+      ]
     },
     {
       "selector": "input[name=\"apply.passportNo\"]",
@@ -275,7 +314,13 @@
       "required": true,
       "wizardStep": 2,
       "labelHint": "Chinese Language Proficiency",
-      "options": ["None", "Poor", "Fair", "Good", "Excellent"]
+      "options": [
+        "None",
+        "Poor",
+        "Fair",
+        "Good",
+        "Excellent"
+      ]
     },
     {
       "selector": "select[name=\"apply.hskId\"]",
@@ -284,7 +329,18 @@
       "required": true,
       "wizardStep": 2,
       "labelHint": "Level of HSK",
-      "options": ["None", "HSK LEVEL 1", "HSK LEVEL 2", "HSK LEVEL 3", "HSK LEVEL 4", "HSK LEVEL 5", "HSK LEVEL 6", "HSK LEVEL 7", "HSK LEVEL 8", "HSK LEVEL 9"]
+      "options": [
+        "None",
+        "HSK LEVEL 1",
+        "HSK LEVEL 2",
+        "HSK LEVEL 3",
+        "HSK LEVEL 4",
+        "HSK LEVEL 5",
+        "HSK LEVEL 6",
+        "HSK LEVEL 7",
+        "HSK LEVEL 8",
+        "HSK LEVEL 9"
+      ]
     },
     {
       "selector": "select[name=\"apply.hskOralId\"]",
@@ -293,7 +349,12 @@
       "required": true,
       "wizardStep": 2,
       "labelHint": "Level of HSKK",
-      "options": ["None", "Primary", "Junior", "Senior"]
+      "options": [
+        "None",
+        "Primary",
+        "Junior",
+        "Senior"
+      ]
     },
     {
       "selector": "select[name=\"apply.englishLanguageSkillId\"]",
@@ -302,7 +363,13 @@
       "required": true,
       "wizardStep": 2,
       "labelHint": "English Language Proficiency",
-      "options": ["Good", "Excellent", "Fair", "Poor", "None"]
+      "options": [
+        "Good",
+        "Excellent",
+        "Fair",
+        "Poor",
+        "None"
+      ]
     },
     {
       "selector": "select[name=\"apply.yydjzs\"]",
@@ -311,7 +378,14 @@
       "required": true,
       "wizardStep": 2,
       "labelHint": "Certificate of English Proficiency",
-      "options": ["Native Language", "Native Speaker", "IELTS", "TOEFL", "Other", "None"]
+      "options": [
+        "Native Language",
+        "Native Speaker",
+        "IELTS",
+        "TOEFL",
+        "Other",
+        "None"
+      ]
     },
     {
       "selector": "input[name=\"apply.yydjzsScore\"]",
@@ -384,7 +458,11 @@
       "required": false,
       "wizardStep": 2,
       "labelHint": "Nationality",
-      "options": ["Russian Federation", "Russia", "China"]
+      "options": [
+        "Russian Federation",
+        "Russia",
+        "China"
+      ]
     },
     {
       "selector": "input[name=\"apply.guarCareer\"]",
@@ -404,7 +482,10 @@
     },
     {
       "selector": "input[name=\"apply.guarSecEnname\"]",
-      "mapsTo": ["emergencyContact.name", "guarantor.name"],
+      "mapsTo": [
+        "emergencyContact.name",
+        "guarantor.name"
+      ],
       "type": "text",
       "required": true,
       "wizardStep": 2,
@@ -412,7 +493,10 @@
     },
     {
       "selector": "input[name=\"apply.guarSecRelative\"]",
-      "mapsTo": ["emergencyContact.relationship", "guarantor.relationship"],
+      "mapsTo": [
+        "emergencyContact.relationship",
+        "guarantor.relationship"
+      ],
       "type": "text",
       "required": true,
       "wizardStep": 2,
@@ -420,7 +504,10 @@
     },
     {
       "selector": "input[name=\"apply.guarSecWork\"]",
-      "mapsTo": ["emergencyContact.company", "guarantor.company"],
+      "mapsTo": [
+        "emergencyContact.company",
+        "guarantor.company"
+      ],
       "type": "text",
       "required": true,
       "wizardStep": 2,
@@ -428,7 +515,10 @@
     },
     {
       "selector": "input[name=\"apply.guarMobile2\"]",
-      "mapsTo": ["emergencyContact.phone", "guarantor.phone"],
+      "mapsTo": [
+        "emergencyContact.phone",
+        "guarantor.phone"
+      ],
       "type": "text",
       "required": false,
       "wizardStep": 2,
@@ -436,7 +526,10 @@
     },
     {
       "selector": "input[name=\"apply.guarSecPhone\"]",
-      "mapsTo": ["emergencyContact.phone", "guarantor.phone"],
+      "mapsTo": [
+        "emergencyContact.phone",
+        "guarantor.phone"
+      ],
       "type": "text",
       "required": true,
       "wizardStep": 2,
@@ -444,7 +537,10 @@
     },
     {
       "selector": "input[name=\"apply.guarSecEmail\"]",
-      "mapsTo": ["emergencyContact.email", "guarantor.email"],
+      "mapsTo": [
+        "emergencyContact.email",
+        "guarantor.email"
+      ],
       "type": "text",
       "required": true,
       "wizardStep": 2,
@@ -452,16 +548,28 @@
     },
     {
       "selector": "select[name=\"apply.guarCountryId2\"]",
-      "mapsTo": ["emergencyContact.nationality", "guarantor.nationality", "personal.nationality"],
+      "mapsTo": [
+        "emergencyContact.nationality",
+        "guarantor.nationality",
+        "personal.nationality"
+      ],
       "type": "select",
       "required": false,
       "wizardStep": 2,
       "labelHint": "Recommender #2 Nationality",
-      "options": ["Russian Federation", "Russia", "China"]
+      "options": [
+        "Russian Federation",
+        "Russia",
+        "China"
+      ]
     },
     {
       "selector": "input[name=\"apply.guarAddress2\"]",
-      "mapsTo": ["emergencyContact.homeAddress", "guarantor.homeAddress", "personal.permanentAddress"],
+      "mapsTo": [
+        "emergencyContact.homeAddress",
+        "guarantor.homeAddress",
+        "personal.permanentAddress"
+      ],
       "type": "text",
       "required": false,
       "wizardStep": 2,
@@ -513,7 +621,13 @@
       "required": true,
       "wizardStep": 3,
       "labelHint": "Education Level",
-      "options": ["Bachelor", "Master", "Dr.", "Senior high", "Vocational College"],
+      "options": [
+        "Bachelor",
+        "Master",
+        "Dr.",
+        "Senior high",
+        "Vocational College"
+      ],
       "valueMap": {
         "High school diploma": "Senior high",
         "High school": "Senior high",
@@ -534,7 +648,10 @@
       "required": true,
       "wizardStep": 3,
       "labelHint": "Have you ever studied in China",
-      "options": ["No", "Yes"]
+      "options": [
+        "No",
+        "Yes"
+      ]
     },
     {
       "selector": "input[type=\"radio\"][name=\"haveWorkHistory\"]",
@@ -543,7 +660,10 @@
       "required": false,
       "wizardStep": 3,
       "labelHint": "Work History",
-      "options": ["No", "Yes"]
+      "options": [
+        "No",
+        "Yes"
+      ]
     },
     {
       "selector": "input[type=\"radio\"][name=\"applyEx.hasCriminalRecord\"]",
@@ -552,7 +672,10 @@
       "required": true,
       "wizardStep": 4,
       "labelHint": "Criminal Record",
-      "options": ["No", "Yes"]
+      "options": [
+        "No",
+        "Yes"
+      ]
     },
     {
       "selector": "input[name=\"fm.name\"]",
@@ -564,7 +687,10 @@
     },
     {
       "selector": "input[name=\"fm.phone\"]",
-      "mapsTo": ["familyMembers.0.phone", "personal.phone"],
+      "mapsTo": [
+        "familyMembers.0.phone",
+        "personal.phone"
+      ],
       "type": "text",
       "required": true,
       "wizardStep": 4,
@@ -572,7 +698,10 @@
     },
     {
       "selector": "input[name=\"fm.email\"]",
-      "mapsTo": ["familyMembers.0.email", "personal.email"],
+      "mapsTo": [
+        "familyMembers.0.email",
+        "personal.email"
+      ],
       "type": "text",
       "required": true,
       "wizardStep": 4,
@@ -596,7 +725,10 @@
     },
     {
       "selector": "input[name=\"apply.emergencyName\"]",
-      "mapsTo": ["emergencyContact.name", "guarantor.name"],
+      "mapsTo": [
+        "emergencyContact.name",
+        "guarantor.name"
+      ],
       "type": "text",
       "required": true,
       "wizardStep": 4,
@@ -604,14 +736,22 @@
     },
     {
       "selector": "input[name=\"apply.emergencyPhone\"]",
-      "mapsTo": ["emergencyContact.phone", "guarantor.phone", "personal.phone"],
+      "mapsTo": [
+        "emergencyContact.phone",
+        "guarantor.phone",
+        "personal.phone"
+      ],
       "type": "text",
       "required": false,
       "wizardStep": 4
     },
     {
       "selector": "input[name=\"apply.emergencyMobile\"]",
-      "mapsTo": ["emergencyContact.phone", "guarantor.phone", "personal.phone"],
+      "mapsTo": [
+        "emergencyContact.phone",
+        "guarantor.phone",
+        "personal.phone"
+      ],
       "type": "text",
       "required": true,
       "wizardStep": 4,
@@ -619,14 +759,22 @@
     },
     {
       "selector": "input[name=\"apply.emergencyEmail\"]",
-      "mapsTo": ["emergencyContact.email", "guarantor.email", "personal.email"],
+      "mapsTo": [
+        "emergencyContact.email",
+        "guarantor.email",
+        "personal.email"
+      ],
       "type": "text",
       "required": false,
       "wizardStep": 4
     },
     {
       "selector": "input[name=\"apply.emergencyAddress\"]",
-      "mapsTo": ["emergencyContact.homeAddress", "guarantor.homeAddress", "personal.permanentAddress"],
+      "mapsTo": [
+        "emergencyContact.homeAddress",
+        "guarantor.homeAddress",
+        "personal.permanentAddress"
+      ],
       "type": "text",
       "required": true,
       "wizardStep": 4,
@@ -741,7 +889,10 @@
       "required": true,
       "wizardStep": 5,
       "labelHint": "Same as the Permanent address",
-      "options": ["Same as the Permanent address", "Other"]
+      "options": [
+        "Same as the Permanent address",
+        "Other"
+      ]
     },
     {
       "selector": "input[name=\"apply.contactPhone\"]",
@@ -822,87 +973,97 @@
       ]
     },
     {
-      "selector": "[attachTypeId=\"ATTACH_TYPE_passportImage\"] input[type=\"file\"]",
+      "selector": "[attachTypeId=\"ATTACH_TYPE_passportImage\"]",
       "mapsTo": null,
       "type": "file",
       "required": true,
       "wizardStep": 6,
-      "documentType": "passport"
+      "documentType": "passport",
+      "labelHint": "Passport"
     },
     {
-      "selector": "[attachTypeId=\"ATTACH_TYPE_8135227092\"] input[type=\"file\"]",
+      "selector": "[attachTypeId=\"ATTACH_TYPE_8135227092\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6,
+      "labelHint": "China Scholastic"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_HighstEducationImage\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6,
+      "documentType": "diploma",
+      "labelHint": "Diploma"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_scoreImage\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6,
+      "documentType": "transcript",
+      "labelHint": "Transcript"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_152170289\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6,
+      "documentType": "personal_statement",
+      "labelHint": "Personal Statement"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_158931292\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6,
+      "documentType": "language_certificate",
+      "labelHint": "English Language"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_checkBodyreport\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6,
+      "documentType": "medical",
+      "labelHint": "Physical Examination"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_115623117\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6,
+      "labelHint": "Non-criminal"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_115623116\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6,
+      "labelHint": "Guardian"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_158951430\"]",
       "mapsTo": null,
       "type": "file",
       "required": false,
       "wizardStep": 6
     },
     {
-      "selector": "[attachTypeId=\"ATTACH_TYPE_HighstEducationImage\"] input[type=\"file\"]",
+      "selector": "[attachTypeId=\"ATTACH_TYPE_appendFile\"]",
       "mapsTo": null,
       "type": "file",
       "required": false,
       "wizardStep": 6,
-      "documentType": "diploma"
-    },
-    {
-      "selector": "[attachTypeId=\"ATTACH_TYPE_scoreImage\"] input[type=\"file\"]",
-      "mapsTo": null,
-      "type": "file",
-      "required": false,
-      "wizardStep": 6,
-      "documentType": "transcript"
-    },
-    {
-      "selector": "[attachTypeId=\"ATTACH_TYPE_152170289\"] input[type=\"file\"]",
-      "mapsTo": null,
-      "type": "file",
-      "required": false,
-      "wizardStep": 6,
-      "documentType": "personal_statement"
-    },
-    {
-      "selector": "[attachTypeId=\"ATTACH_TYPE_158931292\"] input[type=\"file\"]",
-      "mapsTo": null,
-      "type": "file",
-      "required": false,
-      "wizardStep": 6,
-      "documentType": "language_certificate"
-    },
-    {
-      "selector": "[attachTypeId=\"ATTACH_TYPE_checkBodyreport\"] input[type=\"file\"]",
-      "mapsTo": null,
-      "type": "file",
-      "required": false,
-      "wizardStep": 6,
-      "documentType": "medical"
-    },
-    {
-      "selector": "[attachTypeId=\"ATTACH_TYPE_115623117\"] input[type=\"file\"]",
-      "mapsTo": null,
-      "type": "file",
-      "required": false,
-      "wizardStep": 6
-    },
-    {
-      "selector": "[attachTypeId=\"ATTACH_TYPE_115623116\"] input[type=\"file\"]",
-      "mapsTo": null,
-      "type": "file",
-      "required": false,
-      "wizardStep": 6
-    },
-    {
-      "selector": "[attachTypeId=\"ATTACH_TYPE_158951430\"] input[type=\"file\"]",
-      "mapsTo": null,
-      "type": "file",
-      "required": false,
-      "wizardStep": 6
-    },
-    {
-      "selector": "[attachTypeId=\"ATTACH_TYPE_appendFile\"] input[type=\"file\"]",
-      "mapsTo": null,
-      "type": "file",
-      "required": false,
-      "wizardStep": 6
+      "labelHint": "Other Documents"
     }
   ],
   "wizard": {
