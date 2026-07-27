@@ -112,7 +112,7 @@ export class FormFiller {
       async (step) => {
         if (
           step === 1 &&
-          this.isPkuLike(university)
+          university.navigationHints?.ocrPassportUpload
         ) {
           await this.ocrPassportUploader.upload(page, profile);
           // Photo OCR often leaves "It's processing!" up — don't fill under it.
@@ -132,21 +132,21 @@ export class FormFiller {
 
         if (step === 1) {
           await this.ensureChineseNameWaiver(page, profile);
-          if (this.isPkuLike(university)) {
+          if (this.is17gzPortal(university)) {
             await this.ensurePkuStep1RequiredGaps(page);
           }
         }
-        if (step === 2 && this.isPkuLike(university)) {
+        if (step === 2 && this.is17gzPortal(university)) {
           await this.ensurePkuStep2RequiredGaps(page, profile);
           await this.assertPkuStep2CriticalFilled(page, profile);
         }
-        if (step === 3 && this.isPkuLike(university)) {
+        if (step === 3 && this.is17gzPortal(university)) {
           await this.ensurePkuStep3RequiredGaps(page, profile);
         }
-        if (step === 4 && this.isPkuLike(university)) {
+        if (step === 4 && this.is17gzPortal(university)) {
           await this.ensurePkuStep4RequiredGaps(page, profile);
         }
-        if (step === 5 && this.isPkuLike(university)) {
+        if (step === 5 && this.is17gzPortal(university)) {
           await this.ensurePkuStep5RequiredGaps(page, profile);
         }
         await this.dismissFormOverlays(page);
@@ -1471,15 +1471,16 @@ export class FormFiller {
     await this.dismissFormOverlays(page);
   }
 
-  private isPkuLike(university: {
+  private is17gzPortal(university: {
     id: string;
     formUrl?: string;
-    navigationHints?: { ocrPassportUpload?: boolean };
   }): boolean {
     return (
       university.id === 'pku' ||
-      Boolean(university.navigationHints?.ocrPassportUpload) ||
-      /pku\.17gz\.org/i.test(university.formUrl || '')
+      university.id === 'csu' ||
+      university.id === 'kmmc' ||
+      university.id === 'zhengzhou-university' ||
+      /(?:^|\.)17gz\.org|kmmc\.cn/i.test(university.formUrl || '')
     );
   }
 

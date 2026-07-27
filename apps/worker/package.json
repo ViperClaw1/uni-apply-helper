@@ -23,6 +23,7 @@
     "capture:zzu-session": "node scripts/capture-zzu-session.mjs",
     "capture:kmmc-session": "node scripts/capture-kmmc-session.mjs",
     "capture:pku-session": "node scripts/capture-pku-session.mjs",
+    "capture:csu-session": "node scripts/capture-csu-session.mjs",
     "debug:pku-step1": "node scripts/debug-pku-step1-waiver.mjs",
     "debug:pku-steps-2-7": "node scripts/debug-pku-steps-2-7.mjs",
     "debug:pku-all": "node scripts/debug-pku-all.mjs",

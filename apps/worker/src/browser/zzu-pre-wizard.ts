@@ -6,6 +6,39 @@ export type PreWizardScreen =
   | 'student_type'
   | 'program_selection';
 
+/** Split hints so desiredField doesn't steal program-type matching. */
+export type PreWizardHints = {
+  /** Scholarship / program-type radio, e.g. "Self-sponsored" / "Research Scholar" */
+  programText?: string;
+  /** Degree/student-type radio, e.g. "Undergraduate Student" */
+  studentType?: string;
+  /** Study-plan row match (desiredField / major) */
+  studyPlanHint?: string;
+};
+
+export type StudyPlanMatcher = {
+  isAvailable: () => boolean;
+  generateJson: <T>(options: {
+    prompt: string;
+    temperature?: number;
+  }) => Promise<T>;
+};
+
+function normalizeHints(
+  hints?: string | PreWizardHints,
+): PreWizardHints {
+  if (!hints) {
+    return {};
+  }
+  if (typeof hints === 'string') {
+    const value = hints.trim();
+    return value
+      ? { programText: value, studyPlanHint: value }
+      : {};
+  }
+  return hints;
+}
+
 export async function waitForUiReady(page: Page): Promise<void> {
   // Dismiss dialogs first — otherwise "请求正在处理中..." never clears and we burn 30s.
   await dismissBlockingDialogs(page);
@@ -494,14 +527,6 @@ type StudyPlanRow = {
   text: string;
 };
 
-export type StudyPlanMatcher = {
-  isAvailable: () => boolean;
-  generateJson: <T>(options: {
-    prompt: string;
-    temperature?: number;
-  }) => Promise<T>;
-};
-
 async function collectStudyPlanRows(page: Page): Promise<StudyPlanRow[]> {
   return page.evaluate(() => {
     const labelOf = (el: Element) =>
@@ -762,7 +787,7 @@ async function selectStudyPlanRow(
   return null;
 }
 
-const STUDENT_TYPE_HINTS = [
+const DEFAULT_STUDENT_TYPE_HINTS = [
   'Undergraduate Student',
   '本科生',
   '本科',
@@ -770,13 +795,34 @@ const STUDENT_TYPE_HINTS = [
   'bachelor',
 ];
 
+function studentTypeHintList(preferred?: string): string[] {
+  const preferredHints = preferred?.trim()
+    ? [preferred.trim()]
+    : [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const hint of [...preferredHints, ...DEFAULT_STUDENT_TYPE_HINTS]) {
+    const key = hint.toLowerCase();
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    out.push(hint);
+  }
+  return out;
+}
+
 /**
  * Student-type: each radio wrapped in <label>, onclick on input.
- * Probe: label.click / radio.click / checked=true all stick.
- * Prefer Playwright text click (same as program_type success path).
+ * Prefer schema studentType, else Undergraduate defaults.
  */
-async function pickStudentTypeRadio(page: Page): Promise<boolean> {
-  for (const hint of STUDENT_TYPE_HINTS) {
+async function pickStudentTypeRadio(
+  page: Page,
+  studentType?: string,
+): Promise<boolean> {
+  const hints = studentTypeHintList(studentType);
+
+  for (const hint of hints) {
     const byText = page.getByText(hint, { exact: false }).first();
     try {
       if (
@@ -794,8 +840,10 @@ async function pickStudentTypeRadio(page: Page): Promise<boolean> {
     }
   }
 
-  // Visible label wrapping the preferred radio
-  const labels = page.locator('label:has(input[type="radio"][name="projectTypeId"])');
+  // Visible label wrapping the preferred radio (projectTypeId or any radio)
+  const labels = page.locator(
+    'label:has(input[type="radio"][name="projectTypeId"]), label:has(input[type="radio"])',
+  );
   const labelCount = await labels.count();
   for (const prefer of [true, false]) {
     for (let i = 0; i < labelCount; i += 1) {
@@ -807,7 +855,7 @@ async function pickStudentTypeRadio(page: Page): Promise<boolean> {
         .replace(/\s+/g, ' ')
         .trim()
         .toLowerCase();
-      const isPreferred = STUDENT_TYPE_HINTS.some((hint) =>
+      const isPreferred = hints.some((hint) =>
         text.includes(hint.toLowerCase()),
       );
       if (prefer && !isPreferred) {
@@ -825,22 +873,28 @@ async function pickStudentTypeRadio(page: Page): Promise<boolean> {
   }
 
   // evaluate: label.click only (proven in headed probe)
-  return page.evaluate((hints) => {
+  return page.evaluate((hintList) => {
     const normalize = (value: string) => value.replace(/\s+/g, ' ').trim();
     const radios = [
       ...document.querySelectorAll(
         'input[type="radio"][name="projectTypeId"]',
       ),
     ] as HTMLInputElement[];
+    const fallbackRadios =
+      radios.length > 0
+        ? radios
+        : ([...document.querySelectorAll('input[type="radio"]')] as HTMLInputElement[]);
 
     const labelOf = (radio: HTMLInputElement) =>
       normalize(radio.closest('label')?.textContent ?? '');
 
     const target =
-      radios.find((radio) => {
+      fallbackRadios.find((radio) => {
         const label = labelOf(radio).toLowerCase();
-        return hints.some((hint) => label.includes(String(hint).toLowerCase()));
-      }) ?? radios[0];
+        return hintList.some((hint) =>
+          label.includes(String(hint).toLowerCase()),
+        );
+      }) ?? fallbackRadios[0];
 
     if (!target) {
       return false;
@@ -856,13 +910,10 @@ async function pickStudentTypeRadio(page: Page): Promise<boolean> {
       return true;
     }
 
-    // force without extra click (radio groups don't toggle-off on re-click,
-    // but keep this path click-free anyway)
-    for (const radio of radios) {
+    for (const radio of fallbackRadios) {
       radio.checked = radio === target;
     }
     target.dispatchEvent(new Event('change', { bubbles: true }));
-    // Fire native onclick if present (saveProjectType validation may depend on it)
     const onclick = target.getAttribute('onclick');
     if (onclick) {
       try {
@@ -873,7 +924,7 @@ async function pickStudentTypeRadio(page: Page): Promise<boolean> {
       }
     }
     return target.checked;
-  }, STUDENT_TYPE_HINTS);
+  }, hints);
 }
 
 /** Next labels: EN "Next" / ZH "下一步". KMMC uses <button class="el-button">. */
@@ -964,19 +1015,21 @@ async function clickVisibleNext(page: Page): Promise<string | null> {
 export async function fillPreWizardScreen(
   page: Page,
   screen: PreWizardScreen,
-  programHint?: string,
+  hints?: string | PreWizardHints,
 ): Promise<boolean> {
+  const resolved = normalizeHints(hints);
+
   switch (screen) {
     case 'application_notes':
       await checkAgree(page);
-      await pickProjectTypeRadio(page, programHint);
+      await pickProjectTypeRadio(page, resolved.programText);
       break;
     case 'program_type':
       await checkAgree(page);
-      await pickProjectTypeRadio(page, programHint);
+      await pickProjectTypeRadio(page, resolved.programText);
       break;
     case 'student_type':
-      await pickStudentTypeRadio(page);
+      await pickStudentTypeRadio(page, resolved.studentType);
       break;
     case 'program_selection':
       await fillProgramSelection(page);
@@ -996,9 +1049,11 @@ export async function fillPreWizardScreen(
 async function clickPreWizardNext(
   page: Page,
   screen: PreWizardScreen,
-  programHint?: string,
+  hints?: string | PreWizardHints,
   gemini?: StudyPlanMatcher,
 ): Promise<string | null> {
+  const resolved = normalizeHints(hints);
+  const studyPlanHint = resolved.studyPlanHint;
   if (screen === 'application_notes') {
     const agreeButton = page
       .getByRole('button', {
@@ -1092,7 +1147,7 @@ async function clickPreWizardNext(
       return 'empty_list';
     }
 
-    const row = await selectStudyPlanRow(page, programHint, gemini);
+    const row = await selectStudyPlanRow(page, studyPlanHint, gemini);
     if (row) {
       return row;
     }
@@ -1159,7 +1214,7 @@ async function invokeButton(
 export async function advancePreWizardScreen(
   page: Page,
   screen: PreWizardScreen | null = null,
-  programHint?: string,
+  hints?: string | PreWizardHints,
   gemini?: StudyPlanMatcher,
 ): Promise<boolean> {
   await waitForUiReady(page);
@@ -1175,7 +1230,7 @@ export async function advancePreWizardScreen(
   }
 
   const before = await getPreWizardSignature(page, current);
-  await fillPreWizardScreen(page, current, programHint);
+  await fillPreWizardScreen(page, current, hints);
   await page.waitForTimeout(400);
 
   if (current === 'program_type') {
@@ -1194,7 +1249,7 @@ export async function advancePreWizardScreen(
     }
   }
 
-  const clicked = await clickPreWizardNext(page, current, programHint, gemini);
+  const clicked = await clickPreWizardNext(page, current, hints, gemini);
   if (!clicked || clicked === 'empty_list') {
     return false;
   }
@@ -1257,7 +1312,7 @@ export async function clearStuckProcessing(page: Page): Promise<boolean> {
 
 export async function advanceThroughPreWizard(
   page: Page,
-  programHint?: string,
+  hints?: string | PreWizardHints,
   { maxSteps = 20, gemini }: { maxSteps?: number; gemini?: StudyPlanMatcher } = {},
 ): Promise<boolean> {
   const MAX_CONSECUTIVE_FAILS = 4;
@@ -1284,7 +1339,7 @@ export async function advanceThroughPreWizard(
     const advanced = await advancePreWizardScreen(
       page,
       screen,
-      programHint,
+      hints,
       gemini,
     );
     if (advanced || (await isMainWizard(page))) {

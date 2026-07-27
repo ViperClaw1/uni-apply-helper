@@ -281,6 +281,8 @@ export class SchemasService {
     const hints = value as Partial<NavigationHints>;
     const programText =
       typeof hints.programText === 'string' ? hints.programText : undefined;
+    const studentType =
+      typeof hints.studentType === 'string' ? hints.studentType : undefined;
     const language =
       typeof hints.language === 'string' ? hints.language : undefined;
     const ocrPassportUpload =
@@ -288,11 +290,16 @@ export class SchemasService {
         ? hints.ocrPassportUpload
         : undefined;
 
-    if (!programText && !language && ocrPassportUpload === undefined) {
+    if (
+      !programText &&
+      !studentType &&
+      !language &&
+      ocrPassportUpload === undefined
+    ) {
       return undefined;
     }
 
-    return { programText, language, ocrPassportUpload };
+    return { programText, studentType, language, ocrPassportUpload };
   }
 
   private hashSchema(schema: UniversitySchemaFile): string {

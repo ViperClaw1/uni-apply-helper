@@ -34,6 +34,13 @@ export const UNIVERSITIES = {
     formUrl: 'https://pku.17gz.org/apply/index.do',
     platform: '17gz',
   },
+  csu: {
+    id: 'csu',
+    displayName: 'Central South University (CSU)',
+    loginUrl: 'https://csu.17gz.org/member/login.do',
+    formUrl: 'https://csu.17gz.org/apply/index.do',
+    platform: '17gz',
+  },
 };
 
 export function resolveUniversityId(argv = process.argv.slice(2)) {

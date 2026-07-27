@@ -25,8 +25,13 @@ export interface WizardConfig {
 }
 /** Pre-wizard navigation hints for portals that share a platform (e.g. 17gz). */
 export interface NavigationHints {
-    /** Label fragment to match on program-type radios, e.g. "Research Scholar" */
+    /** Label fragment to match on program-type radios, e.g. "Research Scholar" / "Self-sponsored" */
     programText?: string;
+    /**
+     * Student-type radio on portals that ask after program type
+     * (e.g. CSU: Undergraduate / Master / Doctoral).
+     */
+    studentType?: string;
     /** Preferred language option when the portal asks, e.g. "English" */
     language?: string;
     /** Step 1: upload passport to OCR input + Confirm before filling fields (PKU). */
