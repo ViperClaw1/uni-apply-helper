@@ -647,6 +647,64 @@ async function clickStudyPlanApplySimple(
 
   await applyLinks.nth(index).scrollIntoViewIfNeeded().catch(() => undefined);
   await applyLinks.nth(index).click({ force: true });
+
+  // Duplicate program → dismiss and Edit existing application (same 17gz list UX).
+  await page.waitForTimeout(800);
+  const alreadyApplied = await page.evaluate(() => {
+    const text = [
+      ...document.querySelectorAll(
+        '.messager-body, .messager-window, .panel-body',
+      ),
+    ]
+      .map((el) => (el.textContent || '').replace(/\s+/g, ' ').trim())
+      .join(' ');
+    return /already applied|don't repeatedly apply|不要重复申请|重复申请|已经申请/i.test(
+      text,
+    );
+  });
+
+  if (alreadyApplied) {
+    await dismissBlockingDialogs(page);
+
+    // Existing draft lives under Application Status / list — not on Study Plan.
+    const statusTab = page
+      .locator('a, li a')
+      .filter({ hasText: /Application Status|申请状态|我的申请/i })
+      .first();
+    if ((await statusTab.count()) > 0) {
+      await statusTab.click({ force: true }).catch(() => undefined);
+      await page
+        .waitForLoadState('domcontentloaded', { timeout: 15_000 })
+        .catch(() => undefined);
+      await page.waitForTimeout(500);
+    }
+
+    const editBtn = page
+      .locator(
+        'input[value="Edit"][onclick*="editApply"], input[value="Edit"], input[value="编辑"], a:has-text("Edit"), a:has-text("编辑")',
+      )
+      .first();
+    if ((await editBtn.count()) > 0) {
+      await editBtn.click({ force: true });
+      await page
+        .waitForLoadState('domcontentloaded', { timeout: 15_000 })
+        .catch(() => undefined);
+      return {
+        ok: true,
+        via: 'Apply:already-applied→Edit',
+        index,
+        total,
+      };
+    }
+
+    return {
+      ok: false,
+      via: 'Apply:already-applied-no-Edit',
+      index,
+      total,
+    };
+  }
+
   return { ok: true, via: 'Apply:debug-parity', index, total };
 }
 

@@ -186,6 +186,16 @@ export class WizardNavigator {
         const input = el as HTMLInputElement | HTMLSelectElement;
         if (input.type === 'hidden') continue;
 
+        // Skip non-visible conditionals (otherReligion, visa*, etc.) — noise only
+        const style = getComputedStyle(input);
+        if (
+          style.display === 'none' ||
+          style.visibility === 'hidden' ||
+          (input as HTMLElement).offsetParent === null
+        ) {
+          continue;
+        }
+
         if (input.type === 'checkbox') {
           if (!(input as HTMLInputElement).checked) {
             emptyRequired.push(input.name || input.id || '?');

@@ -133,7 +133,7 @@ export class FormFiller {
         if (step === 1) {
           await this.ensureChineseNameWaiver(page, profile);
           if (this.is17gzPortal(university)) {
-            await this.ensurePkuStep1RequiredGaps(page);
+            await this.ensurePkuStep1RequiredGaps(page, profile);
           }
         }
         if (step === 2 && this.is17gzPortal(university)) {
@@ -1252,7 +1252,15 @@ export class FormFiller {
    * - Whether in Chinese mainland now? → applyEx.inChinaOnApply = No
    * - Passport Type → select by label (name varies: hzlb / passportType / …)
    */
-  private async ensurePkuStep1RequiredGaps(page: Page): Promise<void> {
+  /**
+   * Shared 17gz Step-1 gap fill (PKU / CSU / KMMC / ZZU).
+   * Fills platform conditionals that schema mapping often leaves empty:
+   * otherReligion, china/visa block, issue place, immigrant, restrict, gainCountryDate.
+   */
+  private async ensurePkuStep1RequiredGaps(
+    page: Page,
+    profile?: StudentProfile,
+  ): Promise<void> {
     await this.dismissFormOverlays(page);
 
     // Marital often fails when profile/schema value doesn't match radio value=
@@ -1467,6 +1475,192 @@ export class FormFiller {
         return false;
       }, passportCandidates.map((c) => c.toLowerCase()));
     }
+
+    // Immigrant / 是否移民 — required radio on many 17gz skins
+    await this.checkRadioGroupNo(page, 'applyEx.isYiMin');
+    await this.checkRadioNearLabel(
+      page,
+      /immigrant|是否移民|Have you ever been an immigrant/i,
+      'No',
+    );
+
+    // Prefer None/Atheism so otherReligion stays optional; still fill it if empty.
+    await this.selectNearLabel(page, /^Religion$|宗教信仰/i, [
+      'None',
+      'Atheism',
+      '无',
+      '无宗教信仰',
+    ]);
+
+    // Visa type → No Visa (avoids requiring visaNo/expire when in China = No)
+    await this.selectNearLabel(
+      page,
+      /Visa Type|Type of Visa|所持证件|签证种类/i,
+      ['No Visa', 'No visa', '无签证'],
+    );
+
+    // Passport valid for / restrict
+    await this.selectNearLabel(
+      page,
+      /Passport valid for|Valid for|护照有效范围|限制前往/i,
+      [
+        'Chinese mainland',
+        'Chinese Mainland',
+        'Mainland',
+        '中国大陆',
+        '中国内地',
+      ],
+    );
+
+    const birthDate =
+      profile?.personal.dateOfBirth?.trim() ||
+      '2000-01-01';
+    const passportExpire =
+      profile?.personal.passportExpiry?.trim() || '2030-12-31';
+    const nationality =
+      profile?.personal.nationality?.trim() || 'N/A';
+
+    await page.evaluate(
+      ({ birthDate: birth, passportExpire: expire, nationality: nation }) => {
+        const jq = (
+          window as unknown as {
+            jQuery?: (el: Element) => {
+              val: (v: string) => { trigger: (e: string) => unknown };
+            };
+          }
+        ).jQuery;
+
+        const setInput = (input: HTMLInputElement | null, value: string) => {
+          if (!input || !value || (input.value && input.value.trim())) {
+            return;
+          }
+          input.value = value;
+          input.setAttribute('value', value);
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+          input.dispatchEvent(new Event('blur', { bubbles: true }));
+          if (typeof jq === 'function') {
+            try {
+              jq(input).val(value).trigger('change');
+            } catch {
+              // ignore
+            }
+          }
+        };
+
+        const setSelectByNeedles = (
+          name: string,
+          needles: string[],
+        ): boolean => {
+          const select = document.querySelector(
+            `select[name="${name}"]`,
+          ) as HTMLSelectElement | null;
+          if (!select) {
+            return false;
+          }
+          if (
+            select.value &&
+            select.value !== '0' &&
+            !/please|choose|-choose-/i.test(
+              select.options[select.selectedIndex]?.text || '',
+            )
+          ) {
+            return true;
+          }
+          const match = [...select.options].find((opt) => {
+            const t = (opt.textContent || '').trim().toLowerCase();
+            return needles.some((n) => t === n || t.includes(n));
+          });
+          if (!match?.value) {
+            return false;
+          }
+          select.value = match.value;
+          select.dispatchEvent(new Event('input', { bubbles: true }));
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+          if (typeof jq === 'function') {
+            try {
+              jq(select).val(match.value).trigger('chosen:updated');
+              jq(select).val(match.value).trigger('change');
+            } catch {
+              // ignore
+            }
+          }
+          return select.value === match.value;
+        };
+
+        // Religion stuck on Other → flip to None
+        const religion = document.querySelector(
+          'select[name="apply.religionId"]',
+        ) as HTMLSelectElement | null;
+        if (religion) {
+          const cur = (
+            religion.options[religion.selectedIndex]?.text || ''
+          ).trim();
+          if (!cur || /other|其他|please|choose/i.test(cur)) {
+            setSelectByNeedles('apply.religionId', [
+              'none',
+              'atheism',
+              '无',
+            ]);
+          }
+        }
+
+        setInput(
+          document.querySelector(
+            'input[name="apply.otherReligion"]',
+          ) as HTMLInputElement,
+          'None',
+        );
+        setInput(
+          document.querySelector(
+            'input[name="applyEx.chinaPlaceOnApply"]',
+          ) as HTMLInputElement,
+          'N/A',
+        );
+        setInput(
+          document.querySelector(
+            'input[name="apply.visaNo"]',
+          ) as HTMLInputElement,
+          'N/A',
+        );
+        setInput(
+          document.querySelector(
+            'input[name="apply.visaExpire"]',
+          ) as HTMLInputElement,
+          expire,
+        );
+        setInput(
+          document.querySelector(
+            'input[name="otherIssuePlace"]',
+          ) as HTMLInputElement,
+          nation,
+        );
+        setInput(
+          document.querySelector(
+            'input[name="apply.gainCountryDate"]',
+          ) as HTMLInputElement,
+          birth,
+        );
+
+        setSelectByNeedles('apply.visaId', ['no visa', '无签证']);
+        setSelectByNeedles('apply.restrict', [
+          'chinese mainland',
+          'mainland',
+          '中国大陆',
+          '中国内地',
+        ]);
+      },
+      {
+        birthDate,
+        passportExpire,
+        nationality,
+      },
+    );
+
+    // Re-assert No after any change handlers that may flip conditionals back
+    await this.checkRadioGroupNo(page, 'apply.isOversea');
+    await this.checkRadioGroupNo(page, 'applyEx.inChinaOnApply');
+    await this.checkRadioGroupNo(page, 'applyEx.isYiMin');
 
     await this.dismissFormOverlays(page);
   }
