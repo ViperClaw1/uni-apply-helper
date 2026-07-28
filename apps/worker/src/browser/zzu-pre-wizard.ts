@@ -1548,8 +1548,28 @@ export async function advancePreWizardScreen(
   await page.waitForTimeout(200);
 
   // After fill (clear+Find if needed) — only then treat empty as hard fail.
-  if (current === 'program_selection' && (await isProgramSelectionEmpty(page))) {
-    return false;
+  // Wait for study-plan rows to hydrate after student_type AJAX.
+  if (current === 'program_selection') {
+    await page
+      .waitForFunction(
+        () => {
+          const text = document.body?.innerText ?? '';
+          if (/Total:\s*[1-9]/i.test(text)) {
+            return true;
+          }
+          return Boolean(
+            document.querySelector(
+              'a[onclick*="saveChoose"], a[onclick*="StudyPlan"], td a',
+            ),
+          );
+        },
+        { timeout: 15_000 },
+      )
+      .catch(() => undefined);
+
+    if (await isProgramSelectionEmpty(page)) {
+      return false;
+    }
   }
 
   if (current === 'program_type') {
@@ -1591,6 +1611,32 @@ export async function advancePreWizardScreen(
 }
 
 export async function clearStuckProcessing(page: Page): Promise<boolean> {
+  // Never reload mid pre-wizard — CSU rolls back student_type → program_selection
+  // to a fresh student_type after a successful Next+processing.
+  const midPreWizard = await page.evaluate(() => {
+    if (document.querySelector('select[name="collegeId"]')) {
+      return true;
+    }
+    if (document.querySelector('input[name="projectTypeId"]')) {
+      return true;
+    }
+    if (
+      document.querySelector('input[name="apply.lastName"]') &&
+      (document.querySelector(
+        'input[name="apply.lastName"]',
+      ) as HTMLElement | null)?.offsetParent !== null
+    ) {
+      return true;
+    }
+    return false;
+  });
+
+  if (midPreWizard) {
+    // Only wait out processing overlay — no reload, no force-hide.
+    await waitForProcessingQuiet(page, 30_000);
+    return false;
+  }
+
   const stuck = await page.evaluate(() =>
     /请求正在处理中|please wait|processing your request/i.test(
       document.body?.innerText ?? '',
@@ -1614,7 +1660,7 @@ export async function clearStuckProcessing(page: Page): Promise<boolean> {
     return true;
   }
 
-  // Frozen overlay from a previous attempt — hard refresh (never networkidle on 17gz).
+  // Frozen overlay only on non-wizard pages (login/list) — hard refresh.
   await page
     .reload({ waitUntil: 'domcontentloaded', timeout: 30_000 })
     .catch(() => undefined);

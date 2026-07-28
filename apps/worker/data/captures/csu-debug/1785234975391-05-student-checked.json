@@ -1,0 +1,15 @@
+{
+  "url": "https://csu.17gz.org/apply/index.do",
+  "screen": "student_type",
+  "radios": 6,
+  "checked": {
+    "value": "ff8080815184f85601518b35cd3512cf",
+    "label": "Undergraduate Student"
+  },
+  "collegeId": false,
+  "applyLinks": 0,
+  "messager": [
+    "It's processing! Please wait..."
+  ],
+  "body": " International Student Service System 中文English viperclaw bax.nick93@gmail.com ✉ 0 Home Application Application Status Messages please choose your type : Doctoral Student Master Student Undergraduate "
+}

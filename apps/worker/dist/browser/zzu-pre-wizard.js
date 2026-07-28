@@ -1077,8 +1077,19 @@ async function advancePreWizardScreen(page, screen = null, hints, gemini) {
     }
     await fillPreWizardScreen(page, current, hints);
     await page.waitForTimeout(200);
-    if (current === 'program_selection' && (await isProgramSelectionEmpty(page))) {
-        return false;
+    if (current === 'program_selection') {
+        await page
+            .waitForFunction(() => {
+            const text = document.body?.innerText ?? '';
+            if (/Total:\s*[1-9]/i.test(text)) {
+                return true;
+            }
+            return Boolean(document.querySelector('a[onclick*="saveChoose"], a[onclick*="StudyPlan"], td a'));
+        }, { timeout: 15_000 })
+            .catch(() => undefined);
+        if (await isProgramSelectionEmpty(page)) {
+            return false;
+        }
     }
     if (current === 'program_type') {
         if (!(await waitForProjectTypeChecked(page, 5_000))) {
@@ -1109,6 +1120,23 @@ async function advancePreWizardScreen(page, screen = null, hints, gemini) {
     return false;
 }
 async function clearStuckProcessing(page) {
+    const midPreWizard = await page.evaluate(() => {
+        if (document.querySelector('select[name="collegeId"]')) {
+            return true;
+        }
+        if (document.querySelector('input[name="projectTypeId"]')) {
+            return true;
+        }
+        if (document.querySelector('input[name="apply.lastName"]') &&
+            document.querySelector('input[name="apply.lastName"]')?.offsetParent !== null) {
+            return true;
+        }
+        return false;
+    });
+    if (midPreWizard) {
+        await waitForProcessingQuiet(page, 30_000);
+        return false;
+    }
     const stuck = await page.evaluate(() => /请求正在处理中|please wait|processing your request/i.test(document.body?.innerText ?? ''));
     if (!stuck) {
         return false;
