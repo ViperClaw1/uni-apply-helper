@@ -16,6 +16,7 @@ export declare function waitForUiReady(page: Page): Promise<void>;
 export declare function dismissBlockingDialogs(page: Page): Promise<void>;
 export declare function detectPreWizardScreen(page: Page): Promise<PreWizardScreen | null>;
 export declare function isMainWizard(page: Page): Promise<boolean>;
+export declare function getLastStudentTypePickDiag(): Record<string, unknown> | null;
 export declare function fillPreWizardScreen(page: Page, screen: PreWizardScreen, hints?: string | PreWizardHints): Promise<boolean>;
 export declare function advancePreWizardScreen(page: Page, screen?: PreWizardScreen | null, hints?: string | PreWizardHints, gemini?: StudyPlanMatcher): Promise<boolean>;
 export declare function clearStuckProcessing(page: Page): Promise<boolean>;

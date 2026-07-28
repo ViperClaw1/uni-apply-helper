@@ -8,6 +8,7 @@ import {
   clearStuckProcessing,
   describeNavigationState,
   detectPreWizardScreen,
+  getLastStudentTypePickDiag,
   isMainWizard,
   type PreWizardHints,
   type StudyPlanMatcher,
@@ -248,7 +249,10 @@ export async function navigateToZzuApplication(
 
     throw new Error(
       '17gz wizard Step 1 (Basic Info) not reached after navigation. ' +
-        `URL: ${page.url()}. Screenshot: ${shotPath}. ${diagnostics}`,
+        `URL: ${page.url()}. Screenshot: ${shotPath}. ${diagnostics}` +
+        (getLastStudentTypePickDiag()
+          ? ` pickDiag=${JSON.stringify(getLastStudentTypePickDiag())}`
+          : ''),
     );
   }
 }

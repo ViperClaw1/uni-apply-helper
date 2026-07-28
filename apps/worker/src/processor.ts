@@ -255,6 +255,20 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
     step: ApplicationPipelineStep,
     context: ApplicationStepContext,
   ): Promise<void> {
+    // Close orphaned processing rows (crash/retry) so UI doesn't show
+    // open_form:failed + open_form:processing together forever.
+    await this.prisma.applicationStep.updateMany({
+      where: {
+        applicationId,
+        status: 'processing',
+      },
+      data: {
+        status: 'failed',
+        errorMessage: 'superseded by new attempt',
+        completedAt: new Date(),
+      },
+    });
+
     const record = await this.prisma.applicationStep.create({
       data: {
         applicationId,

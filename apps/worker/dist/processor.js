@@ -195,6 +195,17 @@ let Processor = Processor_1 = class Processor {
         }
     }
     async runStep(applicationId, step, context) {
+        await this.prisma.applicationStep.updateMany({
+            where: {
+                applicationId,
+                status: 'processing',
+            },
+            data: {
+                status: 'failed',
+                errorMessage: 'superseded by new attempt',
+                completedAt: new Date(),
+            },
+        });
         const record = await this.prisma.applicationStep.create({
             data: {
                 applicationId,

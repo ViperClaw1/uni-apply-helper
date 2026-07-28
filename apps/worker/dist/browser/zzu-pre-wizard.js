@@ -4,6 +4,7 @@ exports.waitForUiReady = waitForUiReady;
 exports.dismissBlockingDialogs = dismissBlockingDialogs;
 exports.detectPreWizardScreen = detectPreWizardScreen;
 exports.isMainWizard = isMainWizard;
+exports.getLastStudentTypePickDiag = getLastStudentTypePickDiag;
 exports.fillPreWizardScreen = fillPreWizardScreen;
 exports.advancePreWizardScreen = advancePreWizardScreen;
 exports.clearStuckProcessing = clearStuckProcessing;
@@ -648,6 +649,10 @@ function studentTypeHintList(preferred) {
     }
     return out;
 }
+let lastStudentTypePickDiag = null;
+function getLastStudentTypePickDiag() {
+    return lastStudentTypePickDiag;
+}
 async function waitForProjectTypeChecked(page, timeoutMs = 5_000) {
     await page
         .waitForFunction(() => Boolean(document.querySelector('input[type="radio"][name="projectTypeId"]:checked')), { timeout: timeoutMs })
@@ -658,7 +663,7 @@ async function pickStudentTypeRadio(page, studentType) {
     await dismissBlockingDialogs(page);
     const hints = studentTypeHintList(studentType);
     const hint = hints[0] ?? 'Undergraduate Student';
-    const visibleChecked = () => waitForProjectTypeChecked(page, 3_000);
+    lastStudentTypePickDiag = { build: 'atomic-v1', hint };
     for (const textHint of hints) {
         const escaped = textHint.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const label = page
@@ -670,85 +675,117 @@ async function pickStudentTypeRadio(page, studentType) {
         }
         await label.scrollIntoViewIfNeeded().catch(() => undefined);
         await label.click({ force: true });
-        if (await visibleChecked()) {
+        const ok = await page.evaluate(() => Boolean(document.querySelector('input[type="radio"][name="projectTypeId"]:checked')));
+        lastStudentTypePickDiag = {
+            ...lastStudentTypePickDiag,
+            playwrightLabel: textHint,
+            ok,
+        };
+        if (ok) {
             return true;
-        }
-        const box = await label.boundingBox().catch(() => null);
-        if (box) {
-            await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-            if (await visibleChecked()) {
-                return true;
-            }
         }
     }
     const forced = await page.evaluate((needle) => {
-        const isVisible = (el) => {
-            const style = getComputedStyle(el);
-            if (style.display === 'none' || style.visibility === 'hidden') {
-                return false;
-            }
-            const rect = el.getBoundingClientRect();
-            return rect.width > 0 && rect.height > 0;
-        };
         const radios = [
             ...document.querySelectorAll('input[type="radio"][name="projectTypeId"]'),
-        ].filter(isVisible);
+        ];
         const labelOf = (radio) => (radio.closest('label')?.textContent ?? '').replace(/\s+/g, ' ').trim();
-        const target = radios.find((radio) => labelOf(radio).toLowerCase().includes(needle.toLowerCase())) ??
+        const target = radios.find((radio) => labelOf(radio).toLowerCase().includes(String(needle).toLowerCase())) ??
             radios.find((radio) => /undergraduate|本科/i.test(labelOf(radio))) ??
             radios[2] ??
             radios[0];
         if (!target) {
-            return { ok: false, reason: 'no-radio' };
+            return {
+                ok: false,
+                reason: 'no-radio',
+                n: radios.length,
+                hasFn: typeof window
+                    .projectTypeOnClick22,
+            };
         }
         const label = target.closest('label');
+        label?.click();
+        const afterLabelClick = target.checked;
         const evt = new MouseEvent('click', {
             bubbles: true,
             cancelable: true,
             view: window,
         });
-        label?.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
-        if (target.checked) {
-            return { ok: true, reason: 'label-dispatch' };
-        }
-        const win = window;
         target.checked = true;
+        target.setAttribute('checked', 'checked');
+        target.setAttribute('confirmflag', 'true');
+        const win = window;
+        let fnError = null;
         if (typeof win.projectTypeOnClick22 === 'function') {
             try {
                 win.projectTypeOnClick22(target, evt);
             }
-            catch {
+            catch (error) {
+                fnError = error instanceof Error ? error.message : String(error);
             }
         }
         else {
             const raw = target.getAttribute('onclick') || '';
-            const match = raw.match(/^(projectTypeOnClick\w*)\s*\(\s*this\s*,\s*arguments\[0\]\s*\)\s*;?$/);
-            if (match?.[1]) {
-                const fn = window[match[1]];
-                if (typeof fn === 'function') {
-                    try {
-                        fn(target, evt);
-                    }
-                    catch {
-                    }
+            const match = raw.match(/^(projectTypeOnClick\w*)\s*\(/);
+            const fnName = match?.[1];
+            const fn = fnName
+                ? window[fnName]
+                : undefined;
+            if (typeof fn === 'function') {
+                try {
+                    fn(target, evt);
+                }
+                catch (error) {
+                    fnError = error instanceof Error ? error.message : String(error);
                 }
             }
         }
-        if (!target.checked) {
-            target.checked = true;
-            target.setAttribute('checked', 'checked');
-        }
+        const checkedNow = Boolean(document.querySelector('input[type="radio"][name="projectTypeId"]:checked'));
         return {
-            ok: target.checked,
-            reason: `onclick:${typeof win.projectTypeOnClick22}`,
-            label: labelOf(target).slice(0, 80),
+            ok: checkedNow || target.checked,
+            afterLabelClick,
+            targetChecked: target.checked,
+            checkedNow,
+            value: target.value,
+            label: labelOf(target).slice(0, 60),
+            hasFn: typeof win.projectTypeOnClick22,
+            fnError,
+            onclick: (target.getAttribute('onclick') || '').slice(0, 80),
         };
     }, hint);
-    if (forced.ok && (await visibleChecked())) {
-        return true;
+    lastStudentTypePickDiag = { ...lastStudentTypePickDiag, forced };
+    console.warn('[pickStudentTypeRadio]', forced);
+    return Boolean(forced.ok);
+}
+async function advanceStudentTypeAtomic(page, studentType) {
+    const picked = await pickStudentTypeRadio(page, studentType);
+    if (!picked) {
+        return false;
     }
-    console.warn('[pickStudentTypeRadio] failed', forced);
-    return visibleChecked();
+    const nextResult = await page.evaluate(() => {
+        const selected = document.querySelector('input[name="projectTypeId"]:checked');
+        if (!selected) {
+            return { ok: false, reason: 'lost-checked' };
+        }
+        const form = selected.form ??
+            document.querySelector('form');
+        const save = window.saveProjectType;
+        if (typeof save === 'function' && form) {
+            save(form);
+            return { ok: true, via: `saveProjectType:${selected.value}` };
+        }
+        const next = document.querySelector('input[type="button"][value="Next"], input[value="Next"], input[value="下一步"]');
+        if (next) {
+            next.click();
+            return { ok: true, via: `Next:${next.value}` };
+        }
+        return { ok: false, reason: 'no-next' };
+    });
+    lastStudentTypePickDiag = {
+        ...lastStudentTypePickDiag,
+        next: nextResult,
+    };
+    return Boolean(nextResult.ok);
 }
 const NEXT_NAME_RE = /^(Next|下一步|Save and Next|保存并下一步)$/i;
 async function clickVisibleNext(page) {
@@ -950,12 +987,36 @@ async function advancePreWizardScreen(page, screen = null, hints, gemini) {
         return false;
     }
     const before = await getPreWizardSignature(page, current);
+    if (current === 'student_type') {
+        const resolved = normalizeHints(hints);
+        const ok = await advanceStudentTypeAtomic(page, resolved.studentType);
+        if (!ok) {
+            return false;
+        }
+        await page
+            .waitForLoadState('domcontentloaded', { timeout: 10_000 })
+            .catch(() => undefined);
+        await page.waitForTimeout(600);
+        for (let attempt = 0; attempt < 4; attempt += 1) {
+            await waitForUiReady(page);
+            if (await isMainWizard(page)) {
+                return true;
+            }
+            const afterScreen = await detectPreWizardScreen(page);
+            const after = await getPreWizardSignature(page, afterScreen ?? current);
+            if (after !== before) {
+                return true;
+            }
+            await page.waitForTimeout(300);
+        }
+        return false;
+    }
     await fillPreWizardScreen(page, current, hints);
     await page.waitForTimeout(200);
     if (current === 'program_selection' && (await isProgramSelectionEmpty(page))) {
         return false;
     }
-    if (current === 'program_type' || current === 'student_type') {
+    if (current === 'program_type') {
         if (!(await waitForProjectTypeChecked(page, 5_000))) {
             return false;
         }
