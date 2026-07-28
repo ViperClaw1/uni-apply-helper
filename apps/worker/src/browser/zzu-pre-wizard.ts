@@ -381,6 +381,27 @@ async function pickProjectTypeRadio(
         ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     }
 
+    // CSU/17gz: onclick="projectTypeOnClick22(this,arguments[0])"
+    const evt = new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+      view: window,
+    });
+    targetRadio.checked = true;
+    const raw = targetRadio.getAttribute('onclick') || '';
+    const match = raw.match(/^(projectTypeOnClick\w*)\s*\(/);
+    const fnName = match?.[1];
+    const fn = fnName
+      ? (window as unknown as Record<string, unknown>)[fnName]
+      : undefined;
+    if (typeof fn === 'function') {
+      try {
+        (fn as (el: HTMLInputElement, e: Event) => void)(targetRadio, evt);
+      } catch {
+        /* ignore */
+      }
+    }
+
     return targetRadio.checked;
   }, programHint ?? null);
 
@@ -883,8 +904,9 @@ function studentTypeHintList(preferred?: string): string[] {
 }
 
 /**
- * CSU/17gz student-type: radios + separate <label for> OR wrapping <label>.
- * User-confirmed: both radio click and label click work in headed browser.
+ * CSU student-type DOM (confirmed):
+ *   <label><input type="radio" name="projectTypeId" onclick="projectTypeOnClick22(this,arguments[0])">Undergraduate Student</label>
+ * Must fire projectTypeOnClick22 with a real event — bare checked=true doesn't stick.
  */
 async function pickStudentTypeRadio(
   page: Page,
@@ -893,144 +915,134 @@ async function pickStudentTypeRadio(
   await dismissBlockingDialogs(page);
 
   const hints = studentTypeHintList(studentType);
-  const radios = page.locator('input[type="radio"][name="projectTypeId"]');
-  const count = await radios.count();
-  if (count === 0) {
-    return false;
-  }
+  const hint = hints[0] ?? 'Undergraduate Student';
 
-  const checkedCount = () =>
-    page.locator('input[type="radio"][name="projectTypeId"]:checked').count();
+  const visibleChecked = () =>
+    page
+      .locator('input[type="radio"][name="projectTypeId"]:visible:checked')
+      .count();
 
-  // 1) Click <label> by text (wrapping or label[for]) — confirmed on CSU
-  for (const hint of hints) {
-    const escaped = hint.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // 1) Click wrapping <label> that owns the radio (exact CSU structure)
+  for (const textHint of hints) {
+    const escaped = textHint.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const label = page
-      .locator('label')
+      .locator('label:has(input[type="radio"][name="projectTypeId"])')
       .filter({ hasText: new RegExp(escaped, 'i') })
       .first();
     if ((await label.count()) === 0) {
       continue;
     }
-    if (!(await label.isVisible().catch(() => false))) {
-      continue;
-    }
+    await label.scrollIntoViewIfNeeded().catch(() => undefined);
     await label.click({ force: true });
-    if ((await checkedCount()) > 0) {
+    if ((await visibleChecked()) > 0) {
       return true;
     }
-  }
-
-  // 2) Resolve index from DOM (label[for] / wrap / nextSibling), then real click
-  const index = await page.evaluate((hintList) => {
-    const list = [
-      ...document.querySelectorAll(
-        'input[type="radio"][name="projectTypeId"]',
-      ),
-    ] as HTMLInputElement[];
-
-    const labelOf = (radio: HTMLInputElement) => {
-      const wrap = radio.closest('label')?.textContent?.trim();
-      if (wrap) {
-        return wrap;
-      }
-      if (radio.id) {
-        const forLabel = document.querySelector(
-          `label[for="${CSS.escape(radio.id)}"]`,
-        );
-        const text = forLabel?.textContent?.trim();
-        if (text) {
-          return text;
-        }
-      }
-      let node: ChildNode | null = radio.nextSibling;
-      while (node) {
-        if (node.nodeType === Node.TEXT_NODE) {
-          const text = (node.textContent ?? '').replace(/\s+/g, ' ').trim();
-          if (text) {
-            return text;
-          }
-        } else if (node.nodeType === Node.ELEMENT_NODE) {
-          const el = node as Element;
-          if (el.tagName === 'LABEL') {
-            return (el.textContent ?? '').replace(/\s+/g, ' ').trim();
-          }
-          if (el.tagName === 'BR' || el.tagName === 'INPUT') {
-            break;
-          }
-        }
-        node = node.nextSibling;
-      }
-      return '';
-    };
-
-    for (let i = 0; i < list.length; i += 1) {
-      const text = labelOf(list[i]!).toLowerCase();
-      if (hintList.some((hint) => text.includes(String(hint).toLowerCase()))) {
-        return i;
-      }
-    }
-    for (let i = 0; i < list.length; i += 1) {
-      if (/undergraduate|本科/.test(labelOf(list[i]!).toLowerCase())) {
-        return i;
-      }
-    }
-    // CSU order: Doctoral, Master, Undergraduate, ...
-    return Math.min(2, Math.max(0, list.length - 1));
-  }, hints);
-
-  const target = radios.nth(index);
-  await target.scrollIntoViewIfNeeded().catch(() => undefined);
-  await target.click({ force: true });
-  if ((await checkedCount()) > 0) {
-    return true;
-  }
-  await target.check({ force: true }).catch(() => undefined);
-  if ((await checkedCount()) > 0) {
-    return true;
-  }
-
-  // 3) Nuclear: label[for] / wrap click + force checked
-  return page.evaluate((i) => {
-    const list = [
-      ...document.querySelectorAll(
-        'input[type="radio"][name="projectTypeId"]',
-      ),
-    ] as HTMLInputElement[];
-    const targetRadio = list[i];
-    if (!targetRadio) {
-      return false;
-    }
-
-    const wrap = targetRadio.closest('label') as HTMLElement | null;
-    wrap?.click();
-    if (targetRadio.checked) {
-      return true;
-    }
-
-    if (targetRadio.id) {
-      const forLabel = document.querySelector(
-        `label[for="${CSS.escape(targetRadio.id)}"]`,
-      ) as HTMLElement | null;
-      forLabel?.click();
-      if (targetRadio.checked) {
+    // CDP mouse on label center
+    const box = await label.boundingBox().catch(() => null);
+    if (box) {
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+      if ((await visibleChecked()) > 0) {
         return true;
       }
     }
+  }
 
-    targetRadio.click();
-    if (targetRadio.checked) {
-      return true;
+  // 2) Invoke projectTypeOnClick22(radio, event) explicitly — this is what CSU needs
+  const forced = await page.evaluate((needle) => {
+    const isVisible = (el: Element) => {
+      const style = getComputedStyle(el as HTMLElement);
+      if (style.display === 'none' || style.visibility === 'hidden') {
+        return false;
+      }
+      const rect = (el as HTMLElement).getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    };
+
+    const radios = [
+      ...document.querySelectorAll(
+        'input[type="radio"][name="projectTypeId"]',
+      ),
+    ].filter(isVisible) as HTMLInputElement[];
+
+    const labelOf = (radio: HTMLInputElement) =>
+      (radio.closest('label')?.textContent ?? '').replace(/\s+/g, ' ').trim();
+
+    const target =
+      radios.find((radio) =>
+        labelOf(radio).toLowerCase().includes(needle.toLowerCase()),
+      ) ??
+      radios.find((radio) =>
+        /undergraduate|本科/i.test(labelOf(radio)),
+      ) ??
+      radios[2] ??
+      radios[0];
+
+    if (!target) {
+      return { ok: false, reason: 'no-radio' };
     }
 
-    for (const radio of list) {
-      radio.checked = radio === targetRadio;
+    const label = target.closest('label') as HTMLLabelElement | null;
+    const evt = new MouseEvent('click', {
+      bubbles: true,
+      cancelable: true,
+      view: window,
+    });
+
+    // Prefer label click (same as user gesture path)
+    label?.dispatchEvent(
+      new MouseEvent('click', { bubbles: true, cancelable: true, view: window }),
+    );
+    if (target.checked) {
+      return { ok: true, reason: 'label-dispatch' };
     }
-    targetRadio.dispatchEvent(new Event('input', { bubbles: true }));
-    targetRadio.dispatchEvent(new Event('change', { bubbles: true }));
-    targetRadio.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    return targetRadio.checked;
-  }, index);
+
+    // Call 17gz handler directly with (this, event)
+    const win = window as unknown as {
+      projectTypeOnClick22?: (el: HTMLInputElement, e: Event) => void;
+    };
+    target.checked = true;
+    if (typeof win.projectTypeOnClick22 === 'function') {
+      try {
+        win.projectTypeOnClick22(target, evt);
+      } catch {
+        /* ignore */
+      }
+    } else {
+      // Fall back to inline onclick attribute
+      const raw = target.getAttribute('onclick') || '';
+      const match = raw.match(
+        /^(projectTypeOnClick\w*)\s*\(\s*this\s*,\s*arguments\[0\]\s*\)\s*;?$/,
+      );
+      if (match?.[1]) {
+        const fn = (window as unknown as Record<string, unknown>)[match[1]];
+        if (typeof fn === 'function') {
+          try {
+            (fn as (el: HTMLInputElement, e: Event) => void)(target, evt);
+          } catch {
+            /* ignore */
+          }
+        }
+      }
+    }
+
+    if (!target.checked) {
+      target.checked = true;
+      target.setAttribute('checked', 'checked');
+    }
+
+    return {
+      ok: target.checked,
+      reason: `onclick:${typeof win.projectTypeOnClick22}`,
+      label: labelOf(target).slice(0, 80),
+    };
+  }, hint);
+
+  if (forced.ok && (await visibleChecked()) > 0) {
+    return true;
+  }
+
+  console.warn('[pickStudentTypeRadio] failed', forced);
+  return (await visibleChecked()) > 0;
 }
 
 /** Next labels: EN "Next" / ZH "下一步". KMMC uses <button class="el-button">. */
@@ -1350,7 +1362,9 @@ export async function advancePreWizardScreen(
   }
 
   if (current === 'student_type') {
-    const selected = await page.locator('input[type="radio"]:checked').count();
+    const selected = await page
+      .locator('input[type="radio"][name="projectTypeId"]:visible:checked')
+      .count();
     if (selected === 0) {
       return false;
     }
@@ -1532,10 +1546,17 @@ export async function describeNavigationState(page: Page): Promise<string> {
     const checked = inputs.find((input) => input.checked);
     const inputDump = inputs
       .slice(0, 10)
-      .map(
-        (input) =>
-          `name=${input.name};value=${input.value};checked=${input.checked};display=${getComputedStyle(input).display}`,
-      )
+      .map((input) => {
+        const parent = (
+          input.closest('label') ?? input.parentElement
+        )?.outerHTML?.replace(/\s+/g, ' ')
+          .slice(0, 120);
+        return (
+          `name=${input.name};value=${input.value};checked=${input.checked};` +
+          `disabled=${input.disabled};display=${getComputedStyle(input).display};` +
+          `parent=${parent ?? ''}`
+        );
+      })
       .join(' | ');
     const hasSave =
       typeof (window as unknown as { saveProjectType?: unknown }).saveProjectType ===
