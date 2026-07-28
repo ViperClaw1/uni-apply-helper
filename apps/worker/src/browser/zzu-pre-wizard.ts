@@ -40,30 +40,66 @@ function normalizeHints(
 }
 
 export async function waitForUiReady(page: Page): Promise<void> {
-  // Dismiss dialogs first — otherwise "请求正在处理中..." never clears and we burn 30s.
+  // Never Ok-click an in-flight processing dialog — wait it out / force-hide later.
   await dismissBlockingDialogs(page);
 
   await page
-    .locator('.window-mask, .el-loading-mask, .datagrid-mask')
-    .first()
-    .waitFor({ state: 'hidden', timeout: 10_000 })
+    .waitForFunction(() => {
+      const wins = [
+        ...document.querySelectorAll(
+          '.messager-window, .panel.window, .window-mask, .datagrid-mask, .el-loading-mask',
+        ),
+      ];
+      const visibleProcessing = wins.some((win) => {
+        const style = getComputedStyle(win as HTMLElement);
+        if (style.display === 'none' || style.visibility === 'hidden') {
+          return false;
+        }
+        const rect = (win as HTMLElement).getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) {
+          return false;
+        }
+        return /It'?s processing|请求正在处理中|please wait|processing your request/i.test(
+          win.textContent || '',
+        );
+      });
+      return !visibleProcessing;
+    }, { timeout: 12_000 })
     .catch(() => undefined);
 
-  await page
-    .waitForFunction(
-      () => {
-        const text = document.body?.innerText ?? '';
-        return !/请求正在处理中|please wait|processing/i.test(text);
-      },
-      { timeout: 8_000 },
-    )
-    .catch(() => undefined);
-
-  await page.waitForTimeout(200);
+  await page.waitForTimeout(150);
 }
 
 export async function dismissBlockingDialogs(page: Page): Promise<void> {
-  for (let attempt = 0; attempt < 8; attempt += 1) {
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const isProcessing = await page
+      .evaluate(() => {
+        const wins = [
+          ...document.querySelectorAll(
+            '.messager-window, .panel.window, .window-mask',
+          ),
+        ];
+        return wins.some((win) => {
+          const style = getComputedStyle(win as HTMLElement);
+          if (style.display === 'none' || style.visibility === 'hidden') {
+            return false;
+          }
+          const rect = (win as HTMLElement).getBoundingClientRect();
+          if (rect.width === 0 || rect.height === 0) {
+            return false;
+          }
+          return /It'?s processing|请求正在处理中|please wait|processing your request/i.test(
+            win.textContent || '',
+          );
+        });
+      })
+      .catch(() => false);
+
+    // Don't click Ok on "It's processing!" — it never clears and we thrash.
+    if (isProcessing) {
+      break;
+    }
+
     const okButton = page
       .locator(
         [
@@ -93,20 +129,34 @@ export async function dismissBlockingDialogs(page: Page): Promise<void> {
     }
 
     await okButton.click({ force: true }).catch(() => undefined);
-    await page.waitForTimeout(400);
+    await page.waitForTimeout(300);
   }
 
-  // Force-hide stuck easyui overlay if Ok never worked.
+  // Force-hide ONLY if a processing overlay is still visibly stuck.
   await page
     .evaluate(() => {
-      const text = document.body?.innerText ?? '';
-      if (!/请求正在处理中|processing/i.test(text)) {
+      const wins = [
+        ...document.querySelectorAll(
+          '.window-mask, .datagrid-mask, .messager-window, .panel.window, .window-shadow, .el-loading-mask',
+        ),
+      ];
+      const stuck = wins.some((win) => {
+        const style = getComputedStyle(win as HTMLElement);
+        if (style.display === 'none' || style.visibility === 'hidden') {
+          return false;
+        }
+        const rect = (win as HTMLElement).getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) {
+          return false;
+        }
+        return /It'?s processing|请求正在处理中|please wait|processing your request/i.test(
+          win.textContent || '',
+        );
+      });
+      if (!stuck) {
         return;
       }
-
-      for (const el of document.querySelectorAll(
-        '.window-mask, .datagrid-mask, .messager-window, .panel.window, .window-shadow',
-      )) {
+      for (const el of wins) {
         (el as HTMLElement).style.display = 'none';
       }
     })
@@ -1376,7 +1426,7 @@ export async function advancePreWizardScreen(
     .catch(() => undefined);
   await page.waitForTimeout(600);
 
-  for (let attempt = 0; attempt < 6; attempt += 1) {
+  for (let attempt = 0; attempt < 4; attempt += 1) {
     await waitForUiReady(page);
     await dismissBlockingDialogs(page);
 
@@ -1390,7 +1440,7 @@ export async function advancePreWizardScreen(
       return true;
     }
 
-    await page.waitForTimeout(350);
+    await page.waitForTimeout(300);
   }
 
   return false;
@@ -1420,8 +1470,10 @@ export async function clearStuckProcessing(page: Page): Promise<boolean> {
     return true;
   }
 
-  // Frozen overlay from a previous attempt — hard refresh.
-  await page.reload({ waitUntil: 'networkidle', timeout: 60_000 }).catch(() => undefined);
+  // Frozen overlay from a previous attempt — hard refresh (never networkidle on 17gz).
+  await page
+    .reload({ waitUntil: 'domcontentloaded', timeout: 30_000 })
+    .catch(() => undefined);
   await waitForUiReady(page);
   return true;
 }
@@ -1429,27 +1481,53 @@ export async function clearStuckProcessing(page: Page): Promise<boolean> {
 export async function advanceThroughPreWizard(
   page: Page,
   hints?: string | PreWizardHints,
-  { maxSteps = 20, gemini }: { maxSteps?: number; gemini?: StudyPlanMatcher } = {},
+  {
+    maxSteps = 10,
+    deadlineMs = 90_000,
+    gemini,
+  }: {
+    maxSteps?: number;
+    /** Hard cap so open_form can't hang 10+ minutes / stall BullMQ into a duplicate step. */
+    deadlineMs?: number;
+    gemini?: StudyPlanMatcher;
+  } = {},
 ): Promise<boolean> {
-  const MAX_CONSECUTIVE_FAILS = 4;
+  const MAX_CONSECUTIVE_FAILS = 3;
+  const MAX_SAME_SCREEN = 3;
   let consecutiveFails = 0;
+  let sameScreenHits = 0;
+  let lastScreen: PreWizardScreen | null = null;
+  const deadline = Date.now() + deadlineMs;
 
   await clearStuckProcessing(page);
 
   for (let step = 0; step < maxSteps; step += 1) {
+    if (Date.now() > deadline) {
+      return isMainWizard(page);
+    }
+
     if (await isMainWizard(page)) {
       return true;
     }
 
     const screen = await detectPreWizardScreen(page);
     if (!screen) {
-      // Screen may still be hydrating after Apply/AJAX — retry a few times.
       consecutiveFails += 1;
       if (consecutiveFails >= MAX_CONSECUTIVE_FAILS) {
         return false;
       }
-      await page.waitForTimeout(1200);
+      await page.waitForTimeout(800);
       continue;
+    }
+
+    if (screen === lastScreen) {
+      sameScreenHits += 1;
+      if (sameScreenHits >= MAX_SAME_SCREEN) {
+        return false;
+      }
+    } else {
+      lastScreen = screen;
+      sameScreenHits = 0;
     }
 
     const advanced = await advancePreWizardScreen(
@@ -1458,8 +1536,17 @@ export async function advanceThroughPreWizard(
       hints,
       gemini,
     );
-    if (advanced || (await isMainWizard(page))) {
+    if (await isMainWizard(page)) {
+      return true;
+    }
+    if (advanced) {
       consecutiveFails = 0;
+      // Signature change on same screen (e.g. dialog flicker) must not loop forever.
+      const after = await detectPreWizardScreen(page);
+      if (after && after !== screen) {
+        lastScreen = after;
+        sameScreenHits = 0;
+      }
       continue;
     }
 
@@ -1467,7 +1554,7 @@ export async function advanceThroughPreWizard(
     if (consecutiveFails >= MAX_CONSECUTIVE_FAILS) {
       return false;
     }
-    await page.waitForTimeout(1200);
+    await page.waitForTimeout(800);
   }
 
   return isMainWizard(page);

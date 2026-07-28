@@ -101,7 +101,7 @@ async function advanceIntermediateSteps(
   hints?: PreWizardHints,
   gemini?: StudyPlanMatcher,
 ): Promise<boolean> {
-  for (let step = 0; step < 6; step += 1) {
+  for (let step = 0; step < 4; step += 1) {
     if (await isWizardStep(page)) {
       return true;
     }
@@ -110,13 +110,13 @@ async function advanceIntermediateSteps(
     if (await detectPreWizardScreen(page)) {
       const advanced = await advanceThroughPreWizard(page, hints, {
         gemini,
+        deadlineMs: 90_000,
       });
       if (advanced || (await isWizardStep(page))) {
         return true;
       }
-      // advanceThroughPreWizard exhausted retries — wait and let outer loop retry
-      await page.waitForTimeout(1000);
-      continue;
+      // Pre-wizard exhausted — don't nest another 90s loop on the same screens.
+      return false;
     }
 
     const bodyText = await page.locator('body').innerText();
@@ -169,7 +169,7 @@ async function advanceToWizard(
     if ((await formLink.count()) > 0) {
       await formLink.click();
       await page
-        .waitForLoadState('networkidle', { timeout: 60_000 })
+        .waitForLoadState('domcontentloaded', { timeout: 30_000 })
         .catch(() => undefined);
       await advanceIntermediateSteps(page, hints, gemini);
     }
