@@ -1075,7 +1075,9 @@ async function pickStudentTypeRadio(
 }
 
 /**
- * Select student type and submit Next in one shot — beats async reset of checked.
+ * Select student type then click real Next input (onclick=saveProjectType(this.form)).
+ * Calling saveProjectType(form) from evaluate returns ok but CSU stays on the page —
+ * must use Playwright click on the button so inline onclick gets proper `this`.
  */
 async function advanceStudentTypeAtomic(
   page: Page,
@@ -1086,46 +1088,109 @@ async function advanceStudentTypeAtomic(
     return false;
   }
 
-  // Click Next IMMEDIATELY — do not waitForUiReady (gives time to clear checked)
-  const nextResult = await page.evaluate(() => {
+  // Re-confirm checked right before Next (no long waits)
+  const stillChecked = await page.evaluate(() => {
     const selected = document.querySelector(
       'input[name="projectTypeId"]:checked',
     ) as HTMLInputElement | null;
-    if (!selected) {
-      return { ok: false, reason: 'lost-checked' };
-    }
+    return selected
+      ? { ok: true, value: selected.value }
+      : { ok: false, value: null };
+  });
+  lastStudentTypePickDiag = {
+    ...lastStudentTypePickDiag,
+    beforeNext: stillChecked,
+  };
+  if (!stillChecked.ok) {
+    return false;
+  }
 
-    const form =
-      selected.form ??
-      (document.querySelector('form') as HTMLFormElement | null);
-    const save = (
-      window as unknown as {
-        saveProjectType?: (form: HTMLFormElement) => void;
-      }
-    ).saveProjectType;
-
-    if (typeof save === 'function' && form) {
-      save(form);
-      return { ok: true, via: `saveProjectType:${selected.value}` };
-    }
-
-    const next = document.querySelector(
+  // Prefer real button click — fires onclick="saveProjectType(this.form)"
+  const nextBtn = page
+    .locator(
       'input[type="button"][value="Next"], input[value="Next"], input[value="下一步"]',
-    ) as HTMLInputElement | null;
-    if (next) {
-      next.click();
-      return { ok: true, via: `Next:${next.value}` };
-    }
+    )
+    .first();
 
-    return { ok: false, reason: 'no-next' };
+  let via = 'none';
+  if ((await nextBtn.count()) > 0) {
+    await nextBtn.click({ force: true });
+    via = 'playwright:Next';
+  } else {
+    const fallback = await page.evaluate(() => {
+      const selected = document.querySelector(
+        'input[name="projectTypeId"]:checked',
+      ) as HTMLInputElement | null;
+      if (!selected) {
+        return { ok: false, via: 'lost-checked' };
+      }
+      const next = document.querySelector(
+        'input[type="button"][value="Next"], input[value="Next"]',
+      ) as HTMLInputElement | null;
+      if (!next) {
+        return { ok: false, via: 'no-next' };
+      }
+      // Invoke inline handler with button as this when possible
+      const onclick = next.getAttribute('onclick') || '';
+      if (onclick) {
+        try {
+          const run = new Function('btn', onclick.replace(/\bthis\b/g, 'btn'));
+          run(next);
+          return { ok: true, via: `onclick:${onclick.slice(0, 40)}` };
+        } catch {
+          /* fall through */
+        }
+      }
+      next.click();
+      return { ok: true, via: 'next.click' };
+    });
+    via = fallback.via;
+    if (!fallback.ok) {
+      lastStudentTypePickDiag = { ...lastStudentTypePickDiag, next: fallback };
+      return false;
+    }
+  }
+
+  // Give AJAX a moment, then read any messager / screen
+  await page.waitForTimeout(800);
+  const after = await page.evaluate(() => {
+    const body = document.body?.innerText ?? '';
+    const messager = [
+      ...document.querySelectorAll(
+        '.messager-body, .messager-window, .panel-body',
+      ),
+    ]
+      .map((el) => (el.textContent || '').replace(/\s+/g, ' ').trim())
+      .filter((t) => t.length > 0 && t.length < 200)
+      .slice(0, 3);
+    const checked = (
+      document.querySelector(
+        'input[name="projectTypeId"]:checked',
+      ) as HTMLInputElement | null
+    )?.value;
+    const screen = /please choose your type/i.test(body)
+      ? 'student_type'
+      : document.querySelector('select[name="collegeId"]')
+        ? 'program_selection'
+        : document.querySelector('input[name="apply.lastName"]')
+          ? 'wizard'
+          : 'other';
+    return { screen, checked: checked ?? null, messager, bodySnippet: body.slice(0, 120) };
   });
 
   lastStudentTypePickDiag = {
     ...lastStudentTypePickDiag,
-    next: nextResult,
+    next: { ok: true, via },
+    afterNext: after,
+    build: 'atomic-v2-playwright-next',
   };
 
-  return Boolean(nextResult.ok);
+  // Still on student_type with an error dialog — dismiss and report failure
+  if (after.screen === 'student_type' && after.messager.length > 0) {
+    await dismissBlockingDialogs(page);
+  }
+
+  return after.screen !== 'student_type' || after.checked !== null;
 }
 
 /** Next labels: EN "Next" / ZH "下一步". KMMC uses <button class="el-button">. */
@@ -1433,22 +1498,53 @@ export async function advancePreWizardScreen(
     if (!ok) {
       return false;
     }
-    await page
-      .waitForLoadState('domcontentloaded', { timeout: 10_000 })
-      .catch(() => undefined);
-    await page.waitForTimeout(600);
-    for (let attempt = 0; attempt < 4; attempt += 1) {
-      await waitForUiReady(page);
-      if (await isMainWizard(page)) {
-        return true;
-      }
-      const afterScreen = await detectPreWizardScreen(page);
-      const after = await getPreWizardSignature(page, afterScreen ?? current);
-      if (after !== before) {
-        return true;
-      }
-      await page.waitForTimeout(300);
+
+    // Wait for leave student_type (study plan / wizard) — AJAX can take a few seconds
+    const left = await page
+      .waitForFunction(
+        () => {
+          const body = document.body?.innerText ?? '';
+          if (/please choose your type/i.test(body)) {
+            return false;
+          }
+          if (document.querySelector('select[name="collegeId"]')) {
+            return true;
+          }
+          if (
+            document.querySelector('input[name="apply.lastName"]') &&
+            (document.querySelector(
+              'input[name="apply.lastName"]',
+            ) as HTMLElement | null)?.offsetParent !== null
+          ) {
+            return true;
+          }
+          // program_type / notes etc.
+          return !/please choose your type/i.test(body);
+        },
+        { timeout: 20_000 },
+      )
+      .then(() => true)
+      .catch(() => false);
+
+    await dismissBlockingDialogs(page);
+    await waitForUiReady(page);
+
+    if (await isMainWizard(page)) {
+      return true;
     }
+    const afterScreen = await detectPreWizardScreen(page);
+    if (afterScreen && afterScreen !== 'student_type') {
+      return true;
+    }
+    if (left && afterScreen !== 'student_type') {
+      return true;
+    }
+
+    lastStudentTypePickDiag = {
+      ...lastStudentTypePickDiag,
+      stuckAfterWait: true,
+      afterScreen,
+    };
     return false;
   }
 

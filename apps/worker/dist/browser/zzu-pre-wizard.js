@@ -762,30 +762,85 @@ async function advanceStudentTypeAtomic(page, studentType) {
     if (!picked) {
         return false;
     }
-    const nextResult = await page.evaluate(() => {
+    const stillChecked = await page.evaluate(() => {
         const selected = document.querySelector('input[name="projectTypeId"]:checked');
-        if (!selected) {
-            return { ok: false, reason: 'lost-checked' };
-        }
-        const form = selected.form ??
-            document.querySelector('form');
-        const save = window.saveProjectType;
-        if (typeof save === 'function' && form) {
-            save(form);
-            return { ok: true, via: `saveProjectType:${selected.value}` };
-        }
-        const next = document.querySelector('input[type="button"][value="Next"], input[value="Next"], input[value="下一步"]');
-        if (next) {
-            next.click();
-            return { ok: true, via: `Next:${next.value}` };
-        }
-        return { ok: false, reason: 'no-next' };
+        return selected
+            ? { ok: true, value: selected.value }
+            : { ok: false, value: null };
     });
     lastStudentTypePickDiag = {
         ...lastStudentTypePickDiag,
-        next: nextResult,
+        beforeNext: stillChecked,
     };
-    return Boolean(nextResult.ok);
+    if (!stillChecked.ok) {
+        return false;
+    }
+    const nextBtn = page
+        .locator('input[type="button"][value="Next"], input[value="Next"], input[value="下一步"]')
+        .first();
+    let via = 'none';
+    if ((await nextBtn.count()) > 0) {
+        await nextBtn.click({ force: true });
+        via = 'playwright:Next';
+    }
+    else {
+        const fallback = await page.evaluate(() => {
+            const selected = document.querySelector('input[name="projectTypeId"]:checked');
+            if (!selected) {
+                return { ok: false, via: 'lost-checked' };
+            }
+            const next = document.querySelector('input[type="button"][value="Next"], input[value="Next"]');
+            if (!next) {
+                return { ok: false, via: 'no-next' };
+            }
+            const onclick = next.getAttribute('onclick') || '';
+            if (onclick) {
+                try {
+                    const run = new Function('btn', onclick.replace(/\bthis\b/g, 'btn'));
+                    run(next);
+                    return { ok: true, via: `onclick:${onclick.slice(0, 40)}` };
+                }
+                catch {
+                }
+            }
+            next.click();
+            return { ok: true, via: 'next.click' };
+        });
+        via = fallback.via;
+        if (!fallback.ok) {
+            lastStudentTypePickDiag = { ...lastStudentTypePickDiag, next: fallback };
+            return false;
+        }
+    }
+    await page.waitForTimeout(800);
+    const after = await page.evaluate(() => {
+        const body = document.body?.innerText ?? '';
+        const messager = [
+            ...document.querySelectorAll('.messager-body, .messager-window, .panel-body'),
+        ]
+            .map((el) => (el.textContent || '').replace(/\s+/g, ' ').trim())
+            .filter((t) => t.length > 0 && t.length < 200)
+            .slice(0, 3);
+        const checked = document.querySelector('input[name="projectTypeId"]:checked')?.value;
+        const screen = /please choose your type/i.test(body)
+            ? 'student_type'
+            : document.querySelector('select[name="collegeId"]')
+                ? 'program_selection'
+                : document.querySelector('input[name="apply.lastName"]')
+                    ? 'wizard'
+                    : 'other';
+        return { screen, checked: checked ?? null, messager, bodySnippet: body.slice(0, 120) };
+    });
+    lastStudentTypePickDiag = {
+        ...lastStudentTypePickDiag,
+        next: { ok: true, via },
+        afterNext: after,
+        build: 'atomic-v2-playwright-next',
+    };
+    if (after.screen === 'student_type' && after.messager.length > 0) {
+        await dismissBlockingDialogs(page);
+    }
+    return after.screen !== 'student_type' || after.checked !== null;
 }
 const NEXT_NAME_RE = /^(Next|下一步|Save and Next|保存并下一步)$/i;
 async function clickVisibleNext(page) {
@@ -993,22 +1048,40 @@ async function advancePreWizardScreen(page, screen = null, hints, gemini) {
         if (!ok) {
             return false;
         }
-        await page
-            .waitForLoadState('domcontentloaded', { timeout: 10_000 })
-            .catch(() => undefined);
-        await page.waitForTimeout(600);
-        for (let attempt = 0; attempt < 4; attempt += 1) {
-            await waitForUiReady(page);
-            if (await isMainWizard(page)) {
+        const left = await page
+            .waitForFunction(() => {
+            const body = document.body?.innerText ?? '';
+            if (/please choose your type/i.test(body)) {
+                return false;
+            }
+            if (document.querySelector('select[name="collegeId"]')) {
                 return true;
             }
-            const afterScreen = await detectPreWizardScreen(page);
-            const after = await getPreWizardSignature(page, afterScreen ?? current);
-            if (after !== before) {
+            if (document.querySelector('input[name="apply.lastName"]') &&
+                document.querySelector('input[name="apply.lastName"]')?.offsetParent !== null) {
                 return true;
             }
-            await page.waitForTimeout(300);
+            return !/please choose your type/i.test(body);
+        }, { timeout: 20_000 })
+            .then(() => true)
+            .catch(() => false);
+        await dismissBlockingDialogs(page);
+        await waitForUiReady(page);
+        if (await isMainWizard(page)) {
+            return true;
         }
+        const afterScreen = await detectPreWizardScreen(page);
+        if (afterScreen && afterScreen !== 'student_type') {
+            return true;
+        }
+        if (left && afterScreen !== 'student_type') {
+            return true;
+        }
+        lastStudentTypePickDiag = {
+            ...lastStudentTypePickDiag,
+            stuckAfterWait: true,
+            afterScreen,
+        };
         return false;
     }
     await fillPreWizardScreen(page, current, hints);
