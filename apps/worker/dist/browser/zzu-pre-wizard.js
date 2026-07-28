@@ -648,13 +648,17 @@ function studentTypeHintList(preferred) {
     }
     return out;
 }
+async function waitForProjectTypeChecked(page, timeoutMs = 5_000) {
+    await page
+        .waitForFunction(() => Boolean(document.querySelector('input[type="radio"][name="projectTypeId"]:checked')), { timeout: timeoutMs })
+        .catch(() => undefined);
+    return page.evaluate(() => Boolean(document.querySelector('input[type="radio"][name="projectTypeId"]:checked')));
+}
 async function pickStudentTypeRadio(page, studentType) {
     await dismissBlockingDialogs(page);
     const hints = studentTypeHintList(studentType);
     const hint = hints[0] ?? 'Undergraduate Student';
-    const visibleChecked = () => page
-        .locator('input[type="radio"][name="projectTypeId"]:visible:checked')
-        .count();
+    const visibleChecked = () => waitForProjectTypeChecked(page, 3_000);
     for (const textHint of hints) {
         const escaped = textHint.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const label = page
@@ -666,13 +670,13 @@ async function pickStudentTypeRadio(page, studentType) {
         }
         await label.scrollIntoViewIfNeeded().catch(() => undefined);
         await label.click({ force: true });
-        if ((await visibleChecked()) > 0) {
+        if (await visibleChecked()) {
             return true;
         }
         const box = await label.boundingBox().catch(() => null);
         if (box) {
             await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-            if ((await visibleChecked()) > 0) {
+            if (await visibleChecked()) {
                 return true;
             }
         }
@@ -740,11 +744,11 @@ async function pickStudentTypeRadio(page, studentType) {
             label: labelOf(target).slice(0, 80),
         };
     }, hint);
-    if (forced.ok && (await visibleChecked()) > 0) {
+    if (forced.ok && (await visibleChecked())) {
         return true;
     }
     console.warn('[pickStudentTypeRadio] failed', forced);
-    return (await visibleChecked()) > 0;
+    return visibleChecked();
 }
 const NEXT_NAME_RE = /^(Next|下一步|Save and Next|保存并下一步)$/i;
 async function clickVisibleNext(page) {
@@ -860,17 +864,8 @@ async function clickPreWizardNext(page, screen, hints, gemini) {
         ]);
     }
     if (screen === 'program_type' || screen === 'student_type') {
-        if (screen === 'program_type') {
-            const checked = page.locator('input[name="projectTypeId"]:checked').first();
-            if ((await checked.count()) === 0) {
-                return null;
-            }
-        }
-        else {
-            const anyChecked = page.locator('input[type="radio"]:checked').first();
-            if ((await anyChecked.count()) === 0) {
-                return null;
-            }
+        if (!(await waitForProjectTypeChecked(page, 5_000))) {
+            return null;
         }
         const nextClicked = await clickVisibleNext(page);
         if (nextClicked) {
@@ -885,9 +880,6 @@ async function clickPreWizardNext(page, screen, hints, gemini) {
         if (invoked) {
             return invoked;
         }
-        if (screen !== 'program_type') {
-            return null;
-        }
         return page.evaluate(() => {
             const selected = document.querySelector('input[name="projectTypeId"]:checked');
             if (!selected) {
@@ -899,6 +891,11 @@ async function clickPreWizardNext(page, screen, hints, gemini) {
             if (typeof save === 'function' && form) {
                 save(form);
                 return `saveProjectType:${selected.value}`;
+            }
+            const next = document.querySelector('input[type="button"][value="Next"], input[value="Next"], input[value="下一步"]');
+            if (next) {
+                next.click();
+                return `Next:dom:${next.value}`;
             }
             return null;
         });
@@ -954,23 +951,12 @@ async function advancePreWizardScreen(page, screen = null, hints, gemini) {
     }
     const before = await getPreWizardSignature(page, current);
     await fillPreWizardScreen(page, current, hints);
-    await page.waitForTimeout(400);
+    await page.waitForTimeout(200);
     if (current === 'program_selection' && (await isProgramSelectionEmpty(page))) {
         return false;
     }
-    if (current === 'program_type') {
-        const selected = await page
-            .locator('input[name="projectTypeId"]:checked')
-            .count();
-        if (selected === 0) {
-            return false;
-        }
-    }
-    if (current === 'student_type') {
-        const selected = await page
-            .locator('input[type="radio"][name="projectTypeId"]:visible:checked')
-            .count();
-        if (selected === 0) {
+    if (current === 'program_type' || current === 'student_type') {
+        if (!(await waitForProjectTypeChecked(page, 5_000))) {
             return false;
         }
     }

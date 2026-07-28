@@ -903,6 +903,33 @@ function studentTypeHintList(preferred?: string): string[] {
   return out;
 }
 
+/** DOM-direct checked check — avoids Playwright :visible:checked race after click. */
+async function waitForProjectTypeChecked(
+  page: Page,
+  timeoutMs = 5_000,
+): Promise<boolean> {
+  await page
+    .waitForFunction(
+      () =>
+        Boolean(
+          document.querySelector(
+            'input[type="radio"][name="projectTypeId"]:checked',
+          ),
+        ),
+      { timeout: timeoutMs },
+    )
+    .catch(() => undefined);
+
+  return page.evaluate(
+    () =>
+      Boolean(
+        document.querySelector(
+          'input[type="radio"][name="projectTypeId"]:checked',
+        ),
+      ),
+  );
+}
+
 /**
  * CSU student-type DOM (confirmed):
  *   <label><input type="radio" name="projectTypeId" onclick="projectTypeOnClick22(this,arguments[0])">Undergraduate Student</label>
@@ -917,10 +944,7 @@ async function pickStudentTypeRadio(
   const hints = studentTypeHintList(studentType);
   const hint = hints[0] ?? 'Undergraduate Student';
 
-  const visibleChecked = () =>
-    page
-      .locator('input[type="radio"][name="projectTypeId"]:visible:checked')
-      .count();
+  const visibleChecked = () => waitForProjectTypeChecked(page, 3_000);
 
   // 1) Click wrapping <label> that owns the radio (exact CSU structure)
   for (const textHint of hints) {
@@ -934,14 +958,14 @@ async function pickStudentTypeRadio(
     }
     await label.scrollIntoViewIfNeeded().catch(() => undefined);
     await label.click({ force: true });
-    if ((await visibleChecked()) > 0) {
+    if (await visibleChecked()) {
       return true;
     }
     // CDP mouse on label center
     const box = await label.boundingBox().catch(() => null);
     if (box) {
       await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-      if ((await visibleChecked()) > 0) {
+      if (await visibleChecked()) {
         return true;
       }
     }
@@ -1037,12 +1061,12 @@ async function pickStudentTypeRadio(
     };
   }, hint);
 
-  if (forced.ok && (await visibleChecked()) > 0) {
+  if (forced.ok && (await visibleChecked())) {
     return true;
   }
 
   console.warn('[pickStudentTypeRadio] failed', forced);
-  return (await visibleChecked()) > 0;
+  return visibleChecked();
 }
 
 /** Next labels: EN "Next" / ZH "下一步". KMMC uses <button class="el-button">. */
@@ -1204,16 +1228,9 @@ async function clickPreWizardNext(
   }
 
   if (screen === 'program_type' || screen === 'student_type') {
-    if (screen === 'program_type') {
-      const checked = page.locator('input[name="projectTypeId"]:checked').first();
-      if ((await checked.count()) === 0) {
-        return null;
-      }
-    } else {
-      const anyChecked = page.locator('input[type="radio"]:checked').first();
-      if ((await anyChecked.count()) === 0) {
-        return null;
-      }
+    // Race: Playwright :checked can lag behind DOM after label/onclick.
+    if (!(await waitForProjectTypeChecked(page, 5_000))) {
+      return null;
     }
 
     const nextClicked = await clickVisibleNext(page);
@@ -1221,7 +1238,7 @@ async function clickPreWizardNext(
       return nextClicked;
     }
 
-    // input[value=Next] often present on student_type even when <button> isn't
+    // input[value=Next] — CSU student_type / program_type
     const invoked = await invokeButton(page, [
       'Next',
       '下一步',
@@ -1232,11 +1249,8 @@ async function clickPreWizardNext(
       return invoked;
     }
 
-    // saveProjectType is ONLY for scholarship/program screen — never student_type
-    if (screen !== 'program_type') {
-      return null;
-    }
-
+    // CSU Next is often input[value=Next] onclick=saveProjectType(this.form)
+    // for BOTH program_type and student_type.
     return page.evaluate(() => {
       const selected = document.querySelector(
         'input[name="projectTypeId"]:checked',
@@ -1255,6 +1269,14 @@ async function clickPreWizardNext(
       if (typeof save === 'function' && form) {
         save(form);
         return `saveProjectType:${selected.value}`;
+      }
+
+      const next = document.querySelector(
+        'input[type="button"][value="Next"], input[value="Next"], input[value="下一步"]',
+      ) as HTMLInputElement | null;
+      if (next) {
+        next.click();
+        return `Next:dom:${next.value}`;
       }
       return null;
     });
@@ -1345,27 +1367,16 @@ export async function advancePreWizardScreen(
 
   const before = await getPreWizardSignature(page, current);
   await fillPreWizardScreen(page, current, hints);
-  await page.waitForTimeout(400);
+  await page.waitForTimeout(200);
 
   // After fill (clear+Find if needed) — only then treat empty as hard fail.
   if (current === 'program_selection' && (await isProgramSelectionEmpty(page))) {
     return false;
   }
 
-  if (current === 'program_type') {
-    const selected = await page
-      .locator('input[name="projectTypeId"]:checked')
-      .count();
-    if (selected === 0) {
-      return false;
-    }
-  }
-
-  if (current === 'student_type') {
-    const selected = await page
-      .locator('input[type="radio"][name="projectTypeId"]:visible:checked')
-      .count();
-    if (selected === 0) {
+  if (current === 'program_type' || current === 'student_type') {
+    // Wait for DOM checked — Playwright :visible:checked races after onclick.
+    if (!(await waitForProjectTypeChecked(page, 5_000))) {
       return false;
     }
   }
