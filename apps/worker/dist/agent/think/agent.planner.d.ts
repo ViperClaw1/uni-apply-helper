@@ -5,6 +5,10 @@ export declare class AgentPlanner {
     private readonly logger;
     constructor(gemini: GeminiClient);
     isAvailable(): boolean;
+    generateJson<T>(options: {
+        prompt: string;
+        temperature?: number;
+    }): Promise<T>;
     decideNextAction(observation: AgentObservation, context: AgentContext, useVision?: boolean): Promise<AgentDecision>;
     mapFieldTarget(observation: AgentObservation, field: {
         label: string;

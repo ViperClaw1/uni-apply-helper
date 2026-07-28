@@ -10,5 +10,17 @@ export declare class SemanticFieldMapper {
     private readonly logger;
     constructor(planner: AgentPlanner, executor: ActionExecutor, observer: PageObserver);
     isAvailable(): boolean;
+    semanticSelectMatch(options: {
+        desiredValue: string;
+        candidates: string[];
+        selectOptions: Array<{
+            value: string;
+            label: string;
+        }>;
+        fieldLabel?: string;
+    }): Promise<{
+        value: string;
+        label: string;
+    } | null>;
     resolveLocator(page: Page, field: FieldConfig, profile: StudentProfile, motivationLetterContent?: string): Promise<Locator | null>;
 }

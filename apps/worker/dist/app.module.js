@@ -34,6 +34,7 @@ const form_filler_js_1 = require("./filler/form.filler.js");
 const ocr_passport_uploader_js_1 = require("./filler/ocr-passport.uploader.js");
 const wizard_field_groups_js_1 = require("./filler/wizard-field-groups.js");
 const wizard_navigator_js_1 = require("./filler/wizard.navigator.js");
+const geocoding_service_js_1 = require("./geocoding/geocoding.service.js");
 const notifications_service_js_1 = require("./notifications/notifications.service.js");
 const processor_js_1 = require("./processor.js");
 const relogin_processor_js_1 = require("./relogin/relogin.processor.js");
@@ -65,6 +66,7 @@ exports.AppModule = AppModule = __decorate([
             ocr_passport_uploader_js_1.OcrPassportUploader,
             wizard_navigator_js_1.WizardNavigator,
             wizard_field_groups_js_1.WizardFieldGroups,
+            geocoding_service_js_1.GeocodingService,
             form_filler_js_1.FormFiller,
             open_form_step_js_1.OpenFormStep,
             fill_fields_step_js_1.FillFieldsStep,

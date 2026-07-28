@@ -245,11 +245,19 @@ let WizardNavigator = class WizardNavigator {
                 '.messager-button .okButton',
                 '.messager-button input[value="Ok"]',
                 '.messager-button input[value="OK"]',
+                '.messager-button a.l-btn:has-text("Ok")',
+                '.messager-button a.l-btn:has-text("OK")',
+                '.messager-button a:has-text("Ok")',
+                '.messager-button a:has-text("OK")',
+                '.messager-button a:has-text("确定")',
                 'input.okButton',
                 'button:has-text("OK")',
+                'button:has-text("Ok")',
                 'button:has-text("Continue")',
                 'button:has-text("Accept")',
                 'button:has-text("确定")',
+                'a.l-btn:has-text("Ok")',
+                'a.l-btn:has-text("OK")',
             ].join(', '))
                 .first();
             if ((await okButton.count()) === 0) {
@@ -260,8 +268,16 @@ let WizardNavigator = class WizardNavigator {
             }
             const isProcessingDialog = await page
                 .evaluate(() => {
-                const win = document.querySelector('.messager-window, .panel.window');
-                return /It'?s processing|please wait|请求正在处理/i.test(win?.textContent || '');
+                const wins = [
+                    ...document.querySelectorAll('.messager-window, .panel.window'),
+                ];
+                return wins.some((win) => {
+                    const style = getComputedStyle(win);
+                    if (style.display === 'none' || style.visibility === 'hidden') {
+                        return false;
+                    }
+                    return /It'?s processing|please wait|请求正在处理/i.test(win.textContent || '');
+                });
             })
                 .catch(() => false);
             if (isProcessingDialog) {
@@ -286,13 +302,20 @@ let WizardNavigator = class WizardNavigator {
         const beforeSig = await this.getStepSignature(page);
         await submit.click({ force: true });
         await page.waitForTimeout(300);
+        await this.confirmSubmitDialog(page);
         await this.waitForProcessingDone(page, 90_000);
         await this.dismissBlockingDialogs(page);
         const success = await page
             .waitForFunction((before) => {
             const text = (document.body?.innerText || '').replace(/\s+/g, ' ');
-            if (/successfully submitted|submit(ted)? successfully|application (has been )?submitted|申请.*成功|提交成功|has been received/i.test(text)) {
+            if (/successfully submitted|submit(ted)? successfully|application (has been )?submitted|申请.*成功|提交成功|has been received|status\s*[:：]\s*submitted/i.test(text)) {
                 return true;
+            }
+            if (/are you sure you want to submit|can not be revised|cannot be revised/i.test(text)) {
+                return false;
+            }
+            if (/\bfilled in\b/i.test(text) && /Application Status/i.test(text)) {
+                return false;
             }
             const content = document.querySelector('#main_right_content, #apply_content, .main_right, form')?.innerHTML ?? '';
             const active = document
@@ -323,16 +346,66 @@ let WizardNavigator = class WizardNavigator {
         }, beforeSig, { timeout: 20_000 })
             .then(() => true)
             .catch(() => false);
+        await this.confirmSubmitDialog(page);
         await this.dismissBlockingDialogs(page);
         await page.waitForTimeout(500);
-        if (!success) {
+        const stillPending = await page.evaluate(() => {
+            const text = (document.body?.innerText || '').replace(/\s+/g, ' ');
+            return (/are you sure you want to submit|can not be revised|cannot be revised/i.test(text) ||
+                (/\bfilled in\b/i.test(text) && /Application Status/i.test(text)));
+        });
+        if (stillPending || !success) {
             const hasError = await page.evaluate(() => {
                 const text = (document.body?.innerText || '').replace(/\s+/g, ' ');
-                return /failed|error|invalid|必填|不能为空/i.test(text) &&
-                    document.querySelector('span.error:not(:empty), label.error:not(:empty), .validate-error');
+                return (/failed|error|invalid|必填|不能为空/i.test(text) &&
+                    Boolean(document.querySelector('span.error:not(:empty), label.error:not(:empty), .validate-error')));
             });
-            if (hasError) {
-                throw new Error('Final submit did not succeed (validation/error still on page, URL unchanged as expected for 17gz AJAX).');
+            if (hasError || stillPending) {
+                throw new Error(stillPending
+                    ? 'Final submit stopped on Confirm dialog or status still "filled in" — Ok was not confirmed.'
+                    : 'Final submit did not succeed (validation/error still on page, URL unchanged as expected for 17gz AJAX).');
+            }
+        }
+    }
+    async confirmSubmitDialog(page) {
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+            const visible = await page.evaluate(() => {
+                const wins = [
+                    ...document.querySelectorAll('.messager-window, .panel.window'),
+                ];
+                return wins.some((win) => {
+                    const style = getComputedStyle(win);
+                    if (style.display === 'none' || style.visibility === 'hidden') {
+                        return false;
+                    }
+                    const rect = win.getBoundingClientRect();
+                    if (rect.width === 0 || rect.height === 0) {
+                        return false;
+                    }
+                    return /are you sure you want to submit|can not be revised|cannot be revised|确认提交|无法修改/i.test(win.textContent || '');
+                });
+            });
+            if (!visible) {
+                return;
+            }
+            const ok = page
+                .locator([
+                '.messager-window:visible .messager-button a.l-btn:has-text("Ok")',
+                '.messager-window:visible .messager-button a:has-text("Ok")',
+                '.messager-window:visible .messager-button input[value="Ok"]',
+                '.messager-window:visible .messager-button a:has-text("确定")',
+                '.messager-button a.l-btn:has-text("Ok")',
+                '.messager-button a:has-text("Ok")',
+                'input.okButton',
+            ].join(', '))
+                .first();
+            if ((await ok.count()) > 0) {
+                await ok.click({ force: true }).catch(() => undefined);
+                await page.waitForTimeout(500);
+                await this.waitForProcessingDone(page, 60_000);
+            }
+            else {
+                await this.dismissBlockingDialogs(page);
             }
         }
     }
@@ -363,7 +436,7 @@ let WizardNavigator = class WizardNavigator {
             .catch(() => undefined);
         await this.waitForProcessingDone(page, 60_000);
     }
-    async waitForProcessingDone(page, timeoutMs) {
+    async waitForProcessingDone(page, timeoutMs = 60_000) {
         await page
             .waitForFunction(() => {
             const bodyText = document.body?.innerText ?? '';

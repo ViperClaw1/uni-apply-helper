@@ -21,6 +21,7 @@ const file_attacher_js_1 = require("./file.attacher.js");
 const ocr_passport_uploader_js_1 = require("./ocr-passport.uploader.js");
 const wizard_field_groups_js_1 = require("./wizard-field-groups.js");
 const wizard_navigator_js_1 = require("./wizard.navigator.js");
+const geocoding_service_js_1 = require("../geocoding/geocoding.service.js");
 let FormFiller = class FormFiller {
     configService;
     fieldMapper;
@@ -30,7 +31,8 @@ let FormFiller = class FormFiller {
     wizardFieldGroups;
     semanticFieldMapper;
     formAgent;
-    constructor(configService, fieldMapper, fileAttacher, ocrPassportUploader, wizardNavigator, wizardFieldGroups, semanticFieldMapper, formAgent) {
+    geocoding;
+    constructor(configService, fieldMapper, fileAttacher, ocrPassportUploader, wizardNavigator, wizardFieldGroups, semanticFieldMapper, formAgent, geocoding) {
         this.configService = configService;
         this.fieldMapper = fieldMapper;
         this.fileAttacher = fileAttacher;
@@ -39,6 +41,7 @@ let FormFiller = class FormFiller {
         this.wizardFieldGroups = wizardFieldGroups;
         this.semanticFieldMapper = semanticFieldMapper;
         this.formAgent = formAgent;
+        this.geocoding = geocoding;
     }
     async fillFields(page, profile, fields, motivationLetterContent, university) {
         const fillMode = university
@@ -80,21 +83,32 @@ let FormFiller = class FormFiller {
         await this.waitForStepOneFields(page, university);
         await this.wizardNavigator.forEachStep(page, wizard, async (step) => {
             if (step === 1 &&
-                this.isPkuLike(university)) {
+                university.navigationHints?.ocrPassportUpload) {
                 await this.ocrPassportUploader.upload(page, profile);
+                await this.wizardNavigator.waitForProcessingDone(page, 90_000);
             }
             const fields = this.wizardFieldGroups.fieldsForStep(university, step);
+            await this.wizardNavigator.waitForProcessingDone(page, 60_000);
             await this.dismissFormOverlays(page);
             await this.fillFieldBatch(page, profile, fields.filter((field) => field.type !== 'file'), motivationLetterContent, fillMode);
             if (step === 1) {
                 await this.ensureChineseNameWaiver(page, profile);
-                if (this.isPkuLike(university)) {
+                if (this.is17gzPortal(university)) {
                     await this.ensurePkuStep1RequiredGaps(page);
                 }
             }
-            if (step === 2 && this.isPkuLike(university)) {
+            if (step === 2 && this.is17gzPortal(university)) {
                 await this.ensurePkuStep2RequiredGaps(page, profile);
                 await this.assertPkuStep2CriticalFilled(page, profile);
+            }
+            if (step === 3 && this.is17gzPortal(university)) {
+                await this.ensurePkuStep3RequiredGaps(page, profile);
+            }
+            if (step === 4 && this.is17gzPortal(university)) {
+                await this.ensurePkuStep4RequiredGaps(page, profile);
+            }
+            if (step === 5 && this.is17gzPortal(university)) {
+                await this.ensurePkuStep5RequiredGaps(page, profile);
             }
             await this.dismissFormOverlays(page);
             const fileFields = fields.filter((field) => {
@@ -144,6 +158,7 @@ let FormFiller = class FormFiller {
     }
     async fillFieldBatch(page, profile, fields, motivationLetterContent, fillMode) {
         for (const field of fields) {
+            await this.wizardNavigator.waitForProcessingDone(page, 60_000);
             await this.dismissFormOverlays(page);
             const value = this.fieldMapper.getValue(profile, field, motivationLetterContent);
             if (value === undefined || value === null || value === '') {
@@ -309,104 +324,150 @@ let FormFiller = class FormFiller {
                 break;
         }
     }
-    async fillRadioControl(page, field, locator, normalizedValue) {
+    async fillRadioControl(page, field, _locator, normalizedValue) {
         const selector = field.selector;
-        if (selector) {
-            const byValue = page
-                .locator(`${selector}[value="${normalizedValue}"]`)
-                .first();
-            if ((await byValue.count()) > 0) {
-                await byValue.check({ force: true });
-                return;
-            }
+        if (!selector) {
+            throw new Error(`Radio field needs selector to avoid ambiguous Yes/No match` +
+                `${field.labelHint ? ` ("${field.labelHint}")` : ''}`);
         }
-        {
-            const byRole = page
-                .getByRole('radio', { name: normalizedValue, exact: false })
-                .first();
-            if ((await byRole.count()) > 0) {
-                await byRole.check({ force: true }).catch(() => undefined);
-                if (await byRole.isChecked().catch(() => false)) {
+        await this.wizardNavigator.waitForProcessingDone(page, 60_000);
+        const want = this.canonicalizeRadioValue(normalizedValue.trim());
+        const wantLower = want.toLowerCase();
+        const valueAliases = {
+            no: ['0', 'n', 'no', 'false'],
+            yes: ['1', 'y', 'yes', 'true'],
+            unmarried: ['1', 'unmarried', 'single'],
+            married: ['2', 'married'],
+            female: ['2', 'f', 'female'],
+            male: ['1', 'm', 'male'],
+        };
+        const aliasValues = valueAliases[wantLower] ?? [want];
+        const labelNeedles = [
+            wantLower,
+            ...aliasValues.map((v) => v.toLowerCase()).filter((v) => !/^\d+$/.test(v)),
+        ];
+        for (const v of aliasValues) {
+            const byValue = page.locator(`${selector}[value="${v}"]`).first();
+            if ((await byValue.count()) > 0) {
+                const ok = await page.evaluate(({ sel, value }) => {
+                    const el = document.querySelector(`${sel}[value="${value}"]`);
+                    if (!el) {
+                        return false;
+                    }
+                    el.checked = true;
+                    el.click();
+                    el.dispatchEvent(new Event('input', { bubbles: true }));
+                    el.dispatchEvent(new Event('change', { bubbles: true }));
+                    return el.checked;
+                }, { sel: selector, value: v });
+                if (ok) {
                     return;
                 }
             }
         }
-        if (selector) {
-            const matched = await page.evaluate(({ sel, want }) => {
-                const radios = [
-                    ...document.querySelectorAll(sel),
-                ];
-                if (radios.length === 0) {
-                    return false;
-                }
-                const norm = (s) => s.replace(/\s+/g, ' ').trim().toLowerCase();
-                const wantN = norm(want);
-                const labelOf = (radio) => {
-                    if (radio.id) {
-                        const forLab = document.querySelector(`label[for="${radio.id}"]`);
-                        if (forLab?.textContent) {
-                            return forLab.textContent;
-                        }
-                    }
-                    const wrap = radio.closest('label');
-                    if (wrap?.textContent) {
-                        return wrap.textContent;
-                    }
-                    const parent = radio.parentElement;
-                    if (parent) {
-                        return parent.textContent || '';
-                    }
-                    let sib = radio.nextSibling;
-                    let acc = '';
-                    while (sib && acc.length < 40) {
-                        if (sib.nodeType === Node.TEXT_NODE) {
-                            acc += sib.textContent || '';
-                        }
-                        else if (sib.nodeType === Node.ELEMENT_NODE) {
-                            const el = sib;
-                            if (el.tagName === 'INPUT') {
-                                break;
-                            }
-                            acc += el.textContent || '';
-                        }
-                        sib = sib.nextSibling;
-                    }
-                    return acc;
-                };
-                const match = radios.find((radio) => {
-                    const lab = norm(labelOf(radio));
-                    return (lab === wantN ||
-                        lab.startsWith(wantN) ||
-                        new RegExp(`\\b${wantN}\\b`, 'i').test(lab));
-                });
-                const aliases = {
-                    no: ['0', 'n', 'no', 'false', '2'],
-                    yes: ['1', 'y', 'yes', 'true'],
-                    unmarried: ['1', 'unmarried', 'single'],
-                    married: ['2', 'married'],
-                    female: ['2', 'f', 'female'],
-                    male: ['1', 'm', 'male'],
-                };
-                const byAlias = match ||
-                    radios.find((radio) => (aliases[wantN] || []).includes(norm(radio.value)));
-                const target = byAlias ||
-                    (wantN === 'no' ? radios[radios.length - 1] : undefined);
-                if (!target) {
-                    return false;
-                }
-                target.checked = true;
-                target.click();
-                target.dispatchEvent(new Event('input', { bubbles: true }));
-                target.dispatchEvent(new Event('change', { bubbles: true }));
-                return target.checked;
-            }, { sel: selector, want: normalizedValue });
-            if (matched) {
-                return;
+        const matched = await page.evaluate(({ sel, want: wantRaw, aliases, needles }) => {
+            const radios = [
+                ...document.querySelectorAll(sel),
+            ];
+            if (radios.length === 0) {
+                return false;
             }
+            const norm = (s) => s.replace(/\s+/g, ' ').trim().toLowerCase();
+            const wantN = norm(wantRaw);
+            const labelOf = (radio) => {
+                if (radio.id) {
+                    const forLab = document.querySelector(`label[for="${radio.id}"]`);
+                    if (forLab?.textContent) {
+                        return forLab.textContent;
+                    }
+                }
+                const wrap = radio.closest('label');
+                if (wrap?.textContent) {
+                    return wrap.textContent;
+                }
+                const parent = radio.parentElement;
+                if (parent) {
+                    return parent.textContent || '';
+                }
+                let sib = radio.nextSibling;
+                let acc = '';
+                while (sib && acc.length < 40) {
+                    if (sib.nodeType === Node.TEXT_NODE) {
+                        acc += sib.textContent || '';
+                    }
+                    else if (sib.nodeType === Node.ELEMENT_NODE) {
+                        const el = sib;
+                        if (el.tagName === 'INPUT') {
+                            break;
+                        }
+                        acc += el.textContent || '';
+                    }
+                    sib = sib.nextSibling;
+                }
+                return acc;
+            };
+            const byLabel = radios.find((radio) => {
+                const lab = norm(labelOf(radio));
+                if (lab === wantN || new RegExp(`\\b${wantN}\\b`, 'i').test(lab)) {
+                    return true;
+                }
+                return needles.some((n) => n.length >= 2 && (lab === n || new RegExp(`\\b${n}\\b`, 'i').test(lab)));
+            });
+            const byAlias = radios.find((radio) => aliases.includes(norm(radio.value)));
+            const target = byLabel ||
+                byAlias ||
+                (wantN === 'no' ? radios[radios.length - 1] : undefined);
+            if (!target) {
+                return false;
+            }
+            target.checked = true;
+            target.click();
+            target.dispatchEvent(new Event('input', { bubbles: true }));
+            target.dispatchEvent(new Event('change', { bubbles: true }));
+            return target.checked;
+        }, {
+            sel: selector,
+            want,
+            aliases: aliasValues.map((v) => v.toLowerCase()),
+            needles: labelNeedles,
+        });
+        if (!matched) {
+            throw new Error(`Failed to select radio "${normalizedValue.trim()}"` +
+                (want !== normalizedValue.trim() ? ` (as "${want}")` : '') +
+                ` for ${selector}` +
+                `${field.labelHint ? ` ("${field.labelHint}")` : ''}`);
         }
-        await locator
-            .check({ force: true })
-            .catch(async () => locator.click({ force: true }));
+    }
+    canonicalizeRadioValue(value) {
+        const v = value.trim().toLowerCase();
+        if (v === 'female' ||
+            /\bfemale\b/.test(v) ||
+            /женск/.test(v) ||
+            v === 'f' ||
+            v === 'woman') {
+            return 'Female';
+        }
+        if ((v === 'male' || /\bmale\b/.test(v) || /мужск/.test(v) || v === 'm' || v === 'man') &&
+            !/\bfemale\b/.test(v) &&
+            !/женск/.test(v)) {
+            return 'Male';
+        }
+        if (v === 'unmarried' ||
+            v === 'single' ||
+            /\bunmarried\b/.test(v) ||
+            /\bsingle\b/.test(v)) {
+            return 'Unmarried';
+        }
+        if (v === 'married' || /\bmarried\b/.test(v)) {
+            return 'Married';
+        }
+        if (v === 'yes' || v === 'y' || v === 'true' || v === 'да') {
+            return 'Yes';
+        }
+        if (v === 'no' || v === 'n' || v === 'false' || v === 'нет') {
+            return 'No';
+        }
+        return value.trim();
     }
     async fillSelectControl(page, field, locator, value) {
         const candidates = this.expandSelectCandidates(field, value);
@@ -487,11 +548,69 @@ let FormFiller = class FormFiller {
             return sel.value === bestOpt.value;
         }, { selector: field.selector, values: candidates });
         if (!ok) {
+            const semanticOk = await this.trySemanticSelectMatch(page, field, value, candidates);
+            if (semanticOk) {
+                return;
+            }
             throw new Error(`Failed to select "${value}"` +
                 (value !== candidates[0] ? ` (tried: ${candidates.slice(0, 5).join(' | ')})` : '') +
                 ` for ${field.selector}` +
                 `${field.labelHint ? ` ("${field.labelHint}")` : ''}`);
         }
+    }
+    async trySemanticSelectMatch(page, field, value, candidates) {
+        if (!field.selector || !this.semanticFieldMapper.isAvailable()) {
+            return false;
+        }
+        const selectOptions = await page.evaluate((selector) => {
+            const sel = document.querySelector(selector);
+            if (!sel) {
+                return [];
+            }
+            const isPlaceholder = (text) => !text ||
+                /please\s*(choose|select)/i.test(text) ||
+                /^-+$/.test(text) ||
+                /^-choose-$/i.test(text) ||
+                /^\.\.\./.test(text);
+            return Array.from(sel.options)
+                .map((o) => ({
+                value: o.value,
+                label: o.text.replace(/\s+/g, ' ').trim(),
+            }))
+                .filter((o) => o.value && !isPlaceholder(o.label));
+        }, field.selector);
+        if (selectOptions.length === 0) {
+            return false;
+        }
+        const matched = await this.semanticFieldMapper.semanticSelectMatch({
+            desiredValue: value,
+            candidates,
+            selectOptions,
+            fieldLabel: field.labelHint ?? field.selector,
+        });
+        if (!matched) {
+            return false;
+        }
+        return page.evaluate(({ selector, optionValue }) => {
+            const sel = document.querySelector(selector);
+            if (!sel) {
+                return false;
+            }
+            sel.value = optionValue;
+            sel.dispatchEvent(new Event('input', { bubbles: true }));
+            sel.dispatchEvent(new Event('change', { bubbles: true }));
+            const jq = window.jQuery;
+            if (typeof jq === 'function') {
+                try {
+                    jq(sel).val(optionValue).trigger('chosen:updated');
+                    jq(sel).val(optionValue).trigger('change');
+                    jq(sel).val(optionValue).trigger('liszt:updated');
+                }
+                catch {
+                }
+            }
+            return sel.value === optionValue;
+        }, { selector: field.selector, optionValue: matched.value });
     }
     applyValueMap(field, value) {
         const trimmed = value.trim();
@@ -631,10 +750,14 @@ let FormFiller = class FormFiller {
     }
     normalizeSexLabel(value) {
         const v = value.trim().toLowerCase();
-        if (['f', 'female', 'woman', 'ж', 'жен', 'женский', 'female'].includes(v)) {
+        if (['f', 'female', 'woman', 'ж', 'жен', 'женский'].includes(v) ||
+            /\bfemale\b/.test(v) ||
+            /женск/.test(v)) {
             return 'Female';
         }
-        if (['m', 'male', 'man', 'м', 'муж', 'мужской'].includes(v)) {
+        if (['m', 'male', 'man', 'м', 'муж', 'мужской'].includes(v) ||
+            (/\bmale\b/.test(v) && !/\bfemale\b/.test(v)) ||
+            (/мужск/.test(v) && !/женск/.test(v))) {
             return 'Male';
         }
         return value;
@@ -918,10 +1041,453 @@ let FormFiller = class FormFiller {
         }
         await this.dismissFormOverlays(page);
     }
-    isPkuLike(university) {
+    is17gzPortal(university) {
         return (university.id === 'pku' ||
-            Boolean(university.navigationHints?.ocrPassportUpload) ||
-            /pku\.17gz\.org/i.test(university.formUrl || ''));
+            university.id === 'csu' ||
+            university.id === 'kmmc' ||
+            university.id === 'zhengzhou-university' ||
+            /(?:^|\.)17gz\.org|kmmc\.cn/i.test(university.formUrl || ''));
+    }
+    async ensurePkuStep5RequiredGaps(page, profile) {
+        await this.wizardNavigator.waitForProcessingDone(page, 60_000);
+        await this.dismissFormOverlays(page);
+        await this.closeDatePickers(page);
+        const fullName = [profile.personal.surname, profile.personal.givenName]
+            .filter(Boolean)
+            .join(' ')
+            .trim() || 'Applicant';
+        const phone = profile.personal.phone?.trim() ||
+            profile.guarantor?.phone?.trim() ||
+            '13800000000';
+        const nationality = profile.personal.nationality?.trim() || 'Russian Federation';
+        const rawAddress = profile.personal.permanentAddress?.trim() ||
+            profile.guarantor?.homeAddress?.trim() ||
+            'N/A';
+        const geo = await this.geocoding.resolve(rawAddress, {
+            city: profile.personal.cityOfBirth?.trim(),
+            zip: profile.personal.postCode?.trim(),
+            country: nationality,
+        });
+        const address = (geo.streetAddress && geo.streetAddress !== geo.city
+            ? geo.streetAddress
+            : rawAddress) || rawAddress;
+        const city = geo.city && !/^n\/?a$/i.test(geo.city) ? geo.city : profile.personal.cityOfBirth?.trim() || 'N/A';
+        const zip = geo.zip || profile.personal.postCode?.trim() || '000000';
+        const country = geo.country || nationality;
+        const fills = [
+            ['apply.homePhone', phone],
+            ['apply.homeMobile', phone],
+            ['apply.homeAddress', address],
+            ['apply.homeCity', city],
+            ['apply.homeZip', zip],
+            ['apply.contactPhone', phone],
+            ['apply.contactAddress', address],
+            ['apply.contactZip', zip],
+            ['apply.receiverName', fullName],
+            ['apply.receiverMobile', phone],
+            ['apply.receiverCity', city],
+            ['apply.receiverAddress', address],
+            ['apply.receiverZip', zip],
+        ];
+        await page.evaluate((rows) => {
+            const jq = window.jQuery;
+            for (const [name, value] of rows) {
+                const el = document.querySelector(`input[name="${name}"]`);
+                if (!el || !value) {
+                    continue;
+                }
+                el.value = value;
+                el.setAttribute('value', value);
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+                if (typeof jq === 'function') {
+                    try {
+                        jq(el).val(value).trigger('change');
+                    }
+                    catch {
+                    }
+                }
+            }
+        }, fills);
+        for (const [name, value] of fills) {
+            const empty = await page.evaluate((n) => {
+                const el = document.querySelector(`input[name="${n}"]`);
+                return !el || !el.value?.trim();
+            }, name);
+            if (empty) {
+                await this.setInputValueJs(page, `input[name="${name}"]`, value);
+            }
+        }
+        for (const [sel, label] of [
+            ['select[name="apply.homeCountryId"]', country],
+            ['select[name="apply.receiverCountryId"]', country],
+        ]) {
+            if ((await page.locator(sel).count()) === 0) {
+                continue;
+            }
+            await this.fillSelectControl(page, {
+                selector: sel,
+                type: 'select',
+                required: false,
+                mapsTo: 'personal.nationality',
+                labelHint: 'Country',
+            }, page.locator(sel).first(), label).catch(() => undefined);
+        }
+        await page.evaluate(() => {
+            const radios = [
+                ...document.querySelectorAll('input[name="apply.isSame"]'),
+            ];
+            const labelOf = (radio) => {
+                const wrap = radio.closest('label');
+                if (wrap?.textContent) {
+                    return wrap.textContent;
+                }
+                return radio.parentElement?.textContent || '';
+            };
+            const same = radios.find((r) => /same as|permanent address/i.test(labelOf(r)));
+            const target = same ||
+                radios.find((r) => r.value === '1') ||
+                radios[0];
+            if (!target) {
+                return;
+            }
+            for (const r of radios) {
+                r.checked = false;
+            }
+            target.checked = true;
+            target.click();
+            target.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+        await page.evaluate(() => {
+            const radios = [
+                ...document.querySelectorAll('input[name="apply.receiverType"]'),
+            ];
+            const labelOf = (radio) => {
+                const wrap = radio.closest('label');
+                if (wrap?.textContent) {
+                    return wrap.textContent;
+                }
+                return radio.parentElement?.textContent || '';
+            };
+            const inPerson = radios.find((r) => /collect.*in person|in person/i.test(labelOf(r)));
+            if (!inPerson) {
+                return;
+            }
+            for (const r of radios) {
+                r.checked = false;
+            }
+            inPerson.checked = true;
+            inPerson.click();
+            inPerson.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+        await this.closeDatePickers(page);
+        await this.dismissFormOverlays(page);
+    }
+    async ensurePkuStep4RequiredGaps(page, profile) {
+        await this.wizardNavigator.waitForProcessingDone(page, 60_000);
+        await this.dismissFormOverlays(page);
+        await this.closeDatePickers(page);
+        await page.evaluate(() => {
+            const no = document.querySelector('input[name="applyEx.hasCriminalRecord"][value="0"]');
+            const yes = document.querySelector('input[name="applyEx.hasCriminalRecord"][value="1"]');
+            if (no) {
+                if (yes) {
+                    yes.checked = false;
+                }
+                no.checked = true;
+                no.click();
+                no.dispatchEvent(new Event('input', { bubbles: true }));
+                no.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        });
+        const fullName = [profile.personal.surname, profile.personal.givenName]
+            .filter(Boolean)
+            .join(' ')
+            .trim() || 'Applicant';
+        const phone = profile.personal.phone?.trim() ||
+            profile.guarantor?.phone?.trim() ||
+            '13800000000';
+        const email = profile.personal.email?.trim() ||
+            profile.guarantor?.email?.trim() ||
+            'applicant@example.com';
+        const nationality = profile.personal.nationality?.trim() || 'Russian Federation';
+        const address = profile.personal.permanentAddress?.trim() ||
+            profile.guarantor?.homeAddress?.trim() ||
+            'N/A';
+        const zip = profile.personal.postCode?.trim() || '000000';
+        const familySlots = [0, 1].map((i) => {
+            const fm = profile.familyMembers?.[i];
+            const fallbackName = i === 0
+                ? profile.guarantor?.name?.trim() || fullName
+                : profile.emergencyContact?.name?.trim() ||
+                    profile.guarantor?.name?.trim() ||
+                    fullName;
+            const fallbackPhone = i === 0
+                ? profile.guarantor?.phone?.trim() || phone
+                : profile.emergencyContact?.phone?.trim() ||
+                    profile.guarantor?.phone?.trim() ||
+                    phone;
+            const fallbackEmail = i === 0
+                ? profile.guarantor?.email?.trim() || email
+                : profile.emergencyContact?.email?.trim() ||
+                    profile.guarantor?.email?.trim() ||
+                    email;
+            const fallbackCompany = i === 0
+                ? profile.guarantor?.company?.trim()
+                : profile.emergencyContact?.company?.trim() ||
+                    profile.guarantor?.company?.trim();
+            const fallbackPosition = i === 0
+                ? profile.guarantor?.position?.trim()
+                : profile.emergencyContact?.company
+                    ? undefined
+                    : profile.guarantor?.position?.trim();
+            const relationshipRaw = fm?.relationship?.trim() ||
+                (i === 0
+                    ? profile.guarantor?.relationship?.trim()
+                    : profile.emergencyContact?.relationship?.trim()) ||
+                (i === 0 ? 'Father' : 'Mother');
+            return {
+                relative: this.normalizeFamilyRelationship(relationshipRaw),
+                name: fm?.fullName?.trim() || fallbackName,
+                phone: fm?.phone?.trim() || fallbackPhone,
+                email: fm?.email?.trim() || fallbackEmail,
+                duty: fm?.position?.trim() || fallbackPosition || 'unemployed',
+                workPlace: fm?.company?.trim() || fallbackCompany || 'unemployed',
+                nationality: fm?.nationality?.trim() || nationality,
+                bornedDate: this.familyBirthDateFromAge(fm?.age),
+            };
+        });
+        await page.evaluate((slots) => {
+            const jq = window.jQuery;
+            const setInput = (name, index, value) => {
+                const els = [
+                    ...document.querySelectorAll(`input[name="${name}"]`),
+                ];
+                const el = els[index];
+                if (!el || !value) {
+                    return;
+                }
+                el.focus();
+                el.value = value;
+                el.setAttribute('value', value);
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+                el.dispatchEvent(new Event('blur', { bubbles: true }));
+                if (typeof jq === 'function') {
+                    try {
+                        jq(el).val(value).trigger('input');
+                        jq(el).val(value).trigger('change');
+                    }
+                    catch {
+                    }
+                }
+            };
+            const setSelectByLabel = (name, index, label) => {
+                const sels = [
+                    ...document.querySelectorAll(`select[name="${name}"]`),
+                ];
+                const sel = sels[index];
+                if (!sel || !label) {
+                    return;
+                }
+                const want = label.trim().toLowerCase();
+                const opt = Array.from(sel.options).find((o) => {
+                    const t = o.text.replace(/\s+/g, ' ').trim().toLowerCase();
+                    return t === want || t.includes(want) || want.includes(t);
+                });
+                if (!opt?.value) {
+                    return;
+                }
+                sel.value = opt.value;
+                sel.dispatchEvent(new Event('input', { bubbles: true }));
+                sel.dispatchEvent(new Event('change', { bubbles: true }));
+                if (typeof jq === 'function') {
+                    try {
+                        jq(sel).val(opt.value).trigger('chosen:updated');
+                        jq(sel).val(opt.value).trigger('change');
+                    }
+                    catch {
+                    }
+                }
+            };
+            for (let i = 0; i < slots.length; i += 1) {
+                const s = slots[i];
+                setSelectByLabel('fm.relativeId', i, s.relative);
+                setSelectByLabel('fm.countryId', i, s.nationality);
+                setInput('fm.name', i, s.name);
+                setInput('fm.phone', i, s.phone);
+                setInput('fm.email', i, s.email);
+                setInput('fm.duty', i, s.duty);
+                setInput('fm.workPlace', i, s.workPlace);
+                if (s.bornedDate) {
+                    setInput('fm.bornedDate', i, s.bornedDate);
+                }
+            }
+        }, familySlots);
+        const selfWork = profile.personal.currentInstitution?.trim() ||
+            profile.workExperience?.[0]?.company?.trim() ||
+            profile.education?.[0]?.institution?.trim() ||
+            'unemployed';
+        const singleFills = [
+            ['apply.selfSupporter', fullName],
+            ['apply.selfphone', phone],
+            ['apply.selfwork', selfWork],
+            [
+                'apply.ssrelative',
+                profile.guarantor?.relationship?.trim() || 'Self',
+            ],
+            ['apply.selfaddress', address],
+            ['apply.selfemail', email],
+            [
+                'apply.emergencyName',
+                profile.emergencyContact?.name?.trim() ||
+                    profile.guarantor?.name?.trim() ||
+                    fullName,
+            ],
+            [
+                'apply.emergencyMobile',
+                profile.emergencyContact?.phone?.trim() ||
+                    profile.guarantor?.phone?.trim() ||
+                    phone,
+            ],
+            [
+                'apply.emergencyPhone',
+                profile.emergencyContact?.phone?.trim() ||
+                    profile.guarantor?.phone?.trim() ||
+                    phone,
+            ],
+            [
+                'apply.emergencyEmail',
+                profile.emergencyContact?.email?.trim() ||
+                    profile.guarantor?.email?.trim() ||
+                    email,
+            ],
+            [
+                'apply.emergencyAddress',
+                profile.emergencyContact?.homeAddress?.trim() ||
+                    profile.guarantor?.homeAddress?.trim() ||
+                    address,
+            ],
+            ['apply.emergencyZip', zip],
+        ];
+        await page.evaluate((rows) => {
+            const jq = window.jQuery;
+            for (const [name, value] of rows) {
+                const el = document.querySelector(`input[name="${name}"], textarea[name="${name}"]`);
+                if (!el || !value) {
+                    continue;
+                }
+                if (el.value?.trim() && el.value.trim().length >= value.trim().length) {
+                    continue;
+                }
+                el.value = value;
+                el.setAttribute('value', value);
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+                if (typeof jq === 'function') {
+                    try {
+                        jq(el).val(value).trigger('change');
+                    }
+                    catch {
+                    }
+                }
+            }
+        }, singleFills);
+        for (const [name, value] of singleFills) {
+            const empty = await page.evaluate((n) => {
+                const el = document.querySelector(`input[name="${n}"]`);
+                return !el || !el.value?.trim();
+            }, name);
+            if (empty) {
+                await this.setInputValueJs(page, `input[name="${name}"]`, value);
+            }
+        }
+        await this.closeDatePickers(page);
+        await this.dismissFormOverlays(page);
+    }
+    normalizeFamilyRelationship(raw) {
+        const v = raw.trim().toLowerCase();
+        if (/father|папа|отец|dad/.test(v)) {
+            return 'Father';
+        }
+        if (/mother|мама|мать|mom/.test(v)) {
+            return 'Mother';
+        }
+        if (/spouse|husband|wife|супруг|муж|жена/.test(v)) {
+            return 'Spouse';
+        }
+        if (/brother|брат/.test(v)) {
+            return 'Brother';
+        }
+        if (/sister|сестра/.test(v)) {
+            return 'Sister';
+        }
+        if (/uncle|дядя/.test(v)) {
+            return 'Uncle';
+        }
+        if (/child|сын|дочь|дети/.test(v)) {
+            return 'Children';
+        }
+        const known = [
+            'Father',
+            'Mother',
+            'Spouse',
+            'Uncle',
+            'Brother',
+            'Sister',
+            'Others',
+            'Children',
+        ];
+        const hit = known.find((k) => k.toLowerCase() === v);
+        return hit || 'Others';
+    }
+    familyBirthDateFromAge(age) {
+        if (age === undefined || age === null || Number.isNaN(age) || age < 1) {
+            return undefined;
+        }
+        const year = new Date().getFullYear() - Math.floor(age);
+        return `${year}-01-01`;
+    }
+    async ensurePkuStep3RequiredGaps(page, profile) {
+        await this.dismissFormOverlays(page);
+        await this.closeDatePickers(page);
+        for (const [name, value] of [
+            ['applyEx.haveStudiedInChina', '0'],
+            ['applyEx.haveWorkHistory', '0'],
+            ['haveWorkHistory', '0'],
+        ]) {
+            const radio = page.locator(`input[type="radio"][name="${name}"][value="${value}"]`);
+            if ((await radio.count()) > 0) {
+                await radio.first().check({ force: true }).catch(() => undefined);
+            }
+        }
+        await page.evaluate(() => {
+            const yes = document.querySelector('input[name="applyEx.haveStudiedInChina"][value="1"]');
+            const no = document.querySelector('input[name="applyEx.haveStudiedInChina"][value="0"]');
+            if (no && !no.checked) {
+                no.checked = true;
+                no.click();
+                no.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            if (yes?.checked && no) {
+                yes.checked = false;
+                no.checked = true;
+                no.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        });
+        const nationality = profile.personal.nationality?.trim() || 'Russian Federation';
+        const countrySel = 'select[name="sh.countryId"]';
+        if ((await page.locator(countrySel).count()) > 0) {
+            await this.fillSelectControl(page, {
+                selector: countrySel,
+                type: 'select',
+                required: false,
+                mapsTo: 'personal.nationality',
+                labelHint: 'Institute Location',
+            }, page.locator(countrySel).first(), nationality).catch(() => undefined);
+        }
+        await this.closeDatePickers(page);
+        await this.dismissFormOverlays(page);
     }
     async ensurePkuStep2RequiredGaps(page, profile) {
         await this.dismissFormOverlays(page);
@@ -1261,6 +1827,7 @@ exports.FormFiller = FormFiller = __decorate([
         wizard_navigator_js_1.WizardNavigator,
         wizard_field_groups_js_1.WizardFieldGroups,
         semantic_field_mapper_js_1.SemanticFieldMapper,
-        form_agent_js_1.FormAgent])
+        form_agent_js_1.FormAgent,
+        geocoding_service_js_1.GeocodingService])
 ], FormFiller);
 //# sourceMappingURL=form.filler.js.map

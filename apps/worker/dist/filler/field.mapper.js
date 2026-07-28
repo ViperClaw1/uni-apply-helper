@@ -137,6 +137,65 @@ let FieldMapper = class FieldMapper {
             field.required) {
             return profile.personal.email || 'recommender@example.com';
         }
+        if (/familyMembers\.\d+\.position/.test(paths.join('|')) ||
+            /fm\.duty/i.test(field.selector || '')) {
+            return 'unemployed';
+        }
+        if (/familyMembers\.\d+\.company/.test(paths.join('|')) ||
+            /fm\.workPlace/i.test(field.selector || '')) {
+            return 'unemployed';
+        }
+        if ((/familyMembers\.\d+\.fullName/.test(paths.join('|')) ||
+            /fm\.name/i.test(field.selector || '')) &&
+            field.required) {
+            return (profile.guarantor?.name?.trim() ||
+                profile.emergencyContact?.name?.trim() ||
+                [profile.personal.surname, profile.personal.givenName]
+                    .filter(Boolean)
+                    .join(' ')
+                    .trim() ||
+                'Family Member');
+        }
+        if ((/familyMembers\.\d+\.phone/.test(paths.join('|')) ||
+            /fm\.phone/i.test(field.selector || '')) &&
+            field.required) {
+            return (profile.guarantor?.phone?.trim() ||
+                profile.personal.phone ||
+                '13800000000');
+        }
+        if ((/familyMembers\.\d+\.email/.test(paths.join('|')) ||
+            /fm\.email/i.test(field.selector || '')) &&
+            field.required) {
+            return (profile.guarantor?.email?.trim() ||
+                profile.personal.email ||
+                'family@example.com');
+        }
+        if (this.pathsInclude(paths, 'personal.postCode') ||
+            /emergencyZip|homeZip/i.test(field.selector || '')) {
+            return profile.personal.postCode?.trim() || '000000';
+        }
+        if ((this.pathsInclude(paths, 'personal.currentInstitution') ||
+            /selfwork/i.test(field.selector || '')) &&
+            field.required) {
+            return (profile.personal.currentInstitution?.trim() ||
+                profile.workExperience?.[0]?.company?.trim() ||
+                profile.education?.[0]?.institution?.trim() ||
+                'unemployed');
+        }
+        if ((this.pathsInclude(paths, 'personal.phone') ||
+            /selfphone|homeMobile/i.test(field.selector || '')) &&
+            field.required) {
+            return (profile.personal.phone?.trim() ||
+                profile.guarantor?.phone?.trim() ||
+                '13800000000');
+        }
+        if (this.pathsInclude(paths, 'personal.fullName') &&
+            field.required) {
+            return ([profile.personal.surname, profile.personal.givenName]
+                .filter(Boolean)
+                .join(' ')
+                .trim() || 'Applicant');
+        }
         if (field.selector?.includes('lastSchool') ||
             /institution of highest/i.test(field.labelHint || '')) {
             const fromEducation = profile.education?.[0]?.institution?.trim();
@@ -235,11 +294,15 @@ let FieldMapper = class FieldMapper {
     normalizeSex(value) {
         const v = value.trim().toLowerCase();
         if (['f', 'female', 'woman', 'ж', 'жен', 'женский'].includes(v) ||
-            v.startsWith('fem')) {
+            v.startsWith('fem') ||
+            /\bfemale\b/.test(v) ||
+            /женск/.test(v)) {
             return 'Female';
         }
         if (['m', 'male', 'man', 'м', 'муж', 'мужской'].includes(v) ||
-            v.startsWith('mal')) {
+            (v.startsWith('mal') && !v.startsWith('mar')) ||
+            (/\bmale\b/.test(v) && !/\bfemale\b/.test(v)) ||
+            (/мужск/.test(v) && !/женск/.test(v))) {
             return 'Male';
         }
         return value;

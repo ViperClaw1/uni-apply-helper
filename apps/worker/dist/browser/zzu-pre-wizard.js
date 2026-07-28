@@ -9,23 +9,64 @@ exports.advancePreWizardScreen = advancePreWizardScreen;
 exports.clearStuckProcessing = clearStuckProcessing;
 exports.advanceThroughPreWizard = advanceThroughPreWizard;
 exports.describeNavigationState = describeNavigationState;
+function normalizeHints(hints) {
+    if (!hints) {
+        return {};
+    }
+    if (typeof hints === 'string') {
+        const value = hints.trim();
+        return value
+            ? { programText: value, studyPlanHint: value }
+            : {};
+    }
+    return hints;
+}
 async function waitForUiReady(page) {
     await dismissBlockingDialogs(page);
     await page
-        .locator('.window-mask, .el-loading-mask, .datagrid-mask')
-        .first()
-        .waitFor({ state: 'hidden', timeout: 10_000 })
-        .catch(() => undefined);
-    await page
         .waitForFunction(() => {
-        const text = document.body?.innerText ?? '';
-        return !/请求正在处理中|please wait|processing/i.test(text);
-    }, { timeout: 8_000 })
+        const wins = [
+            ...document.querySelectorAll('.messager-window, .panel.window, .window-mask, .datagrid-mask, .el-loading-mask'),
+        ];
+        const visibleProcessing = wins.some((win) => {
+            const style = getComputedStyle(win);
+            if (style.display === 'none' || style.visibility === 'hidden') {
+                return false;
+            }
+            const rect = win.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) {
+                return false;
+            }
+            return /It'?s processing|请求正在处理中|please wait|processing your request/i.test(win.textContent || '');
+        });
+        return !visibleProcessing;
+    }, { timeout: 12_000 })
         .catch(() => undefined);
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(150);
 }
 async function dismissBlockingDialogs(page) {
-    for (let attempt = 0; attempt < 8; attempt += 1) {
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+        const isProcessing = await page
+            .evaluate(() => {
+            const wins = [
+                ...document.querySelectorAll('.messager-window, .panel.window, .window-mask'),
+            ];
+            return wins.some((win) => {
+                const style = getComputedStyle(win);
+                if (style.display === 'none' || style.visibility === 'hidden') {
+                    return false;
+                }
+                const rect = win.getBoundingClientRect();
+                if (rect.width === 0 || rect.height === 0) {
+                    return false;
+                }
+                return /It'?s processing|请求正在处理中|please wait|processing your request/i.test(win.textContent || '');
+            });
+        })
+            .catch(() => false);
+        if (isProcessing) {
+            break;
+        }
         const okButton = page
             .locator([
             'input.okButton',
@@ -50,15 +91,28 @@ async function dismissBlockingDialogs(page) {
             break;
         }
         await okButton.click({ force: true }).catch(() => undefined);
-        await page.waitForTimeout(400);
+        await page.waitForTimeout(300);
     }
     await page
         .evaluate(() => {
-        const text = document.body?.innerText ?? '';
-        if (!/请求正在处理中|processing/i.test(text)) {
+        const wins = [
+            ...document.querySelectorAll('.window-mask, .datagrid-mask, .messager-window, .panel.window, .window-shadow, .el-loading-mask'),
+        ];
+        const stuck = wins.some((win) => {
+            const style = getComputedStyle(win);
+            if (style.display === 'none' || style.visibility === 'hidden') {
+                return false;
+            }
+            const rect = win.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) {
+                return false;
+            }
+            return /It'?s processing|请求正在处理中|please wait|processing your request/i.test(win.textContent || '');
+        });
+        if (!stuck) {
             return;
         }
-        for (const el of document.querySelectorAll('.window-mask, .datagrid-mask, .messager-window, .panel.window, .window-shadow')) {
+        for (const el of wins) {
             el.style.display = 'none';
         }
     })
@@ -244,7 +298,7 @@ async function setHiddenSelectByName(page, name, optionIndex = 1) {
             return null;
         }
         const option = sel.options[index];
-        if (!option?.value) {
+        if (!option || (index > 0 && !option.value)) {
             return null;
         }
         sel.value = option.value;
@@ -275,33 +329,163 @@ async function setHiddenSelectByName(page, name, optionIndex = 1) {
         return option.value;
     }, { fieldName: name, index: optionIndex });
 }
+async function clearStudyPlanFilters(page) {
+    for (const name of ['collegeId', 'majorId', 'teachLanguage']) {
+        await setHiddenSelectByName(page, name, 0);
+    }
+    await page
+        .locator('input[name="researchArea"], input[name="research"], input[name*="research" i]')
+        .first()
+        .fill('')
+        .catch(() => undefined);
+}
+async function clickStudyPlanFind(page) {
+    const find = page
+        .locator([
+        'input[type="button"][value="Find"]',
+        'input[type="submit"][value="Find"]',
+        'input[value="查询"]',
+        'button:has-text("Find")',
+        'button:has-text("查询")',
+        'a:has-text("Find")',
+    ].join(', '))
+        .first();
+    if ((await find.count()) === 0) {
+        return false;
+    }
+    if (!(await find.isVisible().catch(() => false))) {
+        return false;
+    }
+    await find.click({ force: true });
+    await page.waitForTimeout(1200);
+    await waitForUiReady(page);
+    return true;
+}
 async function fillProgramSelection(page) {
-    const hasNativeOptions = await page.evaluate(() => {
-        const college = document.querySelector('select[name="collegeId"]');
-        return Boolean(college && college.options.length > 1);
-    });
-    if (!hasNativeOptions) {
+    const rows = await collectStudyPlanRows(page);
+    if (rows.length > 0 && !(await isProgramSelectionEmpty(page))) {
         return;
     }
-    await setHiddenSelectByName(page, 'collegeId', 1);
-    const hasMajor = await page.evaluate(() => Boolean(document.querySelector('select[name="majorId"]')));
-    if (hasMajor) {
-        await page.waitForTimeout(1500);
-        await page
-            .waitForFunction(() => {
-            const major = document.querySelector('select[name="majorId"]');
-            return Boolean(major && major.options.length > 1);
-        }, { timeout: 15_000 })
-            .catch(() => undefined);
-        await setHiddenSelectByName(page, 'majorId', 1);
-    }
-    await setHiddenSelectByName(page, 'teachLanguage', 1);
-    await page.waitForTimeout(500);
+    await clearStudyPlanFilters(page);
+    await clickStudyPlanFind(page);
 }
 async function isProgramSelectionEmpty(page) {
     return page.evaluate(() => /Total:\s*0/i.test(document.body?.innerText ?? ''));
 }
-async function selectStudyPlanRow(page) {
+async function expandStudyPlanPageSize(page) {
+    const changed = await page.evaluate(() => {
+        const selects = [
+            ...document.querySelectorAll('select'),
+        ];
+        const perPage = selects.find((sel) => {
+            const opts = [...sel.options].map((o) => o.text.trim());
+            const nearLabel = sel.closest('td, div, span, label')?.textContent?.toLowerCase() || '';
+            return (/per\s*page|page\s*size|条/i.test(nearLabel) ||
+                opts.includes('20') ||
+                opts.includes('50') ||
+                opts.includes('100'));
+        });
+        if (!perPage) {
+            return false;
+        }
+        const preferred = ['100', '50', '30', '20'].find((v) => [...perPage.options].some((o) => o.value === v || o.text.trim() === v));
+        if (!preferred || perPage.value === preferred) {
+            return false;
+        }
+        perPage.value = preferred;
+        perPage.dispatchEvent(new Event('change', { bubbles: true }));
+        const jq = window.jQuery;
+        if (typeof jq === 'function') {
+            try {
+                jq(perPage).val(preferred).trigger('change');
+            }
+            catch {
+            }
+        }
+        return true;
+    });
+    if (changed) {
+        await page.waitForTimeout(1500);
+    }
+}
+async function collectStudyPlanRows(page) {
+    return page.evaluate(() => {
+        const labelOf = (el) => (el.value || el.textContent || '')
+            .replace(/\s+/g, ' ')
+            .trim();
+        const isApplyLink = (el) => {
+            const onclick = el.getAttribute('onclick') || '';
+            const href = el.getAttribute('href') || '';
+            return (/saveChoose|StudyPlan|ChooseProject|choose/i.test(onclick) ||
+                /^(Apply|申请|选择|Select)$/i.test(labelOf(el)) ||
+                /apply/i.test(href));
+        };
+        const rows = [];
+        const trs = [...document.querySelectorAll('tr')];
+        for (const tr of trs) {
+            const link = [...tr.querySelectorAll('a, input[type="button"]')].find(isApplyLink);
+            if (!link) {
+                continue;
+            }
+            const text = (tr.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 240);
+            if (!text || /study plan name|department|application deadline/i.test(text)) {
+                continue;
+            }
+            rows.push({ index: rows.length, text });
+        }
+        return rows;
+    });
+}
+async function clickStudyPlanRowByIndex(page, rowIndex) {
+    return page.evaluate((index) => {
+        const labelOf = (el) => (el.value || el.textContent || '')
+            .replace(/\s+/g, ' ')
+            .trim();
+        const isApplyLink = (el) => {
+            const onclick = el.getAttribute('onclick') || '';
+            const href = el.getAttribute('href') || '';
+            return (/saveChoose|StudyPlan|ChooseProject|choose/i.test(onclick) ||
+                /^(Apply|申请|选择|Select)$/i.test(labelOf(el)) ||
+                /apply/i.test(href));
+        };
+        const applyRows = [...document.querySelectorAll('tr')].filter((tr) => [...tr.querySelectorAll('a, input[type="button"]')].some(isApplyLink));
+        const tr = applyRows[index];
+        if (!tr) {
+            return null;
+        }
+        const link = [...tr.querySelectorAll('a, input[type="button"]')].find(isApplyLink);
+        if (!link) {
+            return null;
+        }
+        link.scrollIntoView({ block: 'center', inline: 'nearest' });
+        link.dispatchEvent(new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+        }));
+        const onclick = link.getAttribute('onclick') || '';
+        return `Apply:row${index}:${onclick.slice(0, 48)}`;
+    }, rowIndex);
+}
+function scoreStudyPlanRow(text, hint) {
+    const hay = text.toLowerCase();
+    const needles = hint
+        .toLowerCase()
+        .split(/[\s,/|;]+/)
+        .map((n) => n.trim())
+        .filter((n) => n.length >= 3);
+    let score = 0;
+    for (const n of needles) {
+        if (hay.includes(n)) {
+            score += n.length >= 6 ? 3 : 2;
+        }
+    }
+    if (hay.includes(hint.toLowerCase())) {
+        score += 10;
+    }
+    return score;
+}
+async function selectStudyPlanRow(page, programHint, gemini) {
     const APPLY_LINK_SELECTOR = [
         'a[onclick*="saveChooseProjectBind"]',
         'a[onclick*="StudyPlan"]',
@@ -318,7 +502,56 @@ async function selectStudyPlanRow(page) {
         })
             .catch(() => undefined);
         await page.waitForTimeout(attempt === 0 ? 500 : 1200);
-        const clicked = await page.evaluate(() => {
+        if (attempt === 0) {
+            await expandStudyPlanPageSize(page);
+        }
+        const rows = await collectStudyPlanRows(page);
+        if (rows.length === 0) {
+            continue;
+        }
+        let chosenIndex = 0;
+        if (programHint?.trim()) {
+            let bestScore = 0;
+            let bestIndex = -1;
+            for (const row of rows) {
+                const score = scoreStudyPlanRow(row.text, programHint);
+                if (score > bestScore) {
+                    bestScore = score;
+                    bestIndex = row.index;
+                }
+            }
+            if (bestIndex >= 0 && bestScore > 0) {
+                chosenIndex = bestIndex;
+            }
+            else if (gemini?.isAvailable()) {
+                try {
+                    const result = await gemini.generateJson({
+                        prompt: [
+                            'You pick the best matching university study-plan row for a student.',
+                            'Return ONLY JSON: {"rowIndex":<number>}. Use -1 if nothing is reasonably close.',
+                            `Student desired field / program hint: "${programHint}"`,
+                            'Available study plans (index: text):',
+                            ...rows.map((r) => `${r.index}: ${r.text}`),
+                        ].join('\n'),
+                        temperature: 0,
+                    });
+                    const idx = result.rowIndex;
+                    if (typeof idx === 'number' &&
+                        Number.isInteger(idx) &&
+                        idx >= 0 &&
+                        idx < rows.length) {
+                        chosenIndex = idx;
+                    }
+                }
+                catch {
+                }
+            }
+        }
+        const clicked = await clickStudyPlanRowByIndex(page, chosenIndex);
+        if (clicked) {
+            return clicked;
+        }
+        const clickedLegacy = await page.evaluate(() => {
             const labelOf = (el) => (el.value || el.textContent || '')
                 .replace(/\s+/g, ' ')
                 .trim();
@@ -358,8 +591,8 @@ async function selectStudyPlanRow(page) {
             }
             return null;
         });
-        if (clicked) {
-            return clicked;
+        if (clickedLegacy) {
+            return clickedLegacy;
         }
         const applyLink = page
             .locator('td a, table a, a')
@@ -373,90 +606,147 @@ async function selectStudyPlanRow(page) {
     }
     return null;
 }
-const STUDENT_TYPE_HINTS = [
+const DEFAULT_STUDENT_TYPE_HINTS = [
     'Undergraduate Student',
     '本科生',
     '本科',
     'undergraduate',
     'bachelor',
 ];
-async function pickStudentTypeRadio(page) {
-    for (const hint of STUDENT_TYPE_HINTS) {
-        const byText = page.getByText(hint, { exact: false }).first();
-        try {
-            if ((await byText.count()) > 0 &&
-                (await byText.isVisible().catch(() => false))) {
-                await byText.click({ force: true });
-                const checked = await page.locator('input[type="radio"]:checked').count();
-                if (checked > 0) {
-                    return true;
-                }
-            }
+function studentTypeHintList(preferred) {
+    const preferredHints = preferred?.trim()
+        ? [preferred.trim()]
+        : [];
+    const seen = new Set();
+    const out = [];
+    for (const hint of [...preferredHints, ...DEFAULT_STUDENT_TYPE_HINTS]) {
+        const key = hint.toLowerCase();
+        if (seen.has(key)) {
+            continue;
         }
-        catch {
+        seen.add(key);
+        out.push(hint);
+    }
+    return out;
+}
+async function pickStudentTypeRadio(page, studentType) {
+    await dismissBlockingDialogs(page);
+    const hints = studentTypeHintList(studentType);
+    const radios = page.locator('input[type="radio"][name="projectTypeId"]');
+    const count = await radios.count();
+    if (count === 0) {
+        return false;
+    }
+    const checkedCount = () => page.locator('input[type="radio"][name="projectTypeId"]:checked').count();
+    for (const hint of hints) {
+        const escaped = hint.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const label = page
+            .locator('label')
+            .filter({ hasText: new RegExp(escaped, 'i') })
+            .first();
+        if ((await label.count()) === 0) {
+            continue;
+        }
+        if (!(await label.isVisible().catch(() => false))) {
+            continue;
+        }
+        await label.click({ force: true });
+        if ((await checkedCount()) > 0) {
+            return true;
         }
     }
-    const labels = page.locator('label:has(input[type="radio"][name="projectTypeId"])');
-    const labelCount = await labels.count();
-    for (const prefer of [true, false]) {
-        for (let i = 0; i < labelCount; i += 1) {
-            const label = labels.nth(i);
-            if (!(await label.isVisible().catch(() => false))) {
-                continue;
+    const index = await page.evaluate((hintList) => {
+        const list = [
+            ...document.querySelectorAll('input[type="radio"][name="projectTypeId"]'),
+        ];
+        const labelOf = (radio) => {
+            const wrap = radio.closest('label')?.textContent?.trim();
+            if (wrap) {
+                return wrap;
             }
-            const text = ((await label.innerText().catch(() => '')) || '')
-                .replace(/\s+/g, ' ')
-                .trim()
-                .toLowerCase();
-            const isPreferred = STUDENT_TYPE_HINTS.some((hint) => text.includes(hint.toLowerCase()));
-            if (prefer && !isPreferred) {
-                continue;
+            if (radio.id) {
+                const forLabel = document.querySelector(`label[for="${CSS.escape(radio.id)}"]`);
+                const text = forLabel?.textContent?.trim();
+                if (text) {
+                    return text;
+                }
             }
-            if (!prefer && isPreferred) {
-                continue;
+            let node = radio.nextSibling;
+            while (node) {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    const text = (node.textContent ?? '').replace(/\s+/g, ' ').trim();
+                    if (text) {
+                        return text;
+                    }
+                }
+                else if (node.nodeType === Node.ELEMENT_NODE) {
+                    const el = node;
+                    if (el.tagName === 'LABEL') {
+                        return (el.textContent ?? '').replace(/\s+/g, ' ').trim();
+                    }
+                    if (el.tagName === 'BR' || el.tagName === 'INPUT') {
+                        break;
+                    }
+                }
+                node = node.nextSibling;
             }
-            await label.click({ force: true });
-            if ((await page.locator('input[type="radio"]:checked').count()) > 0) {
+            return '';
+        };
+        for (let i = 0; i < list.length; i += 1) {
+            const text = labelOf(list[i]).toLowerCase();
+            if (hintList.some((hint) => text.includes(String(hint).toLowerCase()))) {
+                return i;
+            }
+        }
+        for (let i = 0; i < list.length; i += 1) {
+            if (/undergraduate|本科/.test(labelOf(list[i]).toLowerCase())) {
+                return i;
+            }
+        }
+        return Math.min(2, Math.max(0, list.length - 1));
+    }, hints);
+    const target = radios.nth(index);
+    await target.scrollIntoViewIfNeeded().catch(() => undefined);
+    await target.click({ force: true });
+    if ((await checkedCount()) > 0) {
+        return true;
+    }
+    await target.check({ force: true }).catch(() => undefined);
+    if ((await checkedCount()) > 0) {
+        return true;
+    }
+    return page.evaluate((i) => {
+        const list = [
+            ...document.querySelectorAll('input[type="radio"][name="projectTypeId"]'),
+        ];
+        const targetRadio = list[i];
+        if (!targetRadio) {
+            return false;
+        }
+        const wrap = targetRadio.closest('label');
+        wrap?.click();
+        if (targetRadio.checked) {
+            return true;
+        }
+        if (targetRadio.id) {
+            const forLabel = document.querySelector(`label[for="${CSS.escape(targetRadio.id)}"]`);
+            forLabel?.click();
+            if (targetRadio.checked) {
                 return true;
             }
         }
-    }
-    return page.evaluate((hints) => {
-        const normalize = (value) => value.replace(/\s+/g, ' ').trim();
-        const radios = [
-            ...document.querySelectorAll('input[type="radio"][name="projectTypeId"]'),
-        ];
-        const labelOf = (radio) => normalize(radio.closest('label')?.textContent ?? '');
-        const target = radios.find((radio) => {
-            const label = labelOf(radio).toLowerCase();
-            return hints.some((hint) => label.includes(String(hint).toLowerCase()));
-        }) ?? radios[0];
-        if (!target) {
-            return false;
-        }
-        target.closest('label')?.click();
-        if (target.checked) {
+        targetRadio.click();
+        if (targetRadio.checked) {
             return true;
         }
-        target.click();
-        if (target.checked) {
-            return true;
+        for (const radio of list) {
+            radio.checked = radio === targetRadio;
         }
-        for (const radio of radios) {
-            radio.checked = radio === target;
-        }
-        target.dispatchEvent(new Event('change', { bubbles: true }));
-        const onclick = target.getAttribute('onclick');
-        if (onclick) {
-            try {
-                const run = new Function('event', onclick);
-                run.call(target, new Event('click'));
-            }
-            catch {
-            }
-        }
-        return target.checked;
-    }, STUDENT_TYPE_HINTS);
+        targetRadio.dispatchEvent(new Event('input', { bubbles: true }));
+        targetRadio.dispatchEvent(new Event('change', { bubbles: true }));
+        targetRadio.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        return targetRadio.checked;
+    }, index);
 }
 const NEXT_NAME_RE = /^(Next|下一步|Save and Next|保存并下一步)$/i;
 async function clickVisibleNext(page) {
@@ -522,18 +812,19 @@ async function clickVisibleNext(page) {
         return null;
     });
 }
-async function fillPreWizardScreen(page, screen, programHint) {
+async function fillPreWizardScreen(page, screen, hints) {
+    const resolved = normalizeHints(hints);
     switch (screen) {
         case 'application_notes':
             await checkAgree(page);
-            await pickProjectTypeRadio(page, programHint);
+            await pickProjectTypeRadio(page, resolved.programText);
             break;
         case 'program_type':
             await checkAgree(page);
-            await pickProjectTypeRadio(page, programHint);
+            await pickProjectTypeRadio(page, resolved.programText);
             break;
         case 'student_type':
-            await pickStudentTypeRadio(page);
+            await pickStudentTypeRadio(page, resolved.studentType);
             break;
         case 'program_selection':
             await fillProgramSelection(page);
@@ -543,7 +834,9 @@ async function fillPreWizardScreen(page, screen, programHint) {
     }
     return true;
 }
-async function clickPreWizardNext(page, screen, _programHint) {
+async function clickPreWizardNext(page, screen, hints, gemini) {
+    const resolved = normalizeHints(hints);
+    const studyPlanHint = resolved.studyPlanHint;
     if (screen === 'application_notes') {
         const agreeButton = page
             .getByRole('button', {
@@ -616,7 +909,7 @@ async function clickPreWizardNext(page, screen, _programHint) {
         if (await isProgramSelectionEmpty(page)) {
             return 'empty_list';
         }
-        const row = await selectStudyPlanRow(page);
+        const row = await selectStudyPlanRow(page, studyPlanHint, gemini);
         if (row) {
             return row;
         }
@@ -654,19 +947,19 @@ async function invokeButton(page, labels) {
         return (btn.value || btn.textContent?.trim() || 'clicked');
     }, labels);
 }
-async function advancePreWizardScreen(page, screen = null, programHint) {
+async function advancePreWizardScreen(page, screen = null, hints, gemini) {
     await waitForUiReady(page);
     await dismissBlockingDialogs(page);
     const current = screen ?? (await detectPreWizardScreen(page));
     if (!current) {
         return false;
     }
+    const before = await getPreWizardSignature(page, current);
+    await fillPreWizardScreen(page, current, hints);
+    await page.waitForTimeout(400);
     if (current === 'program_selection' && (await isProgramSelectionEmpty(page))) {
         return false;
     }
-    const before = await getPreWizardSignature(page, current);
-    await fillPreWizardScreen(page, current, programHint);
-    await page.waitForTimeout(400);
     if (current === 'program_type') {
         const selected = await page
             .locator('input[name="projectTypeId"]:checked')
@@ -681,7 +974,7 @@ async function advancePreWizardScreen(page, screen = null, programHint) {
             return false;
         }
     }
-    const clicked = await clickPreWizardNext(page, current, programHint);
+    const clicked = await clickPreWizardNext(page, current, hints, gemini);
     if (!clicked || clicked === 'empty_list') {
         return false;
     }
@@ -689,7 +982,7 @@ async function advancePreWizardScreen(page, screen = null, programHint) {
         .waitForLoadState('domcontentloaded', { timeout: 10_000 })
         .catch(() => undefined);
     await page.waitForTimeout(600);
-    for (let attempt = 0; attempt < 6; attempt += 1) {
+    for (let attempt = 0; attempt < 4; attempt += 1) {
         await waitForUiReady(page);
         await dismissBlockingDialogs(page);
         if (await isMainWizard(page)) {
@@ -700,7 +993,7 @@ async function advancePreWizardScreen(page, screen = null, programHint) {
         if (after !== before) {
             return true;
         }
-        await page.waitForTimeout(350);
+        await page.waitForTimeout(300);
     }
     return false;
 }
@@ -715,15 +1008,24 @@ async function clearStuckProcessing(page) {
     if (!stillStuck) {
         return true;
     }
-    await page.reload({ waitUntil: 'networkidle', timeout: 60_000 }).catch(() => undefined);
+    await page
+        .reload({ waitUntil: 'domcontentloaded', timeout: 30_000 })
+        .catch(() => undefined);
     await waitForUiReady(page);
     return true;
 }
-async function advanceThroughPreWizard(page, programHint, { maxSteps = 20 } = {}) {
-    const MAX_CONSECUTIVE_FAILS = 4;
+async function advanceThroughPreWizard(page, hints, { maxSteps = 10, deadlineMs = 90_000, gemini, } = {}) {
+    const MAX_CONSECUTIVE_FAILS = 3;
+    const MAX_SAME_SCREEN = 3;
     let consecutiveFails = 0;
+    let sameScreenHits = 0;
+    let lastScreen = null;
+    const deadline = Date.now() + deadlineMs;
     await clearStuckProcessing(page);
     for (let step = 0; step < maxSteps; step += 1) {
+        if (Date.now() > deadline) {
+            return isMainWizard(page);
+        }
         if (await isMainWizard(page)) {
             return true;
         }
@@ -733,19 +1035,37 @@ async function advanceThroughPreWizard(page, programHint, { maxSteps = 20 } = {}
             if (consecutiveFails >= MAX_CONSECUTIVE_FAILS) {
                 return false;
             }
-            await page.waitForTimeout(1200);
+            await page.waitForTimeout(800);
             continue;
         }
-        const advanced = await advancePreWizardScreen(page, screen, programHint);
-        if (advanced || (await isMainWizard(page))) {
+        if (screen === lastScreen) {
+            sameScreenHits += 1;
+            if (sameScreenHits >= MAX_SAME_SCREEN) {
+                return false;
+            }
+        }
+        else {
+            lastScreen = screen;
+            sameScreenHits = 0;
+        }
+        const advanced = await advancePreWizardScreen(page, screen, hints, gemini);
+        if (await isMainWizard(page)) {
+            return true;
+        }
+        if (advanced) {
             consecutiveFails = 0;
+            const after = await detectPreWizardScreen(page);
+            if (after && after !== screen) {
+                lastScreen = after;
+                sameScreenHits = 0;
+            }
             continue;
         }
         consecutiveFails += 1;
         if (consecutiveFails >= MAX_CONSECUTIVE_FAILS) {
             return false;
         }
-        await page.waitForTimeout(1200);
+        await page.waitForTimeout(800);
     }
     return isMainWizard(page);
 }

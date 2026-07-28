@@ -14,9 +14,10 @@ export declare class WizardNavigator {
     private resolveNextButton;
     private dismissBlockingDialogs;
     clickSubmit(page: Page, selector: string): Promise<void>;
+    private confirmSubmitDialog;
     private resolveSubmitButton;
     private waitForUiReady;
-    private waitForProcessingDone;
+    waitForProcessingDone(page: Page, timeoutMs?: number): Promise<void>;
     private isProcessingVisible;
     private closeDatePickers;
 }

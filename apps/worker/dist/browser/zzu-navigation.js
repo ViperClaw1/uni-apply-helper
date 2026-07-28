@@ -72,18 +72,20 @@ async function clickEditApplication(page) {
 async function isWizardStep(page) {
     return (0, zzu_pre_wizard_js_1.isMainWizard)(page);
 }
-async function advanceIntermediateSteps(page, programHint) {
-    for (let step = 0; step < 6; step += 1) {
+async function advanceIntermediateSteps(page, hints, gemini) {
+    for (let step = 0; step < 4; step += 1) {
         if (await isWizardStep(page)) {
             return true;
         }
         if (await (0, zzu_pre_wizard_js_1.detectPreWizardScreen)(page)) {
-            const advanced = await (0, zzu_pre_wizard_js_1.advanceThroughPreWizard)(page, programHint);
+            const advanced = await (0, zzu_pre_wizard_js_1.advanceThroughPreWizard)(page, hints, {
+                gemini,
+                deadlineMs: 90_000,
+            });
             if (advanced || (await isWizardStep(page))) {
                 return true;
             }
-            await page.waitForTimeout(1000);
-            continue;
+            return false;
         }
         const bodyText = await page.locator('body').innerText();
         if (/application status|application list|my application|start application/i.test(bodyText)) {
@@ -100,14 +102,14 @@ async function advanceIntermediateSteps(page, programHint) {
     }
     return isWizardStep(page);
 }
-async function advanceToWizard(page, formUrl, programHint) {
+async function advanceToWizard(page, formUrl, hints, gemini) {
     for (let attempt = 0; attempt < 2; attempt += 1) {
-        if (await advanceIntermediateSteps(page, programHint)) {
+        if (await advanceIntermediateSteps(page, hints, gemini)) {
             return;
         }
         await clickIfVisible(page, START_APPLICATION, { force: true });
         await clickEditApplication(page);
-        if (await advanceIntermediateSteps(page, programHint)) {
+        if (await advanceIntermediateSteps(page, hints, gemini)) {
             return;
         }
     }
@@ -118,16 +120,20 @@ async function advanceToWizard(page, formUrl, programHint) {
         if ((await formLink.count()) > 0) {
             await formLink.click();
             await page
-                .waitForLoadState('networkidle', { timeout: 60_000 })
+                .waitForLoadState('domcontentloaded', { timeout: 30_000 })
                 .catch(() => undefined);
-            await advanceIntermediateSteps(page, programHint);
+            await advanceIntermediateSteps(page, hints, gemini);
         }
     }
 }
-async function navigateToZzuApplication(page, formUrl, profile, universityId = 'zhengzhou-university', defaultProgram, programTextHint) {
-    const programHint = (profile ? (0, program_hint_js_1.resolveProgramHint)(profile, universityId) : undefined) ??
-        programTextHint ??
+async function navigateToZzuApplication(page, formUrl, profile, universityId = 'zhengzhou-university', defaultProgram, navigationHints, gemini) {
+    const studyPlanHint = (profile ? (0, program_hint_js_1.resolveProgramHint)(profile, universityId) : undefined) ??
         defaultProgram;
+    const hints = {
+        programText: navigationHints?.programText ?? defaultProgram,
+        studentType: navigationHints?.studentType,
+        studyPlanHint,
+    };
     await page.goto(formUrl, {
         waitUntil: 'domcontentloaded',
         timeout: 60_000,
@@ -149,9 +155,9 @@ async function navigateToZzuApplication(page, formUrl, profile, universityId = '
     await clickIfVisible(page, NAV_APPLICATION);
     await clickIfVisible(page, START_APPLICATION, { force: true });
     await clickEditApplication(page);
-    await advanceToWizard(page, formUrl, programHint);
+    await advanceToWizard(page, formUrl, hints, gemini);
     if (!(await isWizardStep(page))) {
-        await (0, zzu_pre_wizard_js_1.advanceThroughPreWizard)(page, programHint);
+        await (0, zzu_pre_wizard_js_1.advanceThroughPreWizard)(page, hints, { gemini });
     }
     if (!(await isWizardStep(page))) {
         const shotPath = `nav-stuck-${universityId}-${Date.now()}.png`;

@@ -23,6 +23,9 @@ let AgentPlanner = AgentPlanner_1 = class AgentPlanner {
     isAvailable() {
         return this.gemini.isAvailable();
     }
+    async generateJson(options) {
+        return this.gemini.generateJson(options);
+    }
     async decideNextAction(observation, context, useVision = false) {
         const prompt = (0, prompts_js_1.buildPlannerPrompt)(observation, context);
         const decision = await this.gemini.generateJson({

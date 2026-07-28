@@ -2,6 +2,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.resolveProgramHint = resolveProgramHint;
 function resolveProgramHint(profile, universityId) {
+    const desired = profile.personal?.desiredField?.trim();
+    if (desired) {
+        return desired;
+    }
     const target = profile.applicationTargets.find((applicationTarget) => applicationTarget.universityId === universityId) ??
         profile.applicationTargets.find((applicationTarget) => new RegExp(universityId.replace(/-/g, '[\\s-]'), 'i').test(applicationTarget.universityRaw));
     if (!target) {

@@ -8,6 +8,7 @@ import { FileAttacher } from './file.attacher.js';
 import { OcrPassportUploader } from './ocr-passport.uploader.js';
 import { WizardFieldGroups } from './wizard-field-groups.js';
 import { WizardNavigator } from './wizard.navigator.js';
+import { GeocodingService } from '../geocoding/geocoding.service.js';
 export declare class FormFiller {
     private readonly configService;
     private readonly fieldMapper;
@@ -17,7 +18,8 @@ export declare class FormFiller {
     private readonly wizardFieldGroups;
     private readonly semanticFieldMapper;
     private readonly formAgent;
-    constructor(configService: ConfigService, fieldMapper: FieldMapper, fileAttacher: FileAttacher, ocrPassportUploader: OcrPassportUploader, wizardNavigator: WizardNavigator, wizardFieldGroups: WizardFieldGroups, semanticFieldMapper: SemanticFieldMapper, formAgent: FormAgent);
+    private readonly geocoding;
+    constructor(configService: ConfigService, fieldMapper: FieldMapper, fileAttacher: FileAttacher, ocrPassportUploader: OcrPassportUploader, wizardNavigator: WizardNavigator, wizardFieldGroups: WizardFieldGroups, semanticFieldMapper: SemanticFieldMapper, formAgent: FormAgent, geocoding: GeocodingService);
     fillFields(page: Page, profile: StudentProfile, fields: FieldConfig[], motivationLetterContent?: string, university?: UniversitySchema): Promise<void>;
     attachFiles(page: Page, profile: StudentProfile, fields: FieldConfig[]): Promise<void>;
     submit(page: Page): Promise<void>;
@@ -31,7 +33,9 @@ export declare class FormFiller {
     private closeDatePickers;
     private fillField;
     private fillRadioControl;
+    private canonicalizeRadioValue;
     private fillSelectControl;
+    private trySemanticSelectMatch;
     private applyValueMap;
     private expandSelectCandidates;
     private expandEducationLabels;
@@ -43,7 +47,12 @@ export declare class FormFiller {
     private normalizeDateValue;
     private ensureChineseNameWaiver;
     private ensurePkuStep1RequiredGaps;
-    private isPkuLike;
+    private is17gzPortal;
+    private ensurePkuStep5RequiredGaps;
+    private ensurePkuStep4RequiredGaps;
+    private normalizeFamilyRelationship;
+    private familyBirthDateFromAge;
+    private ensurePkuStep3RequiredGaps;
     private ensurePkuStep2RequiredGaps;
     private assertPkuStep2CriticalFilled;
     private checkRadioGroupNo;
