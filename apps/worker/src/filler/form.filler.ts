@@ -43,6 +43,11 @@ export class FormFiller {
       fields,
       motivationLetterContent,
       fillMode,
+      {
+        softSkipAbsent: university
+          ? this.is17gzPortal(university)
+          : false,
+      },
     );
   }
 
@@ -128,6 +133,7 @@ export class FormFiller {
           fields.filter((field) => field.type !== 'file'),
           motivationLetterContent,
           fillMode,
+          { softSkipAbsent: this.is17gzPortal(university) },
         );
 
         if (step === 1) {
@@ -218,6 +224,16 @@ export class FormFiller {
     fields: FieldConfig[],
     motivationLetterContent: string | undefined,
     fillMode: 'schema' | 'agent' | 'hybrid',
+    {
+      softSkipAbsent = false,
+    }: {
+      /**
+       * 17gz skins differ by student type (undergrad has no Area of Research /
+       * Duration inputs — read-only summary). Schema lists the union; absent DOM
+       * nodes are skipped instead of hard-failing.
+       */
+      softSkipAbsent?: boolean;
+    } = {},
   ): Promise<void> {
     for (const field of fields) {
       await this.wizardNavigator.waitForProcessingDone(page, 60_000);
@@ -277,14 +293,14 @@ export class FormFiller {
         await page
           .waitForSelector(field.selector, {
             state: 'attached',
-            timeout: 10_000,
+            timeout: softSkipAbsent ? 2_000 : 10_000,
           })
           .catch(() => undefined);
         locator = await resolveFieldLocator(page, field);
       }
 
       if (!locator) {
-        if (field.required) {
+        if (field.required && !softSkipAbsent) {
           const present = await page
             .evaluate(() =>
               [...document.querySelectorAll('input[name], select[name], textarea[name]')]
@@ -2368,6 +2384,65 @@ export class FormFiller {
       return report;
     }, fills);
 
+    // Language proficiency selects (undergrad Step2 — always present on 17gz)
+    await page.evaluate(() => {
+      const jq = (
+        window as unknown as {
+          jQuery?: (el: Element) => {
+            val: (v: string) => { trigger: (e: string) => unknown };
+          };
+        }
+      ).jQuery;
+
+      const setSelect = (name: string, needles: string[]) => {
+        const select = document.querySelector(
+          `select[name="${name}"]`,
+        ) as HTMLSelectElement | null;
+        if (!select) {
+          return;
+        }
+        const cur = (select.options[select.selectedIndex]?.text || '')
+          .trim()
+          .toLowerCase();
+        if (cur && !/please|choose|-choose-|^$/.test(cur)) {
+          return;
+        }
+        const match = [...select.options].find((opt) => {
+          const t = (opt.textContent || '').trim().toLowerCase();
+          return needles.some((n) => t === n || t.includes(n));
+        });
+        if (!match?.value) {
+          return;
+        }
+        select.value = match.value;
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        if (typeof jq === 'function') {
+          try {
+            jq(select).val(match.value).trigger('chosen:updated');
+            jq(select).val(match.value).trigger('change');
+          } catch {
+            // ignore
+          }
+        }
+      };
+
+      setSelect('apply.languageSkillId', ['none', '无', 'poor']);
+      setSelect('apply.hskId', ['none', '无']);
+      setSelect('apply.hskOralId', ['none', '无', 'primary']);
+      setSelect('apply.englishLanguageSkillId', [
+        'good',
+        'excellent',
+        'fair',
+        'none',
+      ]);
+      setSelect('apply.yydjzs', [
+        'native language',
+        'native speaker',
+        'none',
+        'other',
+      ]);
+    });
+
     // Playwright fill backup for anything still empty / missing from evaluate quirks
     for (const [name, value] of fills) {
       if (writeResult[name] === 'OK') {
@@ -2414,14 +2489,20 @@ export class FormFiller {
     await this.dismissFormOverlays(page);
   }
 
-  /** Hard-fail before Next if Rec#2 / cert date fields still empty. */
+  /** Hard-fail before Next if present Rec#2 / cert date fields still empty. */
   private async assertPkuStep2CriticalFilled(
     page: Page,
     profile: StudentProfile,
   ): Promise<void> {
+    // Only assert nodes that exist — undergrad skins omit Rec#2 / research fields.
     const critical = [
       'apply.yydjzsScore',
       'apply.yydjzsIssueDate',
+      'apply.guarantorEnname',
+      'apply.guarRelation',
+      'apply.guarWorkplace',
+      'apply.guarPhone',
+      'apply.guarEmail',
       'apply.guarSecEnname',
       'apply.guarSecRelative',
       'apply.guarSecWork',
@@ -2434,7 +2515,18 @@ export class FormFiller {
         const el = document.querySelector(
           `input[name="${name}"]`,
         ) as HTMLInputElement | null;
-        return !el || !el.value?.trim();
+        if (!el) {
+          return false;
+        }
+        const style = getComputedStyle(el);
+        if (
+          style.display === 'none' ||
+          style.visibility === 'hidden' ||
+          el.offsetParent === null
+        ) {
+          return false;
+        }
+        return !el.value?.trim();
       });
     }, critical);
 
@@ -2453,7 +2545,18 @@ export class FormFiller {
           const el = document.querySelector(
             `input[name="${name}"]`,
           ) as HTMLInputElement | null;
-          return !el || !el.value?.trim();
+          if (!el) {
+            return false;
+          }
+          const style = getComputedStyle(el);
+          if (
+            style.display === 'none' ||
+            style.visibility === 'hidden' ||
+            el.offsetParent === null
+          ) {
+            return false;
+          }
+          return !el.value?.trim();
         }),
         presentGuar: present.slice(0, 40),
       };
@@ -2461,7 +2564,7 @@ export class FormFiller {
 
     if (stillEmpty.empty.length > 0) {
       throw new Error(
-        `PKU Step2 critical fields still empty after force-fill: [${stillEmpty.empty.join(', ')}]. ` +
+        `17gz Step2 critical fields still empty after force-fill: [${stillEmpty.empty.join(', ')}]. ` +
           `Present apply.guar* names: [${stillEmpty.presentGuar.join(', ')}]`,
       );
     }

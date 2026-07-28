@@ -107,7 +107,7 @@ export class WizardNavigator {
             const markers = [
               document.querySelector('input[name="apply.lastName"]') && 's1',
               document.querySelector(
-                'input[name="apply.fieldEnglish"], input[name="apply.studyStartDate"]',
+                'input[name="apply.fieldEnglish"], input[name="apply.studyStartDate"], select[name="apply.languageSkillId"], input[name="apply.guarantorEnname"]',
               ) && 's2',
               document.querySelector(
                 'input[name="sh.studyPlace"], input[name="sh.startDate"]',
@@ -262,10 +262,11 @@ export class WizardNavigator {
         .join('|');
 
       // Distinctive step markers (stable across datepicker noise)
+      // s2: research (PKU) OR language/guarantor (undergrad CSU) skins
       const markers = [
         document.querySelector('input[name="apply.lastName"]') && 's1',
         document.querySelector(
-          'input[name="apply.fieldEnglish"], input[name="apply.studyStartDate"]',
+          'input[name="apply.fieldEnglish"], input[name="apply.studyStartDate"], select[name="apply.languageSkillId"], input[name="apply.guarantorEnname"]',
         ) && 's2',
         document.querySelector('input[name="sh.studyPlace"], input[name="sh.startDate"]') &&
           's3',
@@ -472,7 +473,7 @@ export class WizardNavigator {
           const markers = [
             document.querySelector('input[name="apply.lastName"]') && 's1',
             document.querySelector(
-              'input[name="apply.fieldEnglish"], input[name="apply.studyStartDate"]',
+              'input[name="apply.fieldEnglish"], input[name="apply.studyStartDate"], select[name="apply.languageSkillId"], input[name="apply.guarantorEnname"]',
             ) && 's2',
             document.querySelector(
               'input[name="sh.studyPlace"], input[name="sh.startDate"]',
