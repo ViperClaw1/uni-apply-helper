@@ -145,6 +145,25 @@ export async function detectPreWizardScreen(
 
   const bodyText = await page.locator('body').innerText().catch(() => '');
 
+  // CSU Application Notes must win over radio-count heuristics — notes page can
+  // still have leftover/hidden projectTypeId nodes in the DOM.
+  const hasAgreeUi =
+    (await page
+      .getByRole('button', { name: /agree and continue|同意并继续/i })
+      .count()
+      .catch(() => 0)) > 0 ||
+    (await page.locator('[name="agree"], input[type="checkbox"]').count()) > 0;
+
+  if (
+    hasAgreeUi &&
+    /application notes|application instructions|申请须知|申请人保证|I hereby affirm/i.test(
+      bodyText,
+    ) &&
+    !/please choose your program|please choose your type/i.test(bodyText)
+  ) {
+    return 'application_notes';
+  }
+
   // KMMC: 请选择招生类别 (= "please choose your type") — NOT 类型, it's 类别!
   // Same name=projectTypeId as program screen, so body text must win.
   if (
@@ -395,15 +414,74 @@ async function pickProjectTypeRadio(
 }
 
 async function checkAgree(page: Page): Promise<void> {
-  const agree = page.locator('[name="agree"]');
-  if ((await agree.count()) === 0) {
-    return;
+  // CSU: checkbox may be name=agree OR sit next to "I have carefully read..." text
+  const byName = page.locator('input[type="checkbox"][name="agree"], [name="agree"]');
+  if ((await byName.count()) > 0) {
+    const el = byName.first();
+    const checked = await el.isChecked().catch(() => false);
+    if (!checked) {
+      await el.check({ force: true }).catch(() => el.click({ force: true }));
+    }
+    if (await el.isChecked().catch(() => false)) {
+      return;
+    }
   }
 
-  const checked = await agree.isChecked().catch(() => false);
-  if (!checked) {
-    await agree.click({ force: true }).catch(() => undefined);
+  const byLabel = page.getByRole('checkbox', {
+    name: /carefully read|fully understand|agree to abide|申请须知|我已仔细阅读/i,
+  });
+  if ((await byLabel.count()) > 0) {
+    const el = byLabel.first();
+    const checked = await el.isChecked().catch(() => false);
+    if (!checked) {
+      await el.check({ force: true }).catch(() => el.click({ force: true }));
+    }
+    if (await el.isChecked().catch(() => false)) {
+      return;
+    }
   }
+
+  const label = page.locator('label').filter({
+    hasText: /carefully read|fully understand|agree to abide|我已仔细阅读/i,
+  });
+  if ((await label.count()) > 0) {
+    await label.first().click({ force: true }).catch(() => undefined);
+    const anyChecked = await page
+      .locator('input[type="checkbox"]:checked')
+      .count()
+      .catch(() => 0);
+    if (anyChecked > 0) {
+      return;
+    }
+  }
+
+  await page
+    .evaluate(() => {
+      const boxes = [
+        ...document.querySelectorAll('input[type="checkbox"]'),
+      ] as HTMLInputElement[];
+      const target =
+        boxes.find((box) => box.name === 'agree') ??
+        boxes.find((box) => {
+          const text =
+            box.closest('label')?.textContent ||
+            box.parentElement?.textContent ||
+            '';
+          return /carefully read|agree|须知|阅读/i.test(text);
+        }) ??
+        boxes.find((box) => {
+          const style = window.getComputedStyle(box);
+          return style.display !== 'none' && style.visibility !== 'hidden';
+        });
+      if (!target) {
+        return;
+      }
+      target.checked = true;
+      target.dispatchEvent(new Event('change', { bubbles: true }));
+      target.dispatchEvent(new Event('click', { bubbles: true }));
+      target.click();
+    })
+    .catch(() => undefined);
 }
 
 async function setHiddenSelectByName(
@@ -1214,7 +1292,7 @@ async function advanceStudentTypeAtomic(
     ...lastStudentTypePickDiag,
     next: { ok: true, via },
     afterNext: after,
-    build: 'atomic-v4-debug-parity',
+    build: 'atomic-v5-notes-first',
   };
 
   // Success if we already reached study-plan (even while "It's processing!")
@@ -1357,7 +1435,6 @@ export async function fillPreWizardScreen(
   switch (screen) {
     case 'application_notes':
       await checkAgree(page);
-      await pickProjectTypeRadio(page, resolved.programText);
       break;
     case 'program_type':
       await checkAgree(page);
@@ -1390,13 +1467,16 @@ async function clickPreWizardNext(
   const resolved = normalizeHints(hints);
   const studyPlanHint = resolved.studyPlanHint;
   if (screen === 'application_notes') {
+    await checkAgree(page);
+
     const agreeButton = page
       .getByRole('button', {
         name: /agree and continue|同意并继续|同意/i,
       })
       .first();
     if ((await agreeButton.count()) > 0) {
-      await page
+      // Checkbox enables the button; re-check once if still disabled.
+      const enabled = await page
         .waitForFunction(() => {
           const buttons = [...document.querySelectorAll('button')];
           const agree = buttons.find((button) =>
@@ -1405,8 +1485,14 @@ async function clickPreWizardNext(
             ),
           );
           return Boolean(agree && !(agree as HTMLButtonElement).disabled);
-        }, { timeout: 10_000 })
-        .catch(() => undefined);
+        }, { timeout: 3_000 })
+        .then(() => true)
+        .catch(() => false);
+
+      if (!enabled) {
+        await checkAgree(page);
+        await page.waitForTimeout(300);
+      }
 
       await agreeButton.click({ force: true });
       return 'Agree and Continue';
@@ -1579,7 +1665,7 @@ export async function advancePreWizardScreen(
     lastStudentTypePickDiag = {
       ...lastStudentTypePickDiag,
       afterProcessingScreen: afterScreen,
-      build: 'atomic-v4-debug-parity',
+      build: 'atomic-v5-notes-first',
     };
 
     const onStudyPlan =
@@ -1628,7 +1714,7 @@ export async function advancePreWizardScreen(
     lastStudentTypePickDiag = {
       ...lastStudentTypePickDiag,
       studyPlanSolo: applied,
-      build: 'atomic-v4-debug-parity',
+      build: 'atomic-v5-notes-first',
     };
     if (!applied.ok) {
       return false;
@@ -1640,6 +1726,10 @@ export async function advancePreWizardScreen(
     const finalScreen = await detectPreWizardScreen(page);
     return finalScreen !== 'program_selection' && finalScreen !== 'student_type';
   }
+
+  // notes / program_type — fill MUST run (was dropped in atomic-v4; caused checked=none)
+  await fillPreWizardScreen(page, current, hints);
+  await page.waitForTimeout(400);
 
   if (current === 'program_type') {
     // Wait for DOM checked — Playwright :visible:checked races after onclick.
@@ -1683,6 +1773,21 @@ export async function clearStuckProcessing(page: Page): Promise<boolean> {
   // Never reload mid pre-wizard — CSU rolls back student_type → program_selection
   // to a fresh student_type after a successful Next+processing.
   const midPreWizard = await page.evaluate(() => {
+    const body = document.body?.innerText ?? '';
+    // Notes page can still contain hidden projectTypeId nodes — do not treat as mid-flow.
+    const hasAgreeBtn = [...document.querySelectorAll('button, a, input')].some(
+      (el) =>
+        /agree and continue|同意并继续/i.test(
+          (el as HTMLInputElement).value || el.textContent || '',
+        ),
+    );
+    if (
+      hasAgreeBtn &&
+      /application notes|申请人保证|I hereby affirm/i.test(body) &&
+      !/please choose your program|please choose your type/i.test(body)
+    ) {
+      return false;
+    }
     if (document.querySelector('select[name="collegeId"]')) {
       return true;
     }
@@ -1827,19 +1932,36 @@ export async function describeNavigationState(page: Page): Promise<string> {
     const body = normalize(bodyRaw).slice(0, 240);
 
     const screen = (() => {
+      const hasAgreeBtn = [...document.querySelectorAll('button, input')].some(
+        (el) =>
+          /agree and continue|同意并继续/i.test(
+            (el as HTMLInputElement).value || el.textContent || '',
+          ),
+      );
+      if (
+        hasAgreeBtn &&
+        /application notes|申请人保证|I hereby affirm/i.test(bodyRaw) &&
+        !/please choose your program|please choose your type/i.test(bodyRaw)
+      ) {
+        return 'application_notes';
+      }
       if (document.querySelector('select[name="collegeId"]')) {
         return 'program_selection';
       }
-      if (
-        /请选择招生类别|please choose your type/i.test(bodyRaw)
-      ) {
+      if (/请选择招生类别|please choose your type/i.test(bodyRaw)) {
         return 'student_type';
+      }
+      if (/please choose your program/i.test(bodyRaw)) {
+        return 'program_type';
       }
       if (document.querySelector('input[name="projectTypeId"]')) {
         return 'program_type';
       }
       if (document.querySelector('input[name="apply.lastName"]')) {
         return 'wizard_step1';
+      }
+      if (/application notes|申请须知|申请人保证/i.test(bodyRaw)) {
+        return 'application_notes';
       }
       return 'unknown';
     })();
