@@ -157,7 +157,10 @@ async function navigateToZzuApplication(page, formUrl, profile, universityId = '
     await clickEditApplication(page);
     await advanceToWizard(page, formUrl, hints, gemini);
     if (!(await isWizardStep(page))) {
-        await (0, zzu_pre_wizard_js_1.advanceThroughPreWizard)(page, hints, { gemini });
+        const screen = await (0, zzu_pre_wizard_js_1.detectPreWizardScreen)(page);
+        if (screen) {
+            await (0, zzu_pre_wizard_js_1.advanceThroughPreWizard)(page, hints, { gemini, maxSteps: 6 });
+        }
     }
     if (!(await isWizardStep(page))) {
         const shotPath = `nav-stuck-${universityId}-${Date.now()}.png`;

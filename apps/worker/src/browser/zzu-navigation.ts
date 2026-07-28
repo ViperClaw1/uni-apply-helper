@@ -235,9 +235,12 @@ export async function navigateToZzuApplication(
 
   await advanceToWizard(page, formUrl, hints, gemini);
 
-  // Final sweep through any remaining pre-wizard screens.
+  // One more sweep only if still mid pre-wizard — never restart from scratch.
   if (!(await isWizardStep(page))) {
-    await advanceThroughPreWizard(page, hints, { gemini });
+    const screen = await detectPreWizardScreen(page);
+    if (screen) {
+      await advanceThroughPreWizard(page, hints, { gemini, maxSteps: 6 });
+    }
   }
 
   if (!(await isWizardStep(page))) {

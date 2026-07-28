@@ -357,6 +357,38 @@ async function clickStudyPlanFind(page) {
     await waitForUiReady(page);
     return true;
 }
+async function clickStudyPlanApplySimple(page, studyPlanHint) {
+    await page
+        .waitForFunction(() => {
+        const links = [...document.querySelectorAll('a')].filter((a) => /^(Apply|申请)$/i.test((a.textContent || '').replace(/\s+/g, ' ').trim()));
+        return links.length > 0;
+    }, { timeout: 20_000 })
+        .catch(() => undefined);
+    const applyLinks = page.locator('a').filter({ hasText: /^(Apply|申请)$/i });
+    const total = await applyLinks.count();
+    if (total === 0) {
+        return { ok: false, via: 'no-apply-links', total: 0 };
+    }
+    let index = 0;
+    const needle = studyPlanHint?.trim().toLowerCase();
+    if (needle) {
+        for (let i = 0; i < total; i += 1) {
+            const rowText = ((await applyLinks
+                .nth(i)
+                .evaluate((el) => (el.closest('tr')?.innerText || el.textContent || '')
+                .replace(/\s+/g, ' ')
+                .trim())
+                .catch(() => '')) || '').toLowerCase();
+            if (rowText.includes(needle) || needle.split(/\s+/).some((p) => p.length > 3 && rowText.includes(p))) {
+                index = i;
+                break;
+            }
+        }
+    }
+    await applyLinks.nth(index).scrollIntoViewIfNeeded().catch(() => undefined);
+    await applyLinks.nth(index).click({ force: true });
+    return { ok: true, via: 'Apply:debug-parity', index, total };
+}
 async function fillProgramSelection(page) {
     const rows = await collectStudyPlanRows(page);
     if (rows.length > 0 && !(await isProgramSelectionEmpty(page))) {
@@ -818,7 +850,7 @@ async function advanceStudentTypeAtomic(page, studentType) {
         ...lastStudentTypePickDiag,
         next: { ok: true, via },
         afterNext: after,
-        build: 'atomic-v3-wait-processing',
+        build: 'atomic-v4-debug-parity',
     };
     if (after.screen === 'program_selection' || after.hasCollege) {
         return true;
@@ -1063,33 +1095,50 @@ async function advancePreWizardScreen(page, screen = null, hints, gemini) {
         lastStudentTypePickDiag = {
             ...lastStudentTypePickDiag,
             afterProcessingScreen: afterScreen,
+            build: 'atomic-v4-debug-parity',
         };
-        if (afterScreen && afterScreen !== 'student_type') {
-            return true;
-        }
-        if (!afterScreen && (await isMainWizard(page))) {
-            return true;
-        }
-        if ((await page.locator('select[name="collegeId"]').count()) > 0) {
-            return true;
-        }
-        return false;
-    }
-    await fillPreWizardScreen(page, current, hints);
-    await page.waitForTimeout(200);
-    if (current === 'program_selection') {
-        await page
-            .waitForFunction(() => {
-            const text = document.body?.innerText ?? '';
-            if (/Total:\s*[1-9]/i.test(text)) {
-                return true;
-            }
-            return Boolean(document.querySelector('a[onclick*="saveChoose"], a[onclick*="StudyPlan"], td a'));
-        }, { timeout: 15_000 })
-            .catch(() => undefined);
-        if (await isProgramSelectionEmpty(page)) {
+        const onStudyPlan = afterScreen === 'program_selection' ||
+            (await page.locator('select[name="collegeId"]').count()) > 0;
+        if (!onStudyPlan) {
             return false;
         }
+        const applied = await clickStudyPlanApplySimple(page, resolved.studyPlanHint);
+        lastStudentTypePickDiag = {
+            ...lastStudentTypePickDiag,
+            studyPlan: applied,
+        };
+        if (!applied.ok) {
+            return false;
+        }
+        await waitForProcessingQuiet(page, 45_000);
+        if (await isMainWizard(page)) {
+            return true;
+        }
+        const finalScreen = await detectPreWizardScreen(page);
+        lastStudentTypePickDiag = {
+            ...lastStudentTypePickDiag,
+            afterApplyScreen: finalScreen,
+        };
+        return finalScreen !== 'program_selection' && finalScreen !== 'student_type';
+    }
+    if (current === 'program_selection') {
+        const resolved = normalizeHints(hints);
+        await waitForProcessingQuiet(page, 20_000);
+        const applied = await clickStudyPlanApplySimple(page, resolved.studyPlanHint);
+        lastStudentTypePickDiag = {
+            ...lastStudentTypePickDiag,
+            studyPlanSolo: applied,
+            build: 'atomic-v4-debug-parity',
+        };
+        if (!applied.ok) {
+            return false;
+        }
+        await waitForProcessingQuiet(page, 45_000);
+        if (await isMainWizard(page)) {
+            return true;
+        }
+        const finalScreen = await detectPreWizardScreen(page);
+        return finalScreen !== 'program_selection' && finalScreen !== 'student_type';
     }
     if (current === 'program_type') {
         if (!(await waitForProjectTypeChecked(page, 5_000))) {

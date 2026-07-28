@@ -519,8 +519,61 @@ async function clickStudyPlanFind(page: Page): Promise<boolean> {
 }
 
 /**
+ * Debug-parity study plan Apply: first matching Apply link, no filter guessing.
+ * Production used to return after student_type and re-enter program_selection later —
+ * that path drifted from the headed debug script that actually works.
+ */
+async function clickStudyPlanApplySimple(
+  page: Page,
+  studyPlanHint?: string,
+): Promise<{ ok: boolean; via: string; index?: number; total?: number }> {
+  await page
+    .waitForFunction(
+      () => {
+        const links = [...document.querySelectorAll('a')].filter((a) =>
+          /^(Apply|申请)$/i.test((a.textContent || '').replace(/\s+/g, ' ').trim()),
+        );
+        return links.length > 0;
+      },
+      { timeout: 20_000 },
+    )
+    .catch(() => undefined);
+
+  const applyLinks = page.locator('a').filter({ hasText: /^(Apply|申请)$/i });
+  const total = await applyLinks.count();
+  if (total === 0) {
+    return { ok: false, via: 'no-apply-links', total: 0 };
+  }
+
+  let index = 0;
+  const needle = studyPlanHint?.trim().toLowerCase();
+  if (needle) {
+    for (let i = 0; i < total; i += 1) {
+      const rowText = (
+        (await applyLinks
+          .nth(i)
+          .evaluate(
+            (el) =>
+              (el.closest('tr')?.innerText || el.textContent || '')
+                .replace(/\s+/g, ' ')
+                .trim(),
+          )
+          .catch(() => '')) || ''
+      ).toLowerCase();
+      if (rowText.includes(needle) || needle.split(/\s+/).some((p) => p.length > 3 && rowText.includes(p))) {
+        index = i;
+        break;
+      }
+    }
+  }
+
+  await applyLinks.nth(index).scrollIntoViewIfNeeded().catch(() => undefined);
+  await applyLinks.nth(index).click({ force: true });
+  return { ok: true, via: 'Apply:debug-parity', index, total };
+}
+
+/**
  * Study-plan query: NEVER guess Department/Major/Language.
- * Blind index=1 picks (e.g. Metallurgy + English) wipe CSU's Chinese list → Total:0.
  * Keep the default unfiltered list; only clear+Find when already empty.
  */
 async function fillProgramSelection(page: Page): Promise<void> {
@@ -1161,7 +1214,7 @@ async function advanceStudentTypeAtomic(
     ...lastStudentTypePickDiag,
     next: { ok: true, via },
     afterNext: after,
-    build: 'atomic-v3-wait-processing',
+    build: 'atomic-v4-debug-parity',
   };
 
   // Success if we already reached study-plan (even while "It's processing!")
@@ -1507,8 +1560,8 @@ export async function advancePreWizardScreen(
 
   const before = await getPreWizardSignature(page, current);
 
-  // CSU student_type: select+Next; afterNext often already program_selection
-  // while "It's processing!" — must NOT force-hide that overlay (aborts AJAX → rollback).
+  // CSU student_type → study plan Apply in ONE turn (matches headed debug script).
+  // Returning after student_type and re-entering program_selection later was the fail path.
   if (current === 'student_type') {
     const resolved = normalizeHints(hints);
     const ok = await advanceStudentTypeAtomic(page, resolved.studentType);
@@ -1526,50 +1579,66 @@ export async function advancePreWizardScreen(
     lastStudentTypePickDiag = {
       ...lastStudentTypePickDiag,
       afterProcessingScreen: afterScreen,
+      build: 'atomic-v4-debug-parity',
     };
 
-    // Study plan or any non-student_type screen = success for this step
-    if (afterScreen && afterScreen !== 'student_type') {
-      return true;
-    }
-    if (!afterScreen && (await isMainWizard(page))) {
-      return true;
-    }
+    const onStudyPlan =
+      afterScreen === 'program_selection' ||
+      (await page.locator('select[name="collegeId"]').count()) > 0;
 
-    // collegeId present even if detect glitched
-    if ((await page.locator('select[name="collegeId"]').count()) > 0) {
-      return true;
-    }
-
-    return false;
-  }
-
-  await fillPreWizardScreen(page, current, hints);
-  await page.waitForTimeout(200);
-
-  // After fill (clear+Find if needed) — only then treat empty as hard fail.
-  // Wait for study-plan rows to hydrate after student_type AJAX.
-  if (current === 'program_selection') {
-    await page
-      .waitForFunction(
-        () => {
-          const text = document.body?.innerText ?? '';
-          if (/Total:\s*[1-9]/i.test(text)) {
-            return true;
-          }
-          return Boolean(
-            document.querySelector(
-              'a[onclick*="saveChoose"], a[onclick*="StudyPlan"], td a',
-            ),
-          );
-        },
-        { timeout: 15_000 },
-      )
-      .catch(() => undefined);
-
-    if (await isProgramSelectionEmpty(page)) {
+    if (!onStudyPlan) {
       return false;
     }
+
+    // Same as debug-csu-prewizard: click Apply, do not touch Query filters
+    const applied = await clickStudyPlanApplySimple(
+      page,
+      resolved.studyPlanHint,
+    );
+    lastStudentTypePickDiag = {
+      ...lastStudentTypePickDiag,
+      studyPlan: applied,
+    };
+    if (!applied.ok) {
+      return false;
+    }
+
+    await waitForProcessingQuiet(page, 45_000);
+    if (await isMainWizard(page)) {
+      return true;
+    }
+
+    const finalScreen = await detectPreWizardScreen(page);
+    lastStudentTypePickDiag = {
+      ...lastStudentTypePickDiag,
+      afterApplyScreen: finalScreen,
+    };
+    // Left study-plan list → wizard (or next pre-wizard) counts as progress
+    return finalScreen !== 'program_selection' && finalScreen !== 'student_type';
+  }
+
+  // program_selection entered alone (e.g. resume mid-flow) — same simple Apply
+  if (current === 'program_selection') {
+    const resolved = normalizeHints(hints);
+    await waitForProcessingQuiet(page, 20_000);
+    const applied = await clickStudyPlanApplySimple(
+      page,
+      resolved.studyPlanHint,
+    );
+    lastStudentTypePickDiag = {
+      ...lastStudentTypePickDiag,
+      studyPlanSolo: applied,
+      build: 'atomic-v4-debug-parity',
+    };
+    if (!applied.ok) {
+      return false;
+    }
+    await waitForProcessingQuiet(page, 45_000);
+    if (await isMainWizard(page)) {
+      return true;
+    }
+    const finalScreen = await detectPreWizardScreen(page);
+    return finalScreen !== 'program_selection' && finalScreen !== 'student_type';
   }
 
   if (current === 'program_type') {
