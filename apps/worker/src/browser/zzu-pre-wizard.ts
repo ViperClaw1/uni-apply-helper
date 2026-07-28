@@ -833,118 +833,213 @@ function studentTypeHintList(preferred?: string): string[] {
 }
 
 /**
- * Student-type: each radio wrapped in <label>, onclick on input.
- * Prefer schema studentType, else Undergraduate defaults.
+ * Student-type radios often have NO wrapping <label> (CSU/17gz):
+ *   <input type="radio" name="projectTypeId"> Undergraduate Student
+ * getByText click + closest('label') both miss. Use role name + adjacent text.
  */
 async function pickStudentTypeRadio(
   page: Page,
   studentType?: string,
 ): Promise<boolean> {
   const hints = studentTypeHintList(studentType);
+  const radios = page.locator('input[type="radio"][name="projectTypeId"]');
+  const count = await radios.count();
+  if (count === 0) {
+    return false;
+  }
 
+  // 1) Accessible name from adjacent text (Playwright role)
   for (const hint of hints) {
-    const byText = page.getByText(hint, { exact: false }).first();
-    try {
-      if (
-        (await byText.count()) > 0 &&
-        (await byText.isVisible().catch(() => false))
-      ) {
-        await byText.click({ force: true });
-        const checked = await page.locator('input[type="radio"]:checked').count();
-        if (checked > 0) {
-          return true;
-        }
-      }
-    } catch {
-      /* try next hint / fallback */
+    const escaped = hint.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const byRole = page.getByRole('radio', { name: new RegExp(escaped, 'i') }).first();
+    if ((await byRole.count()) === 0) {
+      continue;
+    }
+    await byRole.check({ force: true }).catch(() => undefined);
+    if (await byRole.isChecked().catch(() => false)) {
+      return true;
+    }
+    await byRole.click({ force: true }).catch(() => undefined);
+    if (await byRole.isChecked().catch(() => false)) {
+      return true;
     }
   }
 
-  // Visible label wrapping the preferred radio (projectTypeId or any radio)
-  const labels = page.locator(
-    'label:has(input[type="radio"][name="projectTypeId"]), label:has(input[type="radio"])',
-  );
-  const labelCount = await labels.count();
-  for (const prefer of [true, false]) {
-    for (let i = 0; i < labelCount; i += 1) {
-      const label = labels.nth(i);
-      if (!(await label.isVisible().catch(() => false))) {
-        continue;
+  // 2) Walk radios, match adjacent text, Playwright check()
+  let targetIndex = -1;
+  for (let i = 0; i < count; i += 1) {
+    const labelText = await radios.nth(i).evaluate((el) => {
+      const input = el as HTMLInputElement;
+      const fromLabel = input.closest('label')?.textContent?.trim();
+      if (fromLabel) {
+        return fromLabel;
       }
-      const text = ((await label.innerText().catch(() => '')) || '')
+      let node: ChildNode | null = input.nextSibling;
+      while (node) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          const text = (node.textContent ?? '').replace(/\s+/g, ' ').trim();
+          if (text) {
+            return text;
+          }
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+          const tag = (node as Element).tagName;
+          if (tag === 'BR' || tag === 'INPUT') {
+            break;
+          }
+          const text = ((node as Element).textContent ?? '')
+            .replace(/\s+/g, ' ')
+            .trim();
+          if (text) {
+            return text;
+          }
+          break;
+        }
+        node = node.nextSibling;
+      }
+      return (input.parentElement?.textContent ?? '')
         .replace(/\s+/g, ' ')
-        .trim()
-        .toLowerCase();
-      const isPreferred = hints.some((hint) =>
-        text.includes(hint.toLowerCase()),
-      );
-      if (prefer && !isPreferred) {
-        continue;
+        .trim();
+    });
+    const hay = labelText.toLowerCase();
+    if (hints.some((hint) => hay.includes(hint.toLowerCase()))) {
+      targetIndex = i;
+      break;
+    }
+  }
+  if (targetIndex < 0) {
+    for (let i = 0; i < count; i += 1) {
+      const text = (
+        (await radios.nth(i).evaluate((el) => {
+          let node: ChildNode | null = (el as HTMLInputElement).nextSibling;
+          while (node) {
+            if (node.nodeType === Node.TEXT_NODE) {
+              const t = (node.textContent ?? '').replace(/\s+/g, ' ').trim();
+              if (t) {
+                return t;
+              }
+            }
+            if (
+              node.nodeType === Node.ELEMENT_NODE &&
+              ((node as Element).tagName === 'BR' ||
+                (node as Element).tagName === 'INPUT')
+            ) {
+              break;
+            }
+            node = node.nextSibling;
+          }
+          return '';
+        })) || ''
+      ).toLowerCase();
+      if (/undergraduate|本科/.test(text)) {
+        targetIndex = i;
+        break;
       }
-      if (!prefer && isPreferred) {
-        continue;
+    }
+  }
+  if (targetIndex < 0) {
+    targetIndex = 0;
+  }
+
+  const target = radios.nth(targetIndex);
+  const value = await target.getAttribute('value');
+  await target.check({ force: true }).catch(() => undefined);
+  if (await target.isChecked().catch(() => false)) {
+    return true;
+  }
+  await target.click({ force: true }).catch(() => undefined);
+  if (await target.isChecked().catch(() => false)) {
+    return true;
+  }
+
+  // 3) evaluate: adjacent-text match + force checked + fire onclick
+  const clicked = await page.evaluate(
+    ({ hintList, selectedValue }) => {
+      const normalize = (value: string) => value.replace(/\s+/g, ' ').trim();
+      const labelOf = (radio: HTMLInputElement) => {
+        const wrapped = radio.closest('label')?.textContent;
+        if (wrapped) {
+          return normalize(wrapped);
+        }
+        let node: ChildNode | null = radio.nextSibling;
+        while (node) {
+          if (node.nodeType === Node.TEXT_NODE) {
+            const text = normalize(node.textContent ?? '');
+            if (text) {
+              return text;
+            }
+          } else if (node.nodeType === Node.ELEMENT_NODE) {
+            const tag = (node as Element).tagName;
+            if (tag === 'BR' || tag === 'INPUT') {
+              break;
+            }
+            const text = normalize((node as Element).textContent ?? '');
+            if (text) {
+              return text;
+            }
+            break;
+          }
+          node = node.nextSibling;
+        }
+        return '';
+      };
+
+      const list = [
+        ...document.querySelectorAll(
+          'input[type="radio"][name="projectTypeId"]',
+        ),
+      ] as HTMLInputElement[];
+      if (list.length === 0) {
+        return false;
       }
 
-      await label.click({ force: true });
-      if ((await page.locator('input[type="radio"]:checked').count()) > 0) {
+      const targetRadio =
+        (selectedValue
+          ? list.find((radio) => radio.value === selectedValue)
+          : undefined) ??
+        list.find((radio) => {
+          const label = labelOf(radio).toLowerCase();
+          return hintList.some((hint) =>
+            label.includes(String(hint).toLowerCase()),
+          );
+        }) ??
+        list.find((radio) =>
+          /undergraduate|本科/.test(labelOf(radio).toLowerCase()),
+        ) ??
+        list[0];
+
+      if (!targetRadio) {
+        return false;
+      }
+
+      targetRadio.focus();
+      targetRadio.click();
+      if (targetRadio.checked) {
         return true;
       }
-    }
-  }
 
-  // evaluate: label.click only (proven in headed probe)
-  return page.evaluate((hintList) => {
-    const normalize = (value: string) => value.replace(/\s+/g, ' ').trim();
-    const radios = [
-      ...document.querySelectorAll(
-        'input[type="radio"][name="projectTypeId"]',
-      ),
-    ] as HTMLInputElement[];
-    const fallbackRadios =
-      radios.length > 0
-        ? radios
-        : ([...document.querySelectorAll('input[type="radio"]')] as HTMLInputElement[]);
-
-    const labelOf = (radio: HTMLInputElement) =>
-      normalize(radio.closest('label')?.textContent ?? '');
-
-    const target =
-      fallbackRadios.find((radio) => {
-        const label = labelOf(radio).toLowerCase();
-        return hintList.some((hint) =>
-          label.includes(String(hint).toLowerCase()),
-        );
-      }) ?? fallbackRadios[0];
-
-    if (!target) {
-      return false;
-    }
-
-    target.closest('label')?.click();
-    if (target.checked) {
-      return true;
-    }
-
-    target.click();
-    if (target.checked) {
-      return true;
-    }
-
-    for (const radio of fallbackRadios) {
-      radio.checked = radio === target;
-    }
-    target.dispatchEvent(new Event('change', { bubbles: true }));
-    const onclick = target.getAttribute('onclick');
-    if (onclick) {
-      try {
-        const run = new Function('event', onclick);
-        run.call(target, new Event('click'));
-      } catch {
-        /* ignore */
+      for (const radio of list) {
+        radio.checked = radio === targetRadio;
       }
-    }
-    return target.checked;
-  }, hints);
+      targetRadio.dispatchEvent(new Event('input', { bubbles: true }));
+      targetRadio.dispatchEvent(new Event('change', { bubbles: true }));
+      targetRadio.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+      const onclick = targetRadio.getAttribute('onclick');
+      if (onclick) {
+        try {
+          const run = new Function('event', onclick);
+          run.call(targetRadio, new MouseEvent('click', { bubbles: true }));
+        } catch {
+          /* ignore */
+        }
+      }
+
+      return targetRadio.checked;
+    },
+    { hintList: hints, selectedValue: value },
+  );
+
+  return clicked || (await target.isChecked().catch(() => false));
 }
 
 /** Next labels: EN "Next" / ZH "下一步". KMMC uses <button class="el-button">. */
