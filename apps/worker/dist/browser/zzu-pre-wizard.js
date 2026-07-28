@@ -94,30 +94,6 @@ async function dismissBlockingDialogs(page) {
         await okButton.click({ force: true }).catch(() => undefined);
         await page.waitForTimeout(300);
     }
-    await page
-        .evaluate(() => {
-        const wins = [
-            ...document.querySelectorAll('.window-mask, .datagrid-mask, .messager-window, .panel.window, .window-shadow, .el-loading-mask'),
-        ];
-        const stuck = wins.some((win) => {
-            const style = getComputedStyle(win);
-            if (style.display === 'none' || style.visibility === 'hidden') {
-                return false;
-            }
-            const rect = win.getBoundingClientRect();
-            if (rect.width === 0 || rect.height === 0) {
-                return false;
-            }
-            return /It'?s processing|请求正在处理中|please wait|processing your request/i.test(win.textContent || '');
-        });
-        if (!stuck) {
-            return;
-        }
-        for (const el of wins) {
-            el.style.display = 'none';
-        }
-    })
-        .catch(() => undefined);
 }
 async function detectPreWizardScreen(page) {
     if ((await page.locator('select[name="collegeId"]').count()) > 0) {
@@ -812,35 +788,66 @@ async function advanceStudentTypeAtomic(page, studentType) {
             return false;
         }
     }
-    await page.waitForTimeout(800);
+    await page.waitForTimeout(500);
     const after = await page.evaluate(() => {
         const body = document.body?.innerText ?? '';
         const messager = [
-            ...document.querySelectorAll('.messager-body, .messager-window, .panel-body'),
+            ...document.querySelectorAll('.messager-body, .messager-window .panel-body, .messager-window'),
         ]
             .map((el) => (el.textContent || '').replace(/\s+/g, ' ').trim())
             .filter((t) => t.length > 0 && t.length < 200)
             .slice(0, 3);
         const checked = document.querySelector('input[name="projectTypeId"]:checked')?.value;
-        const screen = /please choose your type/i.test(body)
-            ? 'student_type'
-            : document.querySelector('select[name="collegeId"]')
-                ? 'program_selection'
+        const hasCollege = Boolean(document.querySelector('select[name="collegeId"]'));
+        const screen = hasCollege
+            ? 'program_selection'
+            : /please choose your type/i.test(body)
+                ? 'student_type'
                 : document.querySelector('input[name="apply.lastName"]')
                     ? 'wizard'
                     : 'other';
-        return { screen, checked: checked ?? null, messager, bodySnippet: body.slice(0, 120) };
+        return {
+            screen,
+            checked: checked ?? null,
+            messager,
+            hasCollege,
+            bodySnippet: body.slice(0, 120),
+        };
     });
     lastStudentTypePickDiag = {
         ...lastStudentTypePickDiag,
         next: { ok: true, via },
         afterNext: after,
-        build: 'atomic-v2-playwright-next',
+        build: 'atomic-v3-wait-processing',
     };
-    if (after.screen === 'student_type' && after.messager.length > 0) {
-        await dismissBlockingDialogs(page);
+    if (after.screen === 'program_selection' || after.hasCollege) {
+        return true;
     }
-    return after.screen !== 'student_type' || after.checked !== null;
+    if (after.screen === 'wizard') {
+        return true;
+    }
+    return false;
+}
+async function waitForProcessingQuiet(page, timeoutMs = 45_000) {
+    await page
+        .waitForFunction(() => {
+        const wins = [
+            ...document.querySelectorAll('.messager-window, .panel.window, .window-mask, .datagrid-mask'),
+        ];
+        const busy = wins.some((win) => {
+            const style = getComputedStyle(win);
+            if (style.display === 'none' || style.visibility === 'hidden') {
+                return false;
+            }
+            const rect = win.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) {
+                return false;
+            }
+            return /It'?s processing|请求正在处理中|please wait|processing your request/i.test(win.textContent || '');
+        });
+        return !busy;
+    }, { timeout: timeoutMs })
+        .catch(() => undefined);
 }
 const NEXT_NAME_RE = /^(Next|下一步|Save and Next|保存并下一步)$/i;
 async function clickVisibleNext(page) {
@@ -1048,40 +1055,24 @@ async function advancePreWizardScreen(page, screen = null, hints, gemini) {
         if (!ok) {
             return false;
         }
-        const left = await page
-            .waitForFunction(() => {
-            const body = document.body?.innerText ?? '';
-            if (/please choose your type/i.test(body)) {
-                return false;
-            }
-            if (document.querySelector('select[name="collegeId"]')) {
-                return true;
-            }
-            if (document.querySelector('input[name="apply.lastName"]') &&
-                document.querySelector('input[name="apply.lastName"]')?.offsetParent !== null) {
-                return true;
-            }
-            return !/please choose your type/i.test(body);
-        }, { timeout: 20_000 })
-            .then(() => true)
-            .catch(() => false);
-        await dismissBlockingDialogs(page);
-        await waitForUiReady(page);
+        await waitForProcessingQuiet(page, 45_000);
         if (await isMainWizard(page)) {
             return true;
         }
         const afterScreen = await detectPreWizardScreen(page);
+        lastStudentTypePickDiag = {
+            ...lastStudentTypePickDiag,
+            afterProcessingScreen: afterScreen,
+        };
         if (afterScreen && afterScreen !== 'student_type') {
             return true;
         }
-        if (left && afterScreen !== 'student_type') {
+        if (!afterScreen && (await isMainWizard(page))) {
             return true;
         }
-        lastStudentTypePickDiag = {
-            ...lastStudentTypePickDiag,
-            stuckAfterWait: true,
-            afterScreen,
-        };
+        if ((await page.locator('select[name="collegeId"]').count()) > 0) {
+            return true;
+        }
         return false;
     }
     await fillPreWizardScreen(page, current, hints);

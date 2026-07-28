@@ -132,35 +132,8 @@ export async function dismissBlockingDialogs(page: Page): Promise<void> {
     await page.waitForTimeout(300);
   }
 
-  // Force-hide ONLY if a processing overlay is still visibly stuck.
-  await page
-    .evaluate(() => {
-      const wins = [
-        ...document.querySelectorAll(
-          '.window-mask, .datagrid-mask, .messager-window, .panel.window, .window-shadow, .el-loading-mask',
-        ),
-      ];
-      const stuck = wins.some((win) => {
-        const style = getComputedStyle(win as HTMLElement);
-        if (style.display === 'none' || style.visibility === 'hidden') {
-          return false;
-        }
-        const rect = (win as HTMLElement).getBoundingClientRect();
-        if (rect.width === 0 || rect.height === 0) {
-          return false;
-        }
-        return /It'?s processing|请求正在处理中|please wait|processing your request/i.test(
-          win.textContent || '',
-        );
-      });
-      if (!stuck) {
-        return;
-      }
-      for (const el of wins) {
-        (el as HTMLElement).style.display = 'none';
-      }
-    })
-    .catch(() => undefined);
+  // Do NOT force-hide processing overlays here — that aborts in-flight 17gz AJAX
+  // (CSU student_type → study plan) and rolls the UI back to student_type.
 }
 
 export async function detectPreWizardScreen(
@@ -1130,7 +1103,6 @@ async function advanceStudentTypeAtomic(
       if (!next) {
         return { ok: false, via: 'no-next' };
       }
-      // Invoke inline handler with button as this when possible
       const onclick = next.getAttribute('onclick') || '';
       if (onclick) {
         try {
@@ -1151,13 +1123,13 @@ async function advanceStudentTypeAtomic(
     }
   }
 
-  // Give AJAX a moment, then read any messager / screen
-  await page.waitForTimeout(800);
+  // Brief pause for AJAX to paint — do NOT dismiss/force-hide processing yet
+  await page.waitForTimeout(500);
   const after = await page.evaluate(() => {
     const body = document.body?.innerText ?? '';
     const messager = [
       ...document.querySelectorAll(
-        '.messager-body, .messager-window, .panel-body',
+        '.messager-body, .messager-window .panel-body, .messager-window',
       ),
     ]
       .map((el) => (el.textContent || '').replace(/\s+/g, ' ').trim())
@@ -1168,29 +1140,73 @@ async function advanceStudentTypeAtomic(
         'input[name="projectTypeId"]:checked',
       ) as HTMLInputElement | null
     )?.value;
-    const screen = /please choose your type/i.test(body)
-      ? 'student_type'
-      : document.querySelector('select[name="collegeId"]')
-        ? 'program_selection'
+    const hasCollege = Boolean(document.querySelector('select[name="collegeId"]'));
+    const screen = hasCollege
+      ? 'program_selection'
+      : /please choose your type/i.test(body)
+        ? 'student_type'
         : document.querySelector('input[name="apply.lastName"]')
           ? 'wizard'
           : 'other';
-    return { screen, checked: checked ?? null, messager, bodySnippet: body.slice(0, 120) };
+    return {
+      screen,
+      checked: checked ?? null,
+      messager,
+      hasCollege,
+      bodySnippet: body.slice(0, 120),
+    };
   });
 
   lastStudentTypePickDiag = {
     ...lastStudentTypePickDiag,
     next: { ok: true, via },
     afterNext: after,
-    build: 'atomic-v2-playwright-next',
+    build: 'atomic-v3-wait-processing',
   };
 
-  // Still on student_type with an error dialog — dismiss and report failure
-  if (after.screen === 'student_type' && after.messager.length > 0) {
-    await dismissBlockingDialogs(page);
+  // Success if we already reached study-plan (even while "It's processing!")
+  if (after.screen === 'program_selection' || after.hasCollege) {
+    return true;
   }
 
-  return after.screen !== 'student_type' || after.checked !== null;
+  if (after.screen === 'wizard') {
+    return true;
+  }
+
+  return false;
+}
+
+/** Wait out 17gz processing overlay without force-hiding (that aborts the AJAX). */
+async function waitForProcessingQuiet(
+  page: Page,
+  timeoutMs = 45_000,
+): Promise<void> {
+  await page
+    .waitForFunction(
+      () => {
+        const wins = [
+          ...document.querySelectorAll(
+            '.messager-window, .panel.window, .window-mask, .datagrid-mask',
+          ),
+        ];
+        const busy = wins.some((win) => {
+          const style = getComputedStyle(win as HTMLElement);
+          if (style.display === 'none' || style.visibility === 'hidden') {
+            return false;
+          }
+          const rect = (win as HTMLElement).getBoundingClientRect();
+          if (rect.width === 0 || rect.height === 0) {
+            return false;
+          }
+          return /It'?s processing|请求正在处理中|please wait|processing your request/i.test(
+            win.textContent || '',
+          );
+        });
+        return !busy;
+      },
+      { timeout: timeoutMs },
+    )
+    .catch(() => undefined);
 }
 
 /** Next labels: EN "Next" / ZH "下一步". KMMC uses <button class="el-button">. */
@@ -1491,7 +1507,8 @@ export async function advancePreWizardScreen(
 
   const before = await getPreWizardSignature(page, current);
 
-  // CSU student_type: select+Next atomically (async handlers clear checked if we wait)
+  // CSU student_type: select+Next; afterNext often already program_selection
+  // while "It's processing!" — must NOT force-hide that overlay (aborts AJAX → rollback).
   if (current === 'student_type') {
     const resolved = normalizeHints(hints);
     const ok = await advanceStudentTypeAtomic(page, resolved.studentType);
@@ -1499,52 +1516,31 @@ export async function advancePreWizardScreen(
       return false;
     }
 
-    // Wait for leave student_type (study plan / wizard) — AJAX can take a few seconds
-    const left = await page
-      .waitForFunction(
-        () => {
-          const body = document.body?.innerText ?? '';
-          if (/please choose your type/i.test(body)) {
-            return false;
-          }
-          if (document.querySelector('select[name="collegeId"]')) {
-            return true;
-          }
-          if (
-            document.querySelector('input[name="apply.lastName"]') &&
-            (document.querySelector(
-              'input[name="apply.lastName"]',
-            ) as HTMLElement | null)?.offsetParent !== null
-          ) {
-            return true;
-          }
-          // program_type / notes etc.
-          return !/please choose your type/i.test(body);
-        },
-        { timeout: 20_000 },
-      )
-      .then(() => true)
-      .catch(() => false);
-
-    await dismissBlockingDialogs(page);
-    await waitForUiReady(page);
+    await waitForProcessingQuiet(page, 45_000);
 
     if (await isMainWizard(page)) {
       return true;
     }
+
     const afterScreen = await detectPreWizardScreen(page);
+    lastStudentTypePickDiag = {
+      ...lastStudentTypePickDiag,
+      afterProcessingScreen: afterScreen,
+    };
+
+    // Study plan or any non-student_type screen = success for this step
     if (afterScreen && afterScreen !== 'student_type') {
       return true;
     }
-    if (left && afterScreen !== 'student_type') {
+    if (!afterScreen && (await isMainWizard(page))) {
       return true;
     }
 
-    lastStudentTypePickDiag = {
-      ...lastStudentTypePickDiag,
-      stuckAfterWait: true,
-      afterScreen,
-    };
+    // collegeId present even if detect glitched
+    if ((await page.locator('select[name="collegeId"]').count()) > 0) {
+      return true;
+    }
+
     return false;
   }
 
