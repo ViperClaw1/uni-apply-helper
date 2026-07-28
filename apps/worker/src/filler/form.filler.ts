@@ -12,6 +12,7 @@ import { OcrPassportUploader } from './ocr-passport.uploader.js';
 import { WizardFieldGroups } from './wizard-field-groups.js';
 import { WizardNavigator } from './wizard.navigator.js';
 import { GeocodingService } from '../geocoding/geocoding.service.js';
+import { detectCurrentWizardStep } from '../browser/zzu-pre-wizard.js';
 
 @Injectable()
 export class FormFiller {
@@ -109,7 +110,13 @@ export class FormFiller {
       throw new Error(`University "${university.id}" has no wizard config`);
     }
 
-    await this.waitForStepOneFields(page, university);
+    // Retry may land mid-wizard (e.g. Step 3) — resume, don't require Step 1 DOM.
+    const resumeStep =
+      (await detectCurrentWizardStep(page).catch(() => null)) ?? 1;
+
+    if (resumeStep <= 1) {
+      await this.waitForStepOneFields(page, university);
+    }
 
     await this.wizardNavigator.forEachStep(
       page,
@@ -177,6 +184,7 @@ export class FormFiller {
       },
       {
         applicationId,
+        startStep: resumeStep,
         markerForStep: (step) => {
           const fields = this.wizardFieldGroups.fieldsForStep(university, step);
           return (
@@ -2204,8 +2212,9 @@ export class FormFiller {
   }
 
   /**
-   * Step 3: force China/work history = No (hides conditional required fields),
-   * fill Institute Location (sh.countryId).
+   * Step 3: education rows + China/work history = No.
+   * CSU (and some 17gz skins) require ALL pre-rendered education blocks
+   * (Delete just warns) — mirror the same school into every row.
    */
   private async ensurePkuStep3RequiredGaps(
     page: Page,
@@ -2214,56 +2223,165 @@ export class FormFiller {
     await this.dismissFormOverlays(page);
     await this.closeDatePickers(page);
 
-    for (const [name, value] of [
-      ['applyEx.haveStudiedInChina', '0'],
-      ['applyEx.haveWorkHistory', '0'],
-      ['haveWorkHistory', '0'],
-    ] as const) {
-      const radio = page.locator(
-        `input[type="radio"][name="${name}"][value="${value}"]`,
-      );
-      if ((await radio.count()) > 0) {
-        await radio.first().check({ force: true }).catch(() => undefined);
-      }
-    }
-
-    // Hide conditional China-study block if Yes was previously selected.
-    await page.evaluate(() => {
-      const yes = document.querySelector(
-        'input[name="applyEx.haveStudiedInChina"][value="1"]',
-      ) as HTMLInputElement | null;
-      const no = document.querySelector(
-        'input[name="applyEx.haveStudiedInChina"][value="0"]',
-      ) as HTMLInputElement | null;
-      if (no && !no.checked) {
-        no.checked = true;
-        no.click();
-        no.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-      if (yes?.checked && no) {
-        yes.checked = false;
-        no.checked = true;
-        no.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-    });
-
+    const edu = profile.education?.[0];
+    const school =
+      edu?.institution?.trim() ||
+      profile.personal.currentInstitution?.trim() ||
+      'High School';
+    const major = edu?.major?.trim() || 'General Studies';
+    const start = edu?.periodStart?.trim() || '2018-09-01';
+    const end = edu?.periodEnd?.trim() || '2022-06-30';
     const nationality =
       profile.personal.nationality?.trim() || 'Russian Federation';
-    const countrySel = 'select[name="sh.countryId"]';
-    if ((await page.locator(countrySel).count()) > 0) {
-      await this.fillSelectControl(
-        page,
-        {
-          selector: countrySel,
-          type: 'select',
-          required: false,
-          mapsTo: 'personal.nationality',
-          labelHint: 'Institute Location',
-        },
-        page.locator(countrySel).first(),
-        nationality,
-      ).catch(() => undefined);
-    }
+    const degreeNeedles = [
+      edu?.degree?.trim() || '',
+      'Senior high',
+      'High school',
+      'Bachelor',
+      '高中',
+      '本科',
+    ].filter(Boolean);
+
+    await page.evaluate(
+      ({ school, major, start, end, degreeNeedles, nationality }) => {
+        const jq = (
+          window as unknown as {
+            jQuery?: (el: Element) => {
+              val: (v: string) => { trigger: (e: string) => unknown };
+            };
+          }
+        ).jQuery;
+
+        const setInput = (input: HTMLInputElement, value: string) => {
+          if (!value) {
+            return;
+          }
+          input.value = value;
+          input.setAttribute('value', value);
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+          input.dispatchEvent(new Event('blur', { bubbles: true }));
+          if (typeof jq === 'function') {
+            try {
+              jq(input).val(value).trigger('change');
+            } catch {
+              // ignore
+            }
+          }
+        };
+
+        const setSelect = (
+          select: HTMLSelectElement,
+          needles: string[],
+          force = false,
+        ) => {
+          if (needles.length === 0) {
+            return;
+          }
+          const cur = (select.options[select.selectedIndex]?.text || '')
+            .trim()
+            .toLowerCase();
+          if (
+            !force &&
+            cur &&
+            !/please|choose|-choose-|^$/.test(cur)
+          ) {
+            return;
+          }
+          const lowered = needles.map((n) => n.toLowerCase());
+          const match = [...select.options].find((opt) => {
+            const t = (opt.textContent || '').trim().toLowerCase();
+            return lowered.some(
+              (n) => n && (t === n || t.includes(n) || n.includes(t)),
+            );
+          });
+          if (!match?.value) {
+            return;
+          }
+          select.value = match.value;
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+          if (typeof jq === 'function') {
+            try {
+              jq(select).val(match.value).trigger('chosen:updated');
+              jq(select).val(match.value).trigger('change');
+            } catch {
+              // ignore
+            }
+          }
+        };
+
+        const setAllInputs = (name: string, value: string) => {
+          for (const el of document.querySelectorAll(
+            `input[name="${name}"]`,
+          )) {
+            setInput(el as HTMLInputElement, value);
+          }
+        };
+
+        const setAllSelects = (
+          name: string,
+          needles: string[],
+          force = true,
+        ) => {
+          for (const el of document.querySelectorAll(
+            `select[name="${name}"]`,
+          )) {
+            setSelect(el as HTMLSelectElement, needles, force);
+          }
+        };
+
+        // Every No.1 / No.2 / No.3 block — same school (Delete is blocked on CSU)
+        setAllInputs('sh.startDate', start);
+        setAllInputs('sh.endDate', end);
+        setAllInputs('sh.studyPlace', school);
+        setAllInputs('sh.stuhisMajor', major);
+        setAllSelects('sh.educationId', degreeNeedles, true);
+        setAllSelects(
+          'sh.countryId',
+          [nationality, 'russian', 'russia', '俄罗斯'],
+          true,
+        );
+
+        // China study / work history → No (fire real click for onclick toggles)
+        const checkNo = (name: string) => {
+          const no = document.querySelector(
+            `input[type="radio"][name="${name}"][value="0"]`,
+          ) as HTMLInputElement | null;
+          const yes = document.querySelector(
+            `input[type="radio"][name="${name}"][value="1"]`,
+          ) as HTMLInputElement | null;
+          if (!no) {
+            return;
+          }
+          if (yes) {
+            yes.checked = false;
+          }
+          no.checked = true;
+          const label = no.closest('label');
+          if (label) {
+            label.click();
+          } else {
+            no.click();
+          }
+          no.dispatchEvent(new Event('change', { bubbles: true }));
+        };
+
+        checkNo('applyEx.haveStudiedInChina');
+        checkNo('applyEx.haveWorkHistory');
+        checkNo('haveWorkHistory');
+      },
+      { school, major, start, end, degreeNeedles, nationality },
+    );
+
+    // Playwright backup for China = No
+    await this.checkRadioGroupNo(page, 'applyEx.haveStudiedInChina');
+    await this.checkRadioGroupNo(page, 'applyEx.haveWorkHistory');
+    await this.checkRadioGroupNo(page, 'haveWorkHistory');
+    await this.checkRadioNearLabel(
+      page,
+      /studied online or offline|studied in China|在中国.*学习/i,
+      'No',
+    );
 
     await this.closeDatePickers(page);
     await this.dismissFormOverlays(page);

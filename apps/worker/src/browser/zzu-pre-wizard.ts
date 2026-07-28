@@ -139,6 +139,12 @@ export async function dismissBlockingDialogs(page: Page): Promise<void> {
 export async function detectPreWizardScreen(
   page: Page,
 ): Promise<PreWizardScreen | null> {
+  // Mid-wizard (any step) is NOT pre-wizard — e.g. haveStudiedInChina radios
+  // used to be misclassified as student_type (any non-projectTypeId radio).
+  if (await isMainWizard(page)) {
+    return null;
+  }
+
   if ((await page.locator('select[name="collegeId"]').count()) > 0) {
     return 'program_selection';
   }
@@ -199,17 +205,22 @@ export async function detectPreWizardScreen(
     return 'program_type';
   }
 
-  // Visible non-projectType radios → student category
-  const anyRadios = page.locator('input[type="radio"]');
-  const anyCount = await anyRadios.count();
-  for (let i = 0; i < anyCount; i += 1) {
-    const radio = anyRadios.nth(i);
-    if (!(await radio.isVisible().catch(() => false))) {
-      continue;
-    }
-    const name = await radio.getAttribute('name').catch(() => null);
-    if (name !== 'projectTypeId') {
-      return 'student_type';
+  // ONLY projectTypeId-adjacent student screens — never bare wizard Yes/No radios
+  if (
+    /please choose your type|招生类别|学生类别|报考类别/i.test(bodyText) &&
+    visibleProgram === 0
+  ) {
+    const anyRadios = page.locator('input[type="radio"]');
+    const anyCount = await anyRadios.count();
+    for (let i = 0; i < anyCount; i += 1) {
+      const radio = anyRadios.nth(i);
+      if (!(await radio.isVisible().catch(() => false))) {
+        continue;
+      }
+      const name = await radio.getAttribute('name').catch(() => null);
+      if (name && name !== 'projectTypeId' && !name.startsWith('apply')) {
+        return 'student_type';
+      }
     }
   }
 
@@ -224,26 +235,155 @@ export async function detectPreWizardScreen(
   return null;
 }
 
-export async function isMainWizard(page: Page): Promise<boolean> {
-  // Hidden Step 1 fields can sit in DOM on pre-wizard screens — require visible.
-  const selectors = [
-    'input[name="apply.lastName"]',
-    'input[name="apply.givenName"]',
-    'input[name="apply.passportNo"]',
-  ];
-
-  for (const selector of selectors) {
-    const locator = page.locator(selector).first();
-    if ((await locator.count()) === 0) {
-      continue;
-    }
-
-    if (await locator.isVisible().catch(() => false)) {
-      return true;
-    }
+export async function detectCurrentWizardStep(
+  page: Page,
+): Promise<number | null> {
+  if (!(await isMainWizard(page))) {
+    return null;
   }
 
-  return false;
+  return page.evaluate(() => {
+    const visible = (sel: string) => {
+      const el = document.querySelector(sel) as HTMLElement | null;
+      if (!el) {
+        return false;
+      }
+      const style = getComputedStyle(el);
+      if (style.display === 'none' || style.visibility === 'hidden') {
+        return false;
+      }
+      return el.offsetParent !== null || style.position === 'fixed';
+    };
+
+    if (
+      visible('input[name="apply.lastName"]') ||
+      visible('input[name="apply.passportNo"]')
+    ) {
+      return 1;
+    }
+    if (
+      visible('input[name="apply.fieldEnglish"]') ||
+      visible('input[name="apply.studyStartDate"]') ||
+      visible('select[name="apply.languageSkillId"]') ||
+      visible('input[name="apply.guarantorEnname"]')
+    ) {
+      return 2;
+    }
+    if (
+      visible('input[name="sh.studyPlace"]') ||
+      visible('input[name="sh.startDate"]') ||
+      visible('input[name="applyEx.haveStudiedInChina"]')
+    ) {
+      return 3;
+    }
+    if (
+      visible('input[name="apply.emergencyName"]') ||
+      visible('input[name="applyEx.hasCriminalRecord"]')
+    ) {
+      return 4;
+    }
+    if (
+      visible('input[name="apply.homeMobile"]') ||
+      visible('input[name="apply.homePhone"]')
+    ) {
+      return 5;
+    }
+    if (
+      document.querySelector(
+        'input[value="Add Document"], [attachTypeId] input[type="file"]',
+      )
+    ) {
+      return 6;
+    }
+    const active =
+      document
+        .querySelector(
+          '.list_title li.on, .list_title li.cur, .wizard li.active, li.current, .process li.on',
+        )
+        ?.textContent?.replace(/\s+/g, ' ')
+        .trim() ?? '';
+    if (/preview|submit/i.test(active)) {
+      return 7;
+    }
+    return 1;
+  });
+}
+
+export async function isMainWizard(page: Page): Promise<boolean> {
+  // Any wizard step counts — Step 1 fields are hidden once you leave Basic Info.
+  // Pre-wizard must NOT match these markers.
+  return page.evaluate(() => {
+    const visible = (el: Element | null) => {
+      if (!el) {
+        return false;
+      }
+      const html = el as HTMLElement;
+      if (html.offsetParent === null && html.tagName !== 'BODY') {
+        // offsetParent null can mean fixed/sticky; fall back to style
+        const style = getComputedStyle(html);
+        if (style.display === 'none' || style.visibility === 'hidden') {
+          return false;
+        }
+      }
+      const style = getComputedStyle(html);
+      return style.display !== 'none' && style.visibility !== 'hidden';
+    };
+
+    const step1 = [
+      'input[name="apply.lastName"]',
+      'input[name="apply.givenName"]',
+      'input[name="apply.passportNo"]',
+    ].some((sel) => visible(document.querySelector(sel)));
+
+    const step2 = [
+      'input[name="apply.fieldEnglish"]',
+      'input[name="apply.studyStartDate"]',
+      'select[name="apply.languageSkillId"]',
+      'input[name="apply.guarantorEnname"]',
+    ].some((sel) => visible(document.querySelector(sel)));
+
+    const step3 = [
+      'input[name="sh.studyPlace"]',
+      'input[name="sh.startDate"]',
+      'input[name="applyEx.haveStudiedInChina"]',
+      'select[name="sh.educationId"]',
+    ].some((sel) => visible(document.querySelector(sel)));
+
+    const step4 = [
+      'input[name="apply.emergencyName"]',
+      'input[name="applyEx.hasCriminalRecord"]',
+    ].some((sel) => visible(document.querySelector(sel)));
+
+    const step5 = ['input[name="apply.homeMobile"], input[name="apply.homePhone"]'].some(
+      (sel) => visible(document.querySelector(sel)),
+    );
+
+    const step6 = Boolean(
+      document.querySelector(
+        'input[value="Add Document"], [attachTypeId] input[type="file"]',
+      ),
+    );
+
+    const wizardChrome = /Step\s*[1234567]|Basic Info|Study Plan|Education & Employment|Contact Info|Preview and Submit/i.test(
+      document.body?.innerText?.slice(0, 2500) ?? '',
+    );
+
+    // Wizard chrome alone is weak (may appear in menus) — require a step marker.
+    return (
+      step1 ||
+      step2 ||
+      step3 ||
+      step4 ||
+      step5 ||
+      step6 ||
+      (wizardChrome &&
+        Boolean(
+          document.querySelector(
+            '.list_title li.on, .list_title li.cur, .process li.on, .wizard li.active',
+          ),
+        ))
+    );
+  });
 }
 
 async function getPreWizardSignature(
@@ -1111,7 +1251,7 @@ async function pickStudentTypeRadio(
 
   const hints = studentTypeHintList(studentType);
   const hint = hints[0] ?? 'Undergraduate Student';
-  lastStudentTypePickDiag = { build: 'atomic-v1', hint };
+  lastStudentTypePickDiag = { build: 'atomic-v6-mid-wizard', hint };
 
   // Fast path: Playwright label click, then IMMEDIATELY verify (no long poll)
   for (const textHint of hints) {
@@ -1350,7 +1490,7 @@ async function advanceStudentTypeAtomic(
     ...lastStudentTypePickDiag,
     next: { ok: true, via },
     afterNext: after,
-    build: 'atomic-v5-notes-first',
+    build: 'atomic-v6-mid-wizard',
   };
 
   // Success if we already reached study-plan (even while "It's processing!")
@@ -1723,7 +1863,7 @@ export async function advancePreWizardScreen(
     lastStudentTypePickDiag = {
       ...lastStudentTypePickDiag,
       afterProcessingScreen: afterScreen,
-      build: 'atomic-v5-notes-first',
+      build: 'atomic-v6-mid-wizard',
     };
 
     const onStudyPlan =
@@ -1772,7 +1912,7 @@ export async function advancePreWizardScreen(
     lastStudentTypePickDiag = {
       ...lastStudentTypePickDiag,
       studyPlanSolo: applied,
-      build: 'atomic-v5-notes-first',
+      build: 'atomic-v6-mid-wizard',
     };
     if (!applied.ok) {
       return false;
@@ -2015,8 +2155,28 @@ export async function describeNavigationState(page: Page): Promise<string> {
       if (document.querySelector('input[name="projectTypeId"]')) {
         return 'program_type';
       }
+      if (
+        document.querySelector(
+          'input[name="sh.studyPlace"], input[name="sh.startDate"], input[name="applyEx.haveStudiedInChina"]',
+        )
+      ) {
+        return 'wizard_step3';
+      }
+      if (
+        document.querySelector(
+          'select[name="apply.languageSkillId"], input[name="apply.guarantorEnname"], input[name="apply.fieldEnglish"]',
+        )
+      ) {
+        return 'wizard_step2';
+      }
       if (document.querySelector('input[name="apply.lastName"]')) {
         return 'wizard_step1';
+      }
+      if (document.querySelector('input[name="apply.emergencyName"]')) {
+        return 'wizard_step4';
+      }
+      if (document.querySelector('input[name="apply.homeMobile"]')) {
+        return 'wizard_step5';
       }
       if (/application notes|申请须知|申请人保证/i.test(bodyRaw)) {
         return 'application_notes';

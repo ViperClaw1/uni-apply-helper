@@ -251,7 +251,7 @@ export async function navigateToZzuApplication(
     );
 
     throw new Error(
-      '17gz wizard Step 1 (Basic Info) not reached after navigation. ' +
+      '17gz wizard not reached after navigation (expected any wizard step). ' +
         `URL: ${page.url()}. Screenshot: ${shotPath}. ${diagnostics}` +
         (getLastStudentTypePickDiag()
           ? ` pickDiag=${JSON.stringify(getLastStudentTypePickDiag())}`

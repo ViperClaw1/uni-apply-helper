@@ -48,6 +48,24 @@ export class FieldMapper {
       return '2027-06-30';
     }
 
+    // Soft defaults for education history when profile sparse
+    if (field.selector?.includes('sh.startDate') || /year attended.*from/i.test(field.labelHint || '')) {
+      return get(profile, 'education.0.periodStart') || '2018-09-01';
+    }
+    if (field.selector?.includes('sh.endDate') || /year attended.*to/i.test(field.labelHint || '')) {
+      return get(profile, 'education.0.periodEnd') || '2022-06-30';
+    }
+    if (field.selector?.includes('sh.studyPlace')) {
+      return (
+        get(profile, 'education.0.institution') ||
+        profile.personal.currentInstitution ||
+        'High School'
+      );
+    }
+    if (field.selector?.includes('sh.stuhisMajor')) {
+      return get(profile, 'education.0.major') || 'General Studies';
+    }
+
     // Native Language cert still requires score + issue date on PKU.
     if (field.selector?.includes('yydjzsScore')) {
       return 'N/A';

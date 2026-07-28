@@ -15,9 +15,15 @@ export class WizardNavigator {
       /** CSS selector that should appear after advancing to this step (AJAX wizards). */
       markerForStep?: (step: number) => string | undefined;
       applicationId?: string;
+      /** Resume mid-wizard after a retry (e.g. already on Step 3). */
+      startStep?: number;
     },
   ): Promise<void> {
-    for (let step = 1; step <= wizard.totalSteps; step += 1) {
+    const start = Math.min(
+      Math.max(options?.startStep ?? 1, 1),
+      wizard.totalSteps,
+    );
+    for (let step = start; step <= wizard.totalSteps; step += 1) {
       await handler(step);
 
       if (step < wizard.totalSteps) {
