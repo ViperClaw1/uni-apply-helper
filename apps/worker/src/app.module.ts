@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ActionExecutor } from './agent/act/action.executor.js';
+import { DialogDismisser } from './agent/act/dialog.dismisser.js';
 import { SemanticFieldMapper } from './agent/dom/semantic-field.mapper.js';
 import { FormAgent } from './agent/form.agent.js';
 import { GeminiClient } from './agent/gemini/gemini.client.js';
@@ -47,6 +48,7 @@ import { ScreenshotService } from './screenshot/screenshot.service.js';
     PageObserver,
     AgentPlanner,
     ActionExecutor,
+    DialogDismisser,
     SemanticFieldMapper,
     FormAgent,
     FieldMapper,

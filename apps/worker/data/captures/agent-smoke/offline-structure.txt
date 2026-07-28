@@ -1,0 +1,3 @@
+[select] name="Language Proficiency * -Choose- None Good" field=apply.languageSkillId required=true near="Language Proficiency * -Choose- None Good"  options=[-Choose-= | None=1 | Good=2]
+[input] name="School Name" field=sh.studyPlace required=true hint="Full school name" near="School Name" 
+[button] name="null" field= 

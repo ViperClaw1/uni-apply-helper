@@ -22,6 +22,8 @@ export interface AgentAction {
   type: AgentActionType;
   target?: AgentActionTarget;
   value?: string;
+  /** Local path or remote URL for type=upload (falls back to value). */
+  filePath?: string;
   reason?: string;
 }
 
@@ -67,6 +69,11 @@ export interface AgentConfig {
   goal?: string;
   maxSteps?: number;
   useVision?: boolean;
+  /**
+   * When true (or AGENT_FALLBACK=1), schema/hybrid path failures fall back to
+   * FormAgent.runWizard once. Default false — no prod behavior change.
+   */
+  fallbackEnabled?: boolean;
 }
 
 export interface AgentLoopResult {

@@ -40,3 +40,17 @@ export function shouldUseVision(
 
   return university.agent?.useVision ?? false;
 }
+
+/** Env AGENT_FALLBACK=1 overrides; else university.agent.fallbackEnabled. */
+export function isAgentFallbackEnabled(
+  configService: ConfigService,
+  university: Pick<UniversitySchema, 'agent'>,
+): boolean {
+  if (configService.get<string>('AGENT_FALLBACK') === '1') {
+    return true;
+  }
+  if (configService.get<string>('AGENT_FALLBACK') === '0') {
+    return false;
+  }
+  return university.agent?.fallbackEnabled === true;
+}

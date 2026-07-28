@@ -1,0 +1,40 @@
+{
+  "id": "csu-agent-smoke",
+  "displayName": "Central South University (agent smoke)",
+  "formUrl": "https://csu.17gz.org/apply/index.do",
+  "navigationHints": {
+    "programText": "Self-sponsored",
+    "studentType": "Undergraduate Student",
+    "ocrPassportUpload": false
+  },
+  "session": {
+    "loginUrlPattern": "/member/login\\\\.do",
+    "expiredIndicators": [
+      "CSRF attack protection",
+      "Account Sign In"
+    ]
+  },
+  "aliases": [
+    "csu-agent-smoke"
+  ],
+  "requiredDocuments": [
+    "photo",
+    "passport"
+  ],
+  "fields": [],
+  "wizard": {
+    "totalSteps": 7,
+    "nextButtonSelector": "input[value=\"Save and Next\"], input[value=\"Next\"], input[value=\"下一步\"], input[value=\"保存并下一步\"]",
+    "submitButtonSelector": "input[value=\"Submit\"], input[value=\"提交\"]"
+  },
+  "agent": {
+    "fillMode": "agent",
+    "maxSteps": 40,
+    "useVision": false,
+    "fallbackEnabled": false,
+    "goal": "Fill CSU 17gz wizard using profile-driven hints only (zero field schema smoke)"
+  },
+  "requiresEssay": false,
+  "notes": "Minimal schema for FormAgent zero-template smoke. Reuses CSU session (capture:csu-session). Pre-wizard stays deterministic via open_form; fill_wizard uses fillMode=agent with empty fields[].",
+  "defaultProgram": "Self-sponsored Program"
+}

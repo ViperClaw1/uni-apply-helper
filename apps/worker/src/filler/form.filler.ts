@@ -1,8 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { FieldConfig, StudentProfile, UniversitySchema } from '@uni-apply/shared';
 import type { Locator, Page } from 'playwright';
-import { resolveFillMode } from '../agent/agent.config.js';
+import { resolveFillMode, isAgentFallbackEnabled } from '../agent/agent.config.js';
 import { FormAgent } from '../agent/form.agent.js';
 import { SemanticFieldMapper } from '../agent/dom/semantic-field.mapper.js';
 import { resolveFieldLocator } from './field.locator.js';
@@ -16,6 +16,8 @@ import { detectCurrentWizardStep } from '../browser/zzu-pre-wizard.js';
 
 @Injectable()
 export class FormFiller {
+  private readonly logger = new Logger(FormFiller.name);
+
   constructor(
     private readonly configService: ConfigService,
     private readonly fieldMapper: FieldMapper,
@@ -105,6 +107,54 @@ export class FormFiller {
       return;
     }
 
+    try {
+      await this.processWizardDeterministic(
+        page,
+        profile,
+        university,
+        motivationLetterContent,
+        applicationId,
+        fillMode,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const canFallback =
+        isAgentFallbackEnabled(this.configService, university) &&
+        this.formAgent.isAvailable();
+
+      if (!canFallback) {
+        throw error;
+      }
+
+      this.logger.warn(
+        `Deterministic wizard failed, falling back to FormAgent: ${message}`,
+      );
+
+      const result = await this.formAgent.runWizard(
+        page,
+        profile,
+        university,
+        motivationLetterContent,
+      );
+
+      if (!result.completed) {
+        throw new Error(
+          `Agent fallback also failed: ${
+            result.finalAction?.reason ?? 'unknown'
+          } (after: ${message})`,
+        );
+      }
+    }
+  }
+
+  private async processWizardDeterministic(
+    page: Page,
+    profile: StudentProfile,
+    university: UniversitySchema,
+    motivationLetterContent: string | undefined,
+    applicationId: string | undefined,
+    fillMode: 'schema' | 'agent' | 'hybrid',
+  ): Promise<void> {
     const wizard = university.wizard;
     if (!wizard) {
       throw new Error(`University "${university.id}" has no wizard config`);

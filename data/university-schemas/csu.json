@@ -1075,6 +1075,7 @@
     "fillMode": "hybrid",
     "maxSteps": 40,
     "useVision": false,
+    "fallbackEnabled": true,
     "goal": "Complete and submit the Central South University online application form"
   },
   "requiresEssay": false,
