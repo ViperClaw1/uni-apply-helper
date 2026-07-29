@@ -210,11 +210,16 @@ export function StudentProfilePage() {
       {student.guarantor || student.emergencyContact ? (
         <section className="mt-8 grid gap-4 md:grid-cols-2">
           {student.guarantor ? (
-            <ContactInfoCard title="Гарант" contact={student.guarantor} />
+            <ContactInfoCard
+              title="Гарант"
+              variant="guarantor"
+              contact={student.guarantor}
+            />
           ) : null}
           {student.emergencyContact ? (
             <ContactInfoCard
               title="Экстренный контакт"
+              variant="emergency"
               contact={student.emergencyContact}
             />
           ) : null}
@@ -229,7 +234,7 @@ export function StudentProfilePage() {
                 Документы
               </h2>
               <p className="mt-1 text-sm text-slate-500">
-                Загрузка сразу отправляет файл в API, R2 и очередь парсинга.
+                Загрузите файлы — система сама распознает данные из документов.
               </p>
             </div>
           </div>
@@ -255,10 +260,10 @@ export function StudentProfilePage() {
           <section>
             <div className="mb-3">
               <h2 className="text-xl font-semibold tracking-tight text-slate-950">
-                Вузы батча
+                Вузы
               </h2>
               <p className="mt-1 text-sm text-slate-500">
-                Список вузов для подачи. URL должен совпадать со схемой вуза.
+                Добавьте ссылки на формы подачи — вузы появятся в списке автоматически.
               </p>
             </div>
 
@@ -280,8 +285,9 @@ export function StudentProfilePage() {
                 Подача заявок
               </h2>
               <p className="mt-1 text-sm text-slate-500">
-                Создайте батч, откройте форму вуза — Extension заполнит поля,
-                вы проверите и отправите вручную.
+                Нажмите «Отправить заявки» — система проверит документы и заполнит
+                формы вузов. Если что-то пойдёт не так, ошибка появится ниже;
+                форму можно открыть и дозаполнить вручную.
               </p>
             </div>
 
@@ -325,32 +331,187 @@ function formatStudentName(student: { givenName?: string; surname?: string }) {
 function ContactInfoCard({
   title,
   contact,
+  variant,
 }: {
   title: string;
   contact: ContactInfo;
+  variant: "guarantor" | "emergency";
 }) {
+  const accent =
+    variant === "guarantor"
+      ? {
+          iconBg: "bg-sky-50 text-sky-700 ring-sky-100",
+          badge: "bg-sky-50 text-sky-800 ring-sky-200",
+        }
+      : {
+          iconBg: "bg-amber-50 text-amber-700 ring-amber-100",
+          badge: "bg-amber-50 text-amber-800 ring-amber-200",
+        };
+
   const rows = [
-    { label: "Имя", value: contact.name },
-    { label: "Телефон", value: contact.phone },
-    { label: "Email", value: contact.email },
-    { label: "Отношение", value: contact.relationship },
-    { label: "Адрес", value: contact.homeAddress },
+    {
+      key: "phone",
+      value: contact.phone,
+      icon: PhoneIcon,
+      href: contact.phone ? `tel:${contact.phone}` : undefined,
+    },
+    {
+      key: "email",
+      value: contact.email,
+      icon: MailIcon,
+      href: contact.email ? `mailto:${contact.email}` : undefined,
+    },
+    {
+      key: "address",
+      value: contact.homeAddress,
+      icon: MapPinIcon,
+    },
   ].filter((row) => row.value);
 
   return (
-    <div className="rounded-3xl bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.08),0_12px_45px_rgba(15,23,42,0.05)] ring-1 ring-black/5">
-      <h2 className="text-lg font-semibold tracking-tight text-slate-950">
-        {title}
-      </h2>
-      <dl className="mt-4 grid gap-3 text-sm">
-        {rows.map((row) => (
-          <div key={row.label}>
-            <dt className="font-medium text-slate-500">{row.label}</dt>
-            <dd className="mt-1 text-slate-900">{row.value}</dd>
+    <div className="rounded-3xl bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.08),0_12px_45px_rgba(15,23,42,0.05)] ring-1 ring-black/5 sm:p-5">
+      <div className="flex items-start gap-3">
+        <span
+          className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ring-1 ${accent.iconBg}`}
+        >
+          {variant === "guarantor" ? <ShieldIcon /> : <AlertIcon />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-base font-semibold tracking-tight text-slate-950">
+              {title}
+            </h2>
+            {contact.relationship ? (
+              <span
+                className={`inline-flex h-6 items-center rounded-full px-2 text-[11px] font-semibold capitalize ring-1 ${accent.badge}`}
+              >
+                {contact.relationship}
+              </span>
+            ) : null}
           </div>
-        ))}
-      </dl>
+          {contact.name ? (
+            <p className="mt-1 truncate text-sm font-medium text-slate-800">
+              {contact.name}
+            </p>
+          ) : null}
+        </div>
+      </div>
+
+      {rows.length > 0 ? (
+        <ul className="mt-3 grid gap-1.5">
+          {rows.map((row) => {
+            const Icon = row.icon;
+            const content = (
+              <>
+                <span className="mt-0.5 shrink-0 text-slate-400">
+                  <Icon />
+                </span>
+                <span className="min-w-0 break-words">{row.value}</span>
+              </>
+            );
+
+            return (
+              <li key={row.key}>
+                {row.href ? (
+                  <a
+                    href={row.href}
+                    className="flex items-start gap-2 rounded-xl px-2 py-1.5 text-sm text-slate-700 transition-colors hover:bg-slate-50 hover:text-slate-950"
+                  >
+                    {content}
+                  </a>
+                ) : (
+                  <div className="flex items-start gap-2 rounded-xl px-2 py-1.5 text-sm text-slate-700">
+                    {content}
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
     </div>
+  );
+}
+
+function ShieldIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 3 5 6v6c0 4.5 2.9 7.4 7 8.5 4.1-1.1 7-4 7-8.5V6l-7-3Z"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinejoin="round"
+      />
+      <path
+        d="m9.5 12 1.8 1.8 3.7-3.8"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function AlertIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 9v4.5M12 17h.01M10.3 4.3 2.8 17.2A2 2 0 0 0 4.5 20h15a2 2 0 0 0 1.7-2.8L13.7 4.3a2 2 0 0 0-3.4 0Z"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function PhoneIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.6a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.5-1.1a2 2 0 0 1 2.1-.4c.8.3 1.7.5 2.6.6a2 2 0 0 1 1.7 2Z"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function MailIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M4 6h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinejoin="round"
+      />
+      <path
+        d="m22 8-10 7L2 8"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function MapPinIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 21s7-5.2 7-11a7 7 0 1 0-14 0c0 5.8 7 11 7 11Z"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.75" />
+    </svg>
   );
 }
 

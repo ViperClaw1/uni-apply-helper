@@ -141,9 +141,9 @@ export function ApplicationTargetsPanel({
     <div className="rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.08),0_8px_30px_rgba(15,23,42,0.04)] ring-1 ring-black/5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-slate-950">Вузы для батча</h3>
+          <h3 className="text-sm font-semibold text-slate-950">Список вузов</h3>
           <p className="mt-1 text-xs text-slate-500">
-            Вставьте URL формы подачи. Ссылка валидируется по схемам вузов.
+            Вставьте ссылку на форму подачи — вуз определится сам.
           </p>
         </div>
         <div className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium tabular-nums text-slate-600">
