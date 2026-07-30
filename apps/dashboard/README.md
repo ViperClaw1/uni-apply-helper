@@ -29,6 +29,7 @@ pnpm dev
 
 `vercel.json` в этой папке запускает `turbo build --filter=@uni-apply/dashboard` из корня монорепо.
 В `turbo.json` для build указаны outputs `.next/**` — без этого Vercel не находит `routes-manifest.json`.
+`API_ORIGIN` / `NEXT_PUBLIC_*` должны быть в `turbo.json` → `tasks.build.env`, иначе Turbo на Vercel их не пробросит в `next build` (rewrites не создадутся).
 
 После фикса turbo outputs: **Redeploy** с очисткой кэша (Deployments → ⋯ → Redeploy → uncheck "Use existing Build Cache" или `vercel --force`).
 
