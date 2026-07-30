@@ -141,6 +141,13 @@ export class WizardNavigator {
     ]);
 
     await this.waitForProcessingDone(page, 30_000);
+
+    // Peek alert/validation BEFORE Ok — dismiss used to wipe the only clue.
+    let dialogPeek = '';
+    if (!advanced) {
+      dialogPeek = await this.peekMessagerText(page);
+    }
+
     await this.dismissBlockingDialogs(page);
     await this.closeDatePickers(page);
     await page.waitForTimeout(500);
@@ -157,6 +164,7 @@ export class WizardNavigator {
         throw new Error(
           'Wizard step did not advance after Next (DOM/URL unchanged). ' +
             `Still on fields: [${afterSig.split('|').slice(0, 12).join(', ')}]` +
+            (dialogPeek ? ` Dialog: ${dialogPeek}` : '') +
             (validation ? ` Validation: ${validation}` : '') +
             (screenshotUrl ? ` Screenshot: ${screenshotUrl}` : ''),
         );
@@ -164,12 +172,39 @@ export class WizardNavigator {
     }
   }
 
+  private async peekMessagerText(page: Page): Promise<string> {
+    return page
+      .evaluate(() => {
+        const wins = [
+          ...document.querySelectorAll(
+            '.messager-body, .messager-window .panel-body, .messager-window',
+          ),
+        ];
+        for (const win of wins) {
+          const style = getComputedStyle(win as HTMLElement);
+          if (style.display === 'none' || style.visibility === 'hidden') {
+            continue;
+          }
+          const t = (win.textContent || '').replace(/\s+/g, ' ').trim();
+          if (
+            !t ||
+            /It'?s processing|please wait|请求正在处理/i.test(t)
+          ) {
+            continue;
+          }
+          return t.slice(0, 300);
+        }
+        return '';
+      })
+      .catch(() => '');
+  }
+
   private async collectValidationHints(page: Page): Promise<string> {
     return page.evaluate(() => {
       const texts: string[] = [];
 
       for (const el of document.querySelectorAll(
-        'span.error:not(:empty), label.error:not(:empty), .error:not(:empty), .tip-error, .validate-error, .messager-body',
+        'span.error:not(:empty), label.error:not(:empty), .error:not(:empty), .tip-error, .validate-error, .messager-body, .validatebox-tip, .tooltip-content, .tooltip',
       )) {
         const t = (el.textContent || '').replace(/\s+/g, ' ').trim();
         // Skip the AJAX spinner copy — it is not a validation error.
@@ -183,6 +218,18 @@ export class WizardNavigator {
         if (!texts.includes(t)) {
           texts.push(t);
         }
+      }
+
+      const invalid = [
+        ...document.querySelectorAll(
+          '.validatebox-invalid, input.validatebox-invalid, select.validatebox-invalid, textarea.validatebox-invalid',
+        ),
+      ]
+        .map((el) => (el as HTMLInputElement).name || (el as HTMLElement).id || '?')
+        .filter(Boolean)
+        .slice(0, 12);
+      if (invalid.length) {
+        texts.push(`invalid: ${invalid.join(', ')}`);
       }
 
       const emptyRequired: string[] = [];

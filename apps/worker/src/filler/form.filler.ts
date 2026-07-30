@@ -1254,7 +1254,78 @@ export class FormFiller {
     ) {
       return this.normalizeDateValue(value);
     }
+    // 17gz: City of Birth must be a short city name — full "village, krai, country"
+    // often fails EasyUI length/pattern without a red asterisk.
+    if (
+      /bornedAddress|city of birth|birth.?city|place of birth/i.test(key)
+    ) {
+      return this.sanitizeCityOfBirth(value);
+    }
+    if (/lastSchool|institution of highest|highest diploma/i.test(key)) {
+      return value.trim().slice(0, 100);
+    }
     return value;
+  }
+
+  /** "Bayevo village, Altai Krai, Russia" → "Bayevo" */
+  private sanitizeCityOfBirth(raw: string): string {
+    let s = raw.replace(/\s+/g, ' ').trim();
+    if (!s) {
+      return 'Unknown';
+    }
+    s = s.split(',')[0]?.trim() || s;
+    s = s
+      .replace(
+        /\s+(village|город|село|деревня|posyolok|settlement)\b.*$/i,
+        '',
+      )
+      .trim();
+    s = s
+      .replace(
+        /\s+(oblast|krai|region|province|district|область|край|район)\b.*$/i,
+        '',
+      )
+      .trim();
+    if (s.length > 50) {
+      s = s.slice(0, 50).trim();
+    }
+    return s || 'Unknown';
+  }
+
+  /**
+   * OCR often misreads DOB year (1998→2018). Age <15 with Bachelor blocks Next
+   * with no red asterisks — silent EasyUI/server reject.
+   */
+  private resolveSaneBirthDate(profile?: StudentProfile): string {
+    const raw = profile?.personal.dateOfBirth?.trim();
+    const normalized = raw ? this.normalizeDateValue(raw) : '';
+    const ageYears = (iso: string): number => {
+      const y = Number(iso.slice(0, 4));
+      if (!Number.isFinite(y)) {
+        return -1;
+      }
+      return new Date().getFullYear() - y;
+    };
+    if (
+      /^\d{4}-\d{2}-\d{2}$/.test(normalized) &&
+      ageYears(normalized) >= 15 &&
+      ageYears(normalized) <= 80
+    ) {
+      return normalized;
+    }
+
+    const eduStart = profile?.education?.[0]?.periodStart?.trim();
+    if (eduStart) {
+      const startYear = Number(this.normalizeDateValue(eduStart).slice(0, 4));
+      if (Number.isFinite(startYear)) {
+        const y = startYear - 18;
+        if (y >= 1950 && y <= new Date().getFullYear() - 15) {
+          return `${y}-01-01`;
+        }
+      }
+    }
+
+    return '2000-01-01';
   }
 
   /** Strip ISO time: 2029-07-10T00:00:00.0 → 2029-07-10 */
@@ -1783,7 +1854,112 @@ export class FormFiller {
     await this.checkRadioGroupNo(page, 'applyEx.inChinaOnApply');
     await this.checkRadioGroupNo(page, 'applyEx.isYiMin');
 
+    // Force-repair values that silently block Save and Next (OCR/profile junk).
+    await this.repairPkuStep1BlockingValues(page, profile);
+
     await this.dismissFormOverlays(page);
+  }
+
+  /**
+   * Always overwrite — OCR Confirm leaves apply.* filled so skip-if-filled
+   * paths never correct bad DOB / long city / overlong school name.
+   */
+  private async repairPkuStep1BlockingValues(
+    page: Page,
+    profile?: StudentProfile,
+  ): Promise<void> {
+    const rawDob = profile?.personal.dateOfBirth?.trim() || '';
+    const birthDate = this.resolveSaneBirthDate(profile);
+    if (rawDob && this.normalizeDateValue(rawDob) !== birthDate) {
+      this.logger.warn(
+        `Step1 DOB repaired: profile/OCR "${rawDob}" → "${birthDate}" (age sanity)`,
+      );
+    }
+
+    const cityRaw =
+      profile?.personal.cityOfBirth?.trim() ||
+      (await page
+        .evaluate(() => {
+          const el = document.querySelector(
+            'input[name="apply.bornedAddress"]',
+          ) as HTMLInputElement | null;
+          return el?.value?.trim() || '';
+        })
+        .catch(() => '')) ||
+      'Unknown';
+    const city = this.sanitizeCityOfBirth(cityRaw);
+    if (cityRaw !== city) {
+      this.logger.warn(`Step1 cityOfBirth sanitized: "${cityRaw}" → "${city}"`);
+    }
+    const schoolRaw =
+      profile?.personal.currentInstitution?.trim() ||
+      profile?.education?.[0]?.institution?.trim() ||
+      'Higher Education Institution';
+    const school = schoolRaw.replace(/\s+/g, ' ').trim().slice(0, 100);
+    const passportExpire = this.normalizeDateValue(
+      profile?.personal.passportExpiry?.trim() || '2030-12-31',
+    );
+
+    await page.evaluate(
+      ({ birthDate: birth, city, school, passportExpire: expire }) => {
+        const jq = (
+          window as unknown as {
+            jQuery?: (el: Element) => {
+              val: (v: string) => { trigger: (e: string) => unknown };
+            };
+          }
+        ).jQuery;
+
+        const forceSet = (name: string, value: string) => {
+          const input = document.querySelector(
+            `input[name="${name}"]`,
+          ) as HTMLInputElement | null;
+          if (!input || !value) {
+            return;
+          }
+          const max =
+            Number(input.getAttribute('maxlength')) ||
+            (() => {
+              const v = input.getAttribute('validate') || '';
+              const m = v.match(/length\[\s*\d+\s*,\s*(\d+)\s*]/);
+              return m ? Number(m[1]) : 0;
+            })();
+          const next = max > 0 ? value.slice(0, max) : value;
+          input.value = next;
+          input.setAttribute('value', next);
+          input.classList.remove('validatebox-invalid');
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+          input.dispatchEvent(new Event('blur', { bubbles: true }));
+          if (typeof jq === 'function') {
+            try {
+              jq(input).val(next).trigger('validate');
+              jq(input).val(next).trigger('change');
+              jq(input).val(next).trigger('blur');
+            } catch {
+              // ignore
+            }
+          }
+        };
+
+        forceSet('apply.bornedDate', birth);
+        forceSet('apply.bornedAddress', city);
+        forceSet('applyEx.lastSchool', school);
+        forceSet('apply.passportExpire', expire);
+
+        // Prefer short city in OCR mirror too (some skins re-copy ocr→apply).
+        forceSet('ocr.bornedAddress', city);
+        forceSet('ocr.bornedDate', birth);
+      },
+      {
+        birthDate,
+        city,
+        school,
+        passportExpire,
+      },
+    );
+
+    await this.closeDatePickers(page);
   }
 
   private is17gzPortal(university: {

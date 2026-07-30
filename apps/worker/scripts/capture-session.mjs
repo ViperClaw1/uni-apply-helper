@@ -43,6 +43,8 @@ await page.goto(university.loginUrl, {
 });
 
 console.log('Headed Chrome (stealth). Залогинься вручную, дождись личного кабинета.');
+console.log('ВАЖНО: capture открывает ПЕРСИСТЕНТНЫЙ profile — старый логин уже внутри.');
+console.log('Если нужен другой аккаунт: Logout → Login новым, проверь имя/email в хедере.');
 console.log('Для SDU/CUCAS: после логина открой раздел заявки, если нужно.');
 console.log('Когда сессия готова — нажми Enter в этом терминале.\n');
 

@@ -798,7 +798,8 @@ async function clickStudyPlanApplySimple(
     ]
       .map((el) => (el.textContent || '').replace(/\s+/g, ' ').trim())
       .join(' ');
-    return /already applied|don't repeatedly apply|不要重复申请|重复申请|已经申请/i.test(
+    // PKU: "You can't repeat the application… 已存在申请单ID : …"
+    return /already applied|don't repeatedly apply|can'?t repeat the application|repeat the application|operation fails|已存在申请|不要重复申请|重复申请|已经申请/i.test(
       text,
     );
   });

@@ -30,14 +30,34 @@ export async function verifyUniversitySession(page, university) {
   }
 
   const onLoginPage = await isLoginPage(page);
+  const identity = await readLoggedInIdentity(page);
 
   return {
     ok: !onLoginPage,
     url,
+    identity,
     reason: onLoginPage
       ? 'Redirected to login — session not valid yet'
       : 'Session looks valid',
   };
+}
+
+/** Best-effort account label from 17gz header (username / email). */
+async function readLoggedInIdentity(page) {
+  return page
+    .evaluate(() => {
+      const body = (document.body?.innerText || '').replace(/\s+/g, ' ').trim();
+      const email = body.match(
+        /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/,
+      )?.[0];
+      // Header pattern: "中文English <user> <email>"
+      const user =
+        body.match(
+          /(?:English|中文)\s+([A-Za-z0-9._-]{2,40})\s+[a-zA-Z0-9._%+-]+@/i,
+        )?.[1] ?? null;
+      return { user, email: email ?? null };
+    })
+    .catch(() => ({ user: null, email: null }));
 }
 
 async function isLoginPage(page) {
@@ -71,12 +91,17 @@ async function isLoginPage(page) {
 }
 
 export function printVerifyResult(university, result) {
+  const who =
+    result.identity?.email || result.identity?.user
+      ? ` as ${[result.identity.user, result.identity.email].filter(Boolean).join(' / ')}`
+      : '';
+
   if (result.ok) {
-    console.log(`\n✓ ${university.displayName}: ${result.reason}`);
+    console.log(`\n✓ ${university.displayName}: ${result.reason}${who}`);
     console.log(`  URL: ${result.url}`);
     return;
   }
 
-  console.log(`\n✗ ${university.displayName}: ${result.reason}`);
+  console.log(`\n✗ ${university.displayName}: ${result.reason}${who}`);
   console.log(`  URL: ${result.url}`);
 }
