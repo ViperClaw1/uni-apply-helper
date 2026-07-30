@@ -263,14 +263,81 @@ export class GeminiClient {
 }
 
 export function parseJsonResponse<T>(raw: string): T {
-  const trimmed = raw.trim();
-  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1]?.trim();
+  const candidates = collectJsonCandidates(raw);
+  let lastError: unknown;
 
-  try {
-    return JSON.parse(fenced ?? trimmed) as T;
-  } catch (error) {
-    throw new Error(
-      `Failed to parse Gemini JSON: ${error instanceof Error ? error.message : 'unknown error'}`,
-    );
+  for (const candidate of candidates) {
+    for (const variant of [candidate, repairGeminiJson(candidate)]) {
+      try {
+        return JSON.parse(variant) as T;
+      } catch (error) {
+        lastError = error;
+      }
+    }
   }
+
+  throw new Error(
+    `Failed to parse Gemini JSON: ${lastError instanceof Error ? lastError.message : 'unknown error'}`,
+  );
+}
+
+function collectJsonCandidates(raw: string): string[] {
+  const trimmed = raw.trim();
+  const out: string[] = [];
+  const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1]?.trim();
+  if (fenced) out.push(fenced);
+  out.push(trimmed);
+  const object = extractBalancedJson(trimmed, '{', '}');
+  if (object) out.push(object);
+  return [...new Set(out.filter(Boolean))];
+}
+
+/** Quote bare ISO dates Gemini often emits as unquoted values (breaks JSON at `T`). */
+function repairGeminiJson(raw: string): string {
+  return raw
+    .replace(/^\uFEFF/, '')
+    .replace(/,\s*([}\]])/g, '$1')
+    .replace(
+      /:\s*(\d{4}-\d{2}-\d{2}T[0-9:.+-Z]+)(?=\s*[,}\]])/g,
+      ': "$1"',
+    )
+    .replace(/:\s*(\d{4}-\d{2}-\d{2})(?=\s*[,}\]])/g, ': "$1"');
+}
+
+function extractBalancedJson(
+  raw: string,
+  open: '{' | '[',
+  close: '}' | ']',
+): string | null {
+  const start = raw.indexOf(open);
+  if (start < 0) return null;
+
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let i = start; i < raw.length; i += 1) {
+    const ch = raw[i];
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+      } else if (ch === '\\') {
+        escaped = true;
+      } else if (ch === '"') {
+        inString = false;
+      }
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+    if (ch === open) depth += 1;
+    if (ch === close) {
+      depth -= 1;
+      if (depth === 0) return raw.slice(start, i + 1);
+    }
+  }
+
+  return null;
 }

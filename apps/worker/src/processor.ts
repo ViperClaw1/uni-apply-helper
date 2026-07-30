@@ -463,11 +463,11 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
         sex: student.sex ?? undefined,
         nationality: student.nationality ?? undefined,
         cityOfBirth: student.cityOfBirth ?? undefined,
-        dateOfBirth: student.dateOfBirth?.toISOString(),
+        dateOfBirth: toDateOnly(student.dateOfBirth),
         chineseName: student.chineseName ?? undefined,
         religion: student.religion ?? undefined,
         passportNo: student.passportNo ?? undefined,
-        passportExpiry: student.passportExpiry?.toISOString(),
+        passportExpiry: toDateOnly(student.passportExpiry),
         consulate: student.consulate ?? undefined,
         maritalStatus: student.maritalStatus ?? undefined,
         email: student.email,
@@ -493,14 +493,14 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
         degree: education.degree ?? undefined,
         institution: education.institution ?? undefined,
         major: education.major ?? undefined,
-        periodStart: education.periodStart?.toISOString(),
-        periodEnd: education.periodEnd?.toISOString(),
+        periodStart: toDateOnly(education.periodStart),
+        periodEnd: toDateOnly(education.periodEnd),
       })),
       workExperience: student.workExperience.map((workExperience: any) => ({
         company: workExperience.company,
         position: workExperience.position ?? undefined,
-        periodStart: workExperience.periodStart?.toISOString(),
-        periodEnd: workExperience.periodEnd?.toISOString(),
+        periodStart: toDateOnly(workExperience.periodStart),
+        periodEnd: toDateOnly(workExperience.periodEnd),
       })),
       languages: student.languageSkills.map((languageSkill: any) => ({
         language: languageSkill.language,
@@ -592,5 +592,17 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
       .filter(Boolean)
       .join(' ');
   }
+}
+
+/** 17gz WdatePicker expects yyyy-MM-dd — never full ISO. */
+function toDateOnly(value?: Date | string | null): string | undefined {
+  if (!value) return undefined;
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return undefined;
+    return value.toISOString().slice(0, 10);
+  }
+  const trimmed = String(value).trim();
+  const iso = trimmed.match(/^(\d{4}-\d{2}-\d{2})/);
+  return iso?.[1] ?? trimmed;
 }
 

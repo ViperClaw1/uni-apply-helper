@@ -263,7 +263,7 @@ export class FormAgent {
             : field.mapsTo) ??
           field.selector,
         type: field.type,
-        value: String(value),
+        value: normalizeHintDate(String(value)),
         required: field.required,
         selector: field.selector,
         labelHint: field.labelHint,
@@ -332,7 +332,7 @@ export class FormAgent {
         mapsTo: mapsTo ?? null,
         label,
         type,
-        value: String(value),
+        value: normalizeHintDate(String(value)),
         required,
       });
     };
@@ -425,4 +425,9 @@ export class FormAgent {
 function decisionNeedsVision(steps: AgentStepResult[]): boolean {
   const recent = steps.slice(-3);
   return recent.length === 3 && recent.every((step) => !step.success);
+}
+
+function normalizeHintDate(value: string): string {
+  const iso = value.trim().match(/^(\d{4}-\d{2}-\d{2})[T\s]/);
+  return iso?.[1] ?? value;
 }

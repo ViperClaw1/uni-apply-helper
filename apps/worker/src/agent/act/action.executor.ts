@@ -16,7 +16,7 @@ export class ActionExecutor {
   async execute(page: Page, action: AgentAction): Promise<void> {
     switch (action.type) {
       case 'fill':
-        await this.resolveLocator(page, action.target).fill(action.value ?? '');
+        await this.fillValue(page, action);
         return;
       case 'select':
         await this.resolveLocator(page, action.target)
@@ -45,6 +45,48 @@ export class ActionExecutor {
       default:
         throw new Error(`Unsupported agent action: ${action.type}`);
     }
+  }
+
+  private async fillValue(page: Page, action: AgentAction): Promise<void> {
+    const raw = action.value ?? '';
+    const value = normalizeDateLike(raw);
+    const locator = this.resolveLocator(page, action.target);
+    const looksLikeDate = isDateLikeValue(value) || isDateTarget(action.target);
+
+    if (looksLikeDate) {
+      const set = await locator
+        .evaluate((el, nextValue) => {
+          const input = el as HTMLInputElement;
+          input.focus();
+          input.value = nextValue;
+          input.setAttribute('value', nextValue);
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+          input.blur();
+          return true;
+        }, value)
+        .catch(() => false);
+
+      await this.closeDatePickers(page);
+      if (set) return;
+    }
+
+    await locator.fill(value);
+    if (looksLikeDate) {
+      await this.closeDatePickers(page);
+    }
+  }
+
+  private async closeDatePickers(page: Page): Promise<void> {
+    await page.keyboard.press('Escape').catch(() => undefined);
+    await page.evaluate(() => {
+      for (const el of document.querySelectorAll(
+        '.WdateDiv, #_my97DP, div[id*="dp"], .datebox-calendar-panel',
+      )) {
+        (el as HTMLElement).style.display = 'none';
+      }
+      (document.activeElement as HTMLElement | null)?.blur?.();
+    });
   }
 
   private async executeUpload(page: Page, action: AgentAction): Promise<void> {
@@ -166,4 +208,24 @@ function extensionFromMime(mime: string): string {
   if (base.includes('jpeg') || base.includes('jpg')) return '.jpg';
   if (base.includes('webp')) return '.webp';
   return '.bin';
+}
+
+function normalizeDateLike(value: string): string {
+  const trimmed = value.trim();
+  const iso = trimmed.match(/^(\d{4}-\d{2}-\d{2})[T\s]/);
+  return iso?.[1] ?? trimmed;
+}
+
+function isDateLikeValue(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}/.test(value.trim());
+}
+
+function isDateTarget(target?: AgentActionTarget): boolean {
+  if (!target) return false;
+  const blob = [target.selector, target.label, target.name, target.placeholder]
+    .filter(Boolean)
+    .join(' ');
+  return /date|borned|birth|expire|expiry|attended|startDate|endDate/i.test(
+    blob,
+  );
 }

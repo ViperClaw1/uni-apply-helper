@@ -2327,8 +2327,10 @@ export class FormFiller {
       profile.personal.currentInstitution?.trim() ||
       'High School';
     const major = edu?.major?.trim() || 'General Studies';
-    const start = edu?.periodStart?.trim() || '2018-09-01';
-    const end = edu?.periodEnd?.trim() || '2022-06-30';
+    const startRaw = this.normalizeDateValue(edu?.periodStart?.trim() || '');
+    const endRaw = this.normalizeDateValue(edu?.periodEnd?.trim() || '');
+    const start = /^\d{4}-\d{2}-\d{2}$/.test(startRaw) ? startRaw : '2018-09-01';
+    const end = /^\d{4}-\d{2}-\d{2}$/.test(endRaw) ? endRaw : '2022-06-30';
     const nationality =
       profile.personal.nationality?.trim() || 'Russian Federation';
     const degreeNeedles = [
