@@ -41,6 +41,13 @@ export const UNIVERSITIES = {
     formUrl: 'https://csu.17gz.org/apply/index.do',
     platform: '17gz',
   },
+  suda: {
+    id: 'suda',
+    displayName: 'Soochow University (SUDA)',
+    loginUrl: 'https://suda.17gz.org/member/login.do',
+    formUrl: 'https://suda.17gz.org/apply/index.do',
+    platform: '17gz',
+  },
 };
 
 export function resolveUniversityId(argv = process.argv.slice(2)) {

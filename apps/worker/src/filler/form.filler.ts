@@ -1792,6 +1792,7 @@ export class FormFiller {
     return (
       university.id === 'pku' ||
       university.id === 'csu' ||
+      university.id === 'suda' ||
       university.id === 'kmmc' ||
       university.id === 'zhengzhou-university' ||
       /(?:^|\.)17gz\.org|kmmc\.cn/i.test(university.formUrl || '')

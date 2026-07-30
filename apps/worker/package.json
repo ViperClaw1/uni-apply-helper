@@ -25,6 +25,8 @@
     "capture:pku-session": "node scripts/capture-pku-session.mjs",
     "capture:csu-session": "node scripts/capture-csu-session.mjs",
     "debug:csu-prewizard": "node scripts/debug-csu-prewizard.mjs",
+    "capture:suda-session": "node scripts/capture-suda-session.mjs",
+    "debug:suda-prewizard": "node scripts/debug-suda-prewizard.mjs",
     "debug:agent-smoke": "node scripts/debug-agent-smoke.mjs",
     "debug:pku-step1": "node scripts/debug-pku-step1-waiver.mjs",
     "debug:pku-steps-2-7": "node scripts/debug-pku-steps-2-7.mjs",

@@ -1,0 +1,1085 @@
+{
+  "id": "suda",
+  "displayName": "Soochow University",
+  "formUrl": "https://suda.17gz.org/apply/index.do",
+  "navigationHints": {
+    "programText": "Self-sponsored",
+    "studentType": "Pre-university Student",
+    "ocrPassportUpload": false
+  },
+  "session": {
+    "loginUrlPattern": "/member/login\\\\.do",
+    "expiredIndicators": [
+      "CSRF attack protection",
+      "Account Sign In"
+    ]
+  },
+  "aliases": [
+    "Soochow University",
+    "Soochow University / Suzhou",
+    "Suzhou University",
+    "SUDA",
+    "suda.17gz.org",
+    "苏州大学",
+    "Soochow Univ"
+  ],
+  "requiredDocuments": [
+    "photo",
+    "passport",
+    "transcript",
+    "medical"
+  ],
+  "fields": [
+    {
+      "selector": "input[type=\"file\"][name=\"photo\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": true,
+      "wizardStep": 1,
+      "documentType": "photo"
+    },
+    {
+      "selector": "input[name=\"apply.lastName\"]",
+      "mapsTo": "personal.surname",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Family Name"
+    },
+    {
+      "selector": "input[name=\"apply.givenName\"]",
+      "mapsTo": "personal.givenName",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Given Name"
+    },
+    {
+      "selector": "input[name=\"apply.name\"]",
+      "mapsTo": "personal.chineseName",
+      "type": "text",
+      "required": false,
+      "wizardStep": 1,
+      "labelHint": "Chinese Name"
+    },
+    {
+      "selector": "input[type=\"radio\"][name=\"apply.sex\"]",
+      "mapsTo": "personal.sex",
+      "type": "radio",
+      "required": true,
+      "wizardStep": 1
+    },
+    {
+      "selector": "input[type=\"radio\"][name=\"apply.marryStatus\"]",
+      "mapsTo": "personal.maritalStatus",
+      "type": "radio",
+      "required": true,
+      "wizardStep": 1,
+      "options": [
+        "Unmarried",
+        "Married"
+      ]
+    },
+    {
+      "selector": "select[name=\"apply.countryId\"]",
+      "mapsTo": "personal.nationality",
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Nationality"
+    },
+    {
+      "selector": "select[name=\"apply.bornedCountryId\"]",
+      "mapsTo": "personal.nationality",
+      "type": "select",
+      "required": false,
+      "wizardStep": 1,
+      "labelHint": "Country or region of birth"
+    },
+    {
+      "selector": "input[name=\"apply.bornedDate\"]",
+      "mapsTo": "personal.dateOfBirth",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Birth Date"
+    },
+    {
+      "selector": "input[name=\"apply.bornedAddress\"]",
+      "mapsTo": "personal.cityOfBirth",
+      "type": "text",
+      "required": false,
+      "wizardStep": 1,
+      "labelHint": "City of Birth"
+    },
+    {
+      "selector": "select[name=\"apply.languageId\"]",
+      "mapsTo": null,
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Native Language",
+      "options": [
+        "Russian",
+        "English",
+        "Chinese"
+      ]
+    },
+    {
+      "selector": "select[name=\"apply.educationId\"]",
+      "mapsTo": null,
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Highest Level of Education Completed",
+      "options": [
+        "Bachelor",
+        "Master",
+        "Dr.",
+        "Senior high"
+      ],
+      "valueMap": {
+        "High school diploma": "Senior high",
+        "High school": "Senior high",
+        "Senior high school": "Senior high",
+        "Bachelor's degree": "Bachelor",
+        "Bachelor": "Bachelor",
+        "Master's degree": "Master",
+        "Master": "Master",
+        "PhD": "Dr.",
+        "Doctorate": "Dr.",
+        "Vocational": "Vocational College"
+      }
+    },
+    {
+      "selector": "input[name=\"applyEx.lastSchool\"]",
+      "mapsTo": "personal.currentInstitution",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Institution of Highest Diploma"
+    },
+    {
+      "selector": "select[name=\"apply.careerId\"]",
+      "mapsTo": null,
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Occupation",
+      "options": [
+        "Student",
+        "Scholars",
+        "Employee",
+        "Others"
+      ]
+    },
+    {
+      "selector": "input[name=\"apply.workplace\"]",
+      "mapsTo": null,
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Current Employer"
+    },
+    {
+      "selector": "select[name=\"apply.religionId\"]",
+      "mapsTo": "personal.religion",
+      "type": "select",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Religion",
+      "options": [
+        "None",
+        "Atheism",
+        "Christianity",
+        "Islam",
+        "Buddhism",
+        "Other"
+      ]
+    },
+    {
+      "selector": "input[type=\"radio\"][name=\"apply.isOversea\"]",
+      "mapsTo": null,
+      "type": "radio",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Are you Ethnic Chinese?",
+      "options": [
+        "No",
+        "Yes"
+      ]
+    },
+    {
+      "selector": "input[type=\"radio\"][name=\"applyEx.inChinaOnApply\"]",
+      "mapsTo": "personal.beenToChina",
+      "type": "radio",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Whether in Chinese mainland now?",
+      "options": [
+        "No",
+        "Yes"
+      ]
+    },
+    {
+      "selector": "select[name=\"apply.passportTypeId\"], select[name=\"apply.hzlb\"], select[name=\"apply.passportType\"], select[name=\"apply.hslb\"]",
+      "mapsTo": null,
+      "type": "select",
+      "required": false,
+      "wizardStep": 1,
+      "labelHint": "Passport Type",
+      "options": [
+        "Ordinary Passport",
+        "Ordinary",
+        "Private Passport",
+        "Diplomatic Passport",
+        "Service Passport"
+      ]
+    },
+    {
+      "selector": "input[name=\"apply.passportNo\"]",
+      "mapsTo": "personal.passportNo",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Passport No"
+    },
+    {
+      "selector": "input[name=\"apply.passportExpire\"]",
+      "mapsTo": "personal.passportExpiry",
+      "type": "text",
+      "required": true,
+      "wizardStep": 1,
+      "labelHint": "Passport Expiry Date"
+    },
+    {
+      "selector": "input[name=\"apply.fieldName\"]",
+      "mapsTo": null,
+      "type": "text",
+      "required": false,
+      "wizardStep": 2,
+      "labelHint": "Area of Research (in Chinese)"
+    },
+    {
+      "selector": "input[name=\"apply.fieldEnglish\"]",
+      "mapsTo": null,
+      "type": "text",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Area of Research (in English)"
+    },
+    {
+      "selector": "input[name=\"apply.studyStartDate\"]",
+      "mapsTo": null,
+      "type": "text",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Duration of Study Start"
+    },
+    {
+      "selector": "input[name=\"apply.studyEndDate\"]",
+      "mapsTo": null,
+      "type": "text",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Duration of Study End"
+    },
+    {
+      "selector": "input[name=\"apply.advisor\"]",
+      "mapsTo": null,
+      "type": "text",
+      "required": false,
+      "wizardStep": 2,
+      "labelHint": "Supervisor Chinese Name"
+    },
+    {
+      "selector": "input[name=\"apply.advisorEn\"]",
+      "mapsTo": null,
+      "type": "text",
+      "required": false,
+      "wizardStep": 2,
+      "labelHint": "Supervisor English Name"
+    },
+    {
+      "selector": "input[name=\"apply.advisorConnect\"]",
+      "mapsTo": null,
+      "type": "text",
+      "required": false,
+      "wizardStep": 2,
+      "labelHint": "Supervisor Contact"
+    },
+    {
+      "selector": "select[name=\"apply.languageSkillId\"]",
+      "mapsTo": null,
+      "type": "select",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Chinese Language Proficiency",
+      "options": [
+        "None",
+        "Poor",
+        "Fair",
+        "Good",
+        "Excellent"
+      ]
+    },
+    {
+      "selector": "select[name=\"apply.hskId\"]",
+      "mapsTo": null,
+      "type": "select",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Level of HSK",
+      "options": [
+        "None",
+        "HSK LEVEL 1",
+        "HSK LEVEL 2",
+        "HSK LEVEL 3",
+        "HSK LEVEL 4",
+        "HSK LEVEL 5",
+        "HSK LEVEL 6",
+        "HSK LEVEL 7",
+        "HSK LEVEL 8",
+        "HSK LEVEL 9"
+      ]
+    },
+    {
+      "selector": "select[name=\"apply.hskOralId\"]",
+      "mapsTo": null,
+      "type": "select",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Level of HSKK",
+      "options": [
+        "None",
+        "Primary",
+        "Junior",
+        "Senior"
+      ]
+    },
+    {
+      "selector": "select[name=\"apply.englishLanguageSkillId\"]",
+      "mapsTo": null,
+      "type": "select",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "English Language Proficiency",
+      "options": [
+        "Good",
+        "Excellent",
+        "Fair",
+        "Poor",
+        "None"
+      ]
+    },
+    {
+      "selector": "select[name=\"apply.yydjzs\"]",
+      "mapsTo": null,
+      "type": "select",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Certificate of English Proficiency",
+      "options": [
+        "Native Language",
+        "Native Speaker",
+        "IELTS",
+        "TOEFL",
+        "Other",
+        "None"
+      ]
+    },
+    {
+      "selector": "input[name=\"apply.yydjzsScore\"]",
+      "mapsTo": null,
+      "type": "text",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "English Certificate Score"
+    },
+    {
+      "selector": "input[name=\"apply.yydjzsIssueDate\"]",
+      "mapsTo": null,
+      "type": "text",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "English Certificate Issue Date"
+    },
+    {
+      "selector": "input[name=\"apply.guarantorEnname\"]",
+      "mapsTo": "guarantor.name",
+      "type": "text",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Recommender Name"
+    },
+    {
+      "selector": "input[name=\"apply.guarRelation\"]",
+      "mapsTo": "guarantor.relationship",
+      "type": "text",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Relationship with the applicant"
+    },
+    {
+      "selector": "input[name=\"apply.guarWorkplace\"]",
+      "mapsTo": "guarantor.company",
+      "type": "text",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Organization"
+    },
+    {
+      "selector": "input[name=\"apply.guarPhone\"]",
+      "mapsTo": "guarantor.phone",
+      "type": "text",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Phone Number"
+    },
+    {
+      "selector": "input[name=\"apply.guarMobile\"]",
+      "mapsTo": "guarantor.phone",
+      "type": "text",
+      "required": false,
+      "wizardStep": 2,
+      "labelHint": "Mobile"
+    },
+    {
+      "selector": "input[name=\"apply.guarEmail\"]",
+      "mapsTo": "guarantor.email",
+      "type": "text",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Email"
+    },
+    {
+      "selector": "select[name=\"apply.guarCountryId\"]",
+      "mapsTo": "guarantor.nationality",
+      "type": "select",
+      "required": false,
+      "wizardStep": 2,
+      "labelHint": "Nationality",
+      "options": [
+        "Russian Federation",
+        "Russia",
+        "China"
+      ]
+    },
+    {
+      "selector": "input[name=\"apply.guarCareer\"]",
+      "mapsTo": "guarantor.position",
+      "type": "text",
+      "required": false,
+      "wizardStep": 2,
+      "labelHint": "Job Title"
+    },
+    {
+      "selector": "input[name=\"apply.guarAddress\"]",
+      "mapsTo": "guarantor.homeAddress",
+      "type": "text",
+      "required": false,
+      "wizardStep": 2,
+      "labelHint": "Address"
+    },
+    {
+      "selector": "input[name=\"apply.guarSecEnname\"]",
+      "mapsTo": [
+        "emergencyContact.name",
+        "guarantor.name"
+      ],
+      "type": "text",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Recommender #2 Name"
+    },
+    {
+      "selector": "input[name=\"apply.guarSecRelative\"]",
+      "mapsTo": [
+        "emergencyContact.relationship",
+        "guarantor.relationship"
+      ],
+      "type": "text",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Recommender #2 Relationship"
+    },
+    {
+      "selector": "input[name=\"apply.guarSecWork\"]",
+      "mapsTo": [
+        "emergencyContact.company",
+        "guarantor.company"
+      ],
+      "type": "text",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Recommender #2 Organization"
+    },
+    {
+      "selector": "input[name=\"apply.guarMobile2\"]",
+      "mapsTo": [
+        "emergencyContact.phone",
+        "guarantor.phone"
+      ],
+      "type": "text",
+      "required": false,
+      "wizardStep": 2,
+      "labelHint": "Recommender #2 Mobile"
+    },
+    {
+      "selector": "input[name=\"apply.guarSecPhone\"]",
+      "mapsTo": [
+        "emergencyContact.phone",
+        "guarantor.phone"
+      ],
+      "type": "text",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Recommender #2 Phone"
+    },
+    {
+      "selector": "input[name=\"apply.guarSecEmail\"]",
+      "mapsTo": [
+        "emergencyContact.email",
+        "guarantor.email"
+      ],
+      "type": "text",
+      "required": true,
+      "wizardStep": 2,
+      "labelHint": "Recommender #2 Email"
+    },
+    {
+      "selector": "select[name=\"apply.guarCountryId2\"]",
+      "mapsTo": [
+        "emergencyContact.nationality",
+        "guarantor.nationality",
+        "personal.nationality"
+      ],
+      "type": "select",
+      "required": false,
+      "wizardStep": 2,
+      "labelHint": "Recommender #2 Nationality",
+      "options": [
+        "Russian Federation",
+        "Russia",
+        "China"
+      ]
+    },
+    {
+      "selector": "input[name=\"apply.guarAddress2\"]",
+      "mapsTo": [
+        "emergencyContact.homeAddress",
+        "guarantor.homeAddress",
+        "personal.permanentAddress"
+      ],
+      "type": "text",
+      "required": false,
+      "wizardStep": 2,
+      "labelHint": "Recommender #2 Address"
+    },
+    {
+      "selector": "input[name=\"sh.startDate\"]",
+      "mapsTo": "education.0.periodStart",
+      "type": "text",
+      "required": false,
+      "wizardStep": 3,
+      "labelHint": "Study Start Date"
+    },
+    {
+      "selector": "input[name=\"sh.endDate\"]",
+      "mapsTo": "education.0.periodEnd",
+      "type": "text",
+      "required": false,
+      "wizardStep": 3,
+      "labelHint": "Study End Date"
+    },
+    {
+      "selector": "input[name=\"sh.studyPlace\"]",
+      "mapsTo": "education.0.institution",
+      "type": "text",
+      "required": false,
+      "wizardStep": 3,
+      "labelHint": "Institution"
+    },
+    {
+      "selector": "select[name=\"sh.countryId\"]",
+      "mapsTo": "personal.nationality",
+      "type": "select",
+      "required": true,
+      "wizardStep": 3,
+      "labelHint": "Institute Location"
+    },
+    {
+      "selector": "input[name=\"sh.stuhisMajor\"]",
+      "mapsTo": "education.0.major",
+      "type": "text",
+      "required": false,
+      "wizardStep": 3
+    },
+    {
+      "selector": "select[name=\"sh.educationId\"]",
+      "mapsTo": "education.0.degree",
+      "type": "select",
+      "required": true,
+      "wizardStep": 3,
+      "labelHint": "Education Level",
+      "options": [
+        "Bachelor",
+        "Master",
+        "Dr.",
+        "Senior high",
+        "Vocational College"
+      ],
+      "valueMap": {
+        "High school diploma": "Senior high",
+        "High school": "Senior high",
+        "Senior high school": "Senior high",
+        "Bachelor's degree": "Bachelor",
+        "Bachelor": "Bachelor",
+        "Master's degree": "Master",
+        "Master": "Master",
+        "PhD": "Dr.",
+        "Doctorate": "Dr.",
+        "Vocational": "Vocational College"
+      }
+    },
+    {
+      "selector": "input[type=\"radio\"][name=\"applyEx.haveStudiedInChina\"]",
+      "mapsTo": "personal.studiedInChina",
+      "type": "radio",
+      "required": true,
+      "wizardStep": 3,
+      "labelHint": "Have you ever studied in China",
+      "options": [
+        "No",
+        "Yes"
+      ]
+    },
+    {
+      "selector": "input[type=\"radio\"][name=\"haveWorkHistory\"]",
+      "mapsTo": null,
+      "type": "radio",
+      "required": false,
+      "wizardStep": 3,
+      "labelHint": "Work History",
+      "options": [
+        "No",
+        "Yes"
+      ]
+    },
+    {
+      "selector": "input[type=\"radio\"][name=\"applyEx.hasCriminalRecord\"]",
+      "mapsTo": null,
+      "type": "radio",
+      "required": true,
+      "wizardStep": 4,
+      "labelHint": "Criminal Record",
+      "options": [
+        "No",
+        "Yes"
+      ]
+    },
+    {
+      "selector": "input[name=\"fm.name\"]",
+      "mapsTo": "familyMembers.0.fullName",
+      "type": "text",
+      "required": true,
+      "wizardStep": 4,
+      "labelHint": "Family Member Name"
+    },
+    {
+      "selector": "input[name=\"fm.phone\"]",
+      "mapsTo": [
+        "familyMembers.0.phone",
+        "personal.phone"
+      ],
+      "type": "text",
+      "required": true,
+      "wizardStep": 4,
+      "labelHint": "Family Member Phone"
+    },
+    {
+      "selector": "input[name=\"fm.email\"]",
+      "mapsTo": [
+        "familyMembers.0.email",
+        "personal.email"
+      ],
+      "type": "text",
+      "required": true,
+      "wizardStep": 4,
+      "labelHint": "Family Member Email"
+    },
+    {
+      "selector": "input[name=\"fm.duty\"]",
+      "mapsTo": "familyMembers.0.position",
+      "type": "text",
+      "required": true,
+      "wizardStep": 4,
+      "labelHint": "Family Member Position"
+    },
+    {
+      "selector": "input[name=\"fm.workPlace\"]",
+      "mapsTo": "familyMembers.0.company",
+      "type": "text",
+      "required": true,
+      "wizardStep": 4,
+      "labelHint": "Family Member Work Place"
+    },
+    {
+      "selector": "input[name=\"apply.emergencyName\"]",
+      "mapsTo": [
+        "emergencyContact.name",
+        "guarantor.name"
+      ],
+      "type": "text",
+      "required": true,
+      "wizardStep": 4,
+      "labelHint": "Emergency Contact Name"
+    },
+    {
+      "selector": "input[name=\"apply.emergencyPhone\"]",
+      "mapsTo": [
+        "emergencyContact.phone",
+        "guarantor.phone",
+        "personal.phone"
+      ],
+      "type": "text",
+      "required": false,
+      "wizardStep": 4
+    },
+    {
+      "selector": "input[name=\"apply.emergencyMobile\"]",
+      "mapsTo": [
+        "emergencyContact.phone",
+        "guarantor.phone",
+        "personal.phone"
+      ],
+      "type": "text",
+      "required": true,
+      "wizardStep": 4,
+      "labelHint": "Emergency Mobile"
+    },
+    {
+      "selector": "input[name=\"apply.emergencyEmail\"]",
+      "mapsTo": [
+        "emergencyContact.email",
+        "guarantor.email",
+        "personal.email"
+      ],
+      "type": "text",
+      "required": false,
+      "wizardStep": 4
+    },
+    {
+      "selector": "input[name=\"apply.emergencyAddress\"]",
+      "mapsTo": [
+        "emergencyContact.homeAddress",
+        "guarantor.homeAddress",
+        "personal.permanentAddress"
+      ],
+      "type": "text",
+      "required": true,
+      "wizardStep": 4,
+      "labelHint": "Guarantor Address"
+    },
+    {
+      "selector": "input[name=\"apply.emergencyZip\"]",
+      "mapsTo": "personal.postCode",
+      "type": "text",
+      "required": true,
+      "wizardStep": 4,
+      "labelHint": "Emergency Zip"
+    },
+    {
+      "selector": "input[name=\"apply.selfSupporter\"]",
+      "mapsTo": "personal.fullName",
+      "type": "text",
+      "required": true,
+      "wizardStep": 4,
+      "labelHint": "Financial Supporter Name"
+    },
+    {
+      "selector": "input[name=\"apply.selfphone\"]",
+      "mapsTo": "personal.phone",
+      "type": "text",
+      "required": true,
+      "wizardStep": 4,
+      "labelHint": "Financial Supporter Tel"
+    },
+    {
+      "selector": "input[name=\"apply.selfwork\"]",
+      "mapsTo": "personal.currentInstitution",
+      "type": "text",
+      "required": true,
+      "wizardStep": 4,
+      "labelHint": "Financial Supporter Organization"
+    },
+    {
+      "selector": "input[name=\"apply.ssrelative\"]",
+      "mapsTo": "guarantor.relationship",
+      "type": "text",
+      "required": false,
+      "wizardStep": 4,
+      "labelHint": "Relationship with applicant"
+    },
+    {
+      "selector": "input[name=\"apply.selfaddress\"]",
+      "mapsTo": "personal.permanentAddress",
+      "type": "text",
+      "required": false,
+      "wizardStep": 4
+    },
+    {
+      "selector": "input[name=\"apply.selfemail\"]",
+      "mapsTo": "personal.email",
+      "type": "text",
+      "required": false,
+      "wizardStep": 4
+    },
+    {
+      "selector": "input[name=\"apply.homePhone\"]",
+      "mapsTo": "personal.phone",
+      "type": "text",
+      "required": true,
+      "wizardStep": 5,
+      "labelHint": "Phone Number"
+    },
+    {
+      "selector": "input[name=\"apply.homeMobile\"]",
+      "mapsTo": "personal.phone",
+      "type": "text",
+      "required": true,
+      "wizardStep": 5,
+      "labelHint": "Mobile"
+    },
+    {
+      "selector": "input[name=\"apply.homeAddress\"]",
+      "mapsTo": "personal.permanentAddress",
+      "type": "text",
+      "required": true,
+      "wizardStep": 5,
+      "labelHint": "Street Address"
+    },
+    {
+      "selector": "input[name=\"apply.homeZip\"]",
+      "mapsTo": "personal.postCode",
+      "type": "text",
+      "required": true,
+      "wizardStep": 5,
+      "labelHint": "Zip Code"
+    },
+    {
+      "selector": "input[name=\"apply.homeCity\"]",
+      "mapsTo": "personal.cityOfBirth",
+      "type": "text",
+      "required": true,
+      "wizardStep": 5,
+      "labelHint": "City/Province"
+    },
+    {
+      "selector": "select[name=\"apply.homeCountryId\"]",
+      "mapsTo": "personal.nationality",
+      "type": "select",
+      "required": true,
+      "wizardStep": 5,
+      "labelHint": "Home Country"
+    },
+    {
+      "selector": "input[type=\"radio\"][name=\"apply.isSame\"]",
+      "mapsTo": null,
+      "type": "radio",
+      "required": true,
+      "wizardStep": 5,
+      "labelHint": "Same as the Permanent address",
+      "options": [
+        "Same as the Permanent address",
+        "Other"
+      ]
+    },
+    {
+      "selector": "input[name=\"apply.contactPhone\"]",
+      "mapsTo": "personal.phone",
+      "type": "text",
+      "required": false,
+      "wizardStep": 5,
+      "labelHint": "Phone/Mobile Number"
+    },
+    {
+      "selector": "input[name=\"apply.contactAddress\"]",
+      "mapsTo": "personal.permanentAddress",
+      "type": "text",
+      "required": false,
+      "wizardStep": 5
+    },
+    {
+      "selector": "input[name=\"apply.contactZip\"]",
+      "mapsTo": "personal.postCode",
+      "type": "text",
+      "required": false,
+      "wizardStep": 5
+    },
+    {
+      "selector": "input[name=\"apply.receiverName\"]",
+      "mapsTo": "personal.fullName",
+      "type": "text",
+      "required": true,
+      "wizardStep": 5,
+      "labelHint": "Receiver Name"
+    },
+    {
+      "selector": "input[name=\"apply.receiverMobile\"]",
+      "mapsTo": "personal.phone",
+      "type": "text",
+      "required": true,
+      "wizardStep": 5
+    },
+    {
+      "selector": "input[name=\"apply.receiverCity\"]",
+      "mapsTo": "personal.cityOfBirth",
+      "type": "text",
+      "required": true,
+      "wizardStep": 5
+    },
+    {
+      "selector": "select[name=\"apply.receiverCountryId\"]",
+      "mapsTo": "personal.nationality",
+      "type": "select",
+      "required": true,
+      "wizardStep": 5
+    },
+    {
+      "selector": "input[name=\"apply.receiverAddress\"]",
+      "mapsTo": "personal.permanentAddress",
+      "type": "text",
+      "required": true,
+      "wizardStep": 5
+    },
+    {
+      "selector": "input[name=\"apply.receiverZip\"]",
+      "mapsTo": "personal.postCode",
+      "type": "text",
+      "required": true,
+      "wizardStep": 5
+    },
+    {
+      "selector": "input[type=\"radio\"][name=\"apply.receiverType\"]",
+      "mapsTo": null,
+      "type": "radio",
+      "required": true,
+      "wizardStep": 5,
+      "labelHint": "Collect from Peking University in Person",
+      "options": [
+        "Collect from Peking University in Person",
+        "in Person",
+        "Collect from"
+      ]
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_passportImage\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": true,
+      "wizardStep": 6,
+      "documentType": "passport",
+      "labelHint": "Passport"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_8135227092\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6,
+      "labelHint": "China Scholastic"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_HighstEducationImage\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6,
+      "documentType": "diploma",
+      "labelHint": "Diploma"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_scoreImage\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6,
+      "documentType": "transcript",
+      "labelHint": "Transcript"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_152170289\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6,
+      "documentType": "personal_statement",
+      "labelHint": "Personal Statement"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_158931292\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6,
+      "documentType": "language_certificate",
+      "labelHint": "English Language"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_checkBodyreport\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6,
+      "documentType": "medical",
+      "labelHint": "Physical Examination"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_115623117\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6,
+      "labelHint": "Non-criminal"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_115623116\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6,
+      "labelHint": "Guardian"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_158951430\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_appendFile\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6,
+      "labelHint": "Other Documents"
+    }
+  ],
+  "wizard": {
+    "totalSteps": 7,
+    "nextButtonSelector": "input[value=\"Save and Next\"], input[value=\"Next\"], input[value=\"下一步\"], input[value=\"保存并下一步\"]",
+    "submitButtonSelector": "input[value=\"Submit\"], input[value=\"提交\"], input[value=\"Save and Next\"], input[value=\"保存并下一步\"]"
+  },
+  "agent": {
+    "fillMode": "hybrid",
+    "maxSteps": 40,
+    "useVision": false,
+    "fallbackEnabled": true,
+    "goal": "Complete and submit the Soochow University online application form"
+  },
+  "requiresEssay": false,
+  "notes": "17gz twin of CSU/PKU. Pre-wizard: Notes → Program (Self-sponsored) → Student type (Pre-university) → Study Plan Apply. Wizard fields reuse 17gz names; verify attachTypeIds after first live capture. Default study plan hint = English foundation (MBBS).",
+  "defaultProgram": "foundation program Eng"
+}
