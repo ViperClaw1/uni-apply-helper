@@ -25,8 +25,10 @@ export interface StudentProfile {
         desiredField?: string;
     };
     education: Array<{
-        degree: string;
-        institution: string;
+        /** 'school' = среднее; 'higher' = высшее (при подаче в магистратуру+) */
+        level?: 'school' | 'higher';
+        degree?: string;
+        institution?: string;
         major?: string;
         periodStart?: string;
         periodEnd?: string;

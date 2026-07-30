@@ -47,8 +47,10 @@ model Education {
   id          String    @id @default(uuid())
   studentId   String
   student     Student   @relation(fields: [studentId], references: [id])
-  degree      String
-  institution String
+  /// 'school' | 'higher' — school = среднее, higher = высшее (магистратура+)
+  level       String?
+  degree      String?
+  institution String?
   major       String?
   periodStart DateTime?
   periodEnd   DateTime?

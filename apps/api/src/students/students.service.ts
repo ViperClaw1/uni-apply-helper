@@ -13,6 +13,7 @@ type ApplicationTargetInput = {
 };
 
 type EducationInput = {
+  level?: string;
   degree?: string;
   institution?: string;
   major?: string;
@@ -92,16 +93,7 @@ export class StudentsService {
           ? String(data.personal.desiredField).trim() || null
           : null,
         education: {
-          create:
-            this.toArray<EducationInput>(data.education)
-              .filter((education) => education?.degree && education?.institution)
-              .map((education) => ({
-                degree: education.degree!,
-                institution: education.institution!,
-                major: education.major,
-                periodStart: this.toDate(education.periodStart),
-                periodEnd: this.toDate(education.periodEnd),
-              })) ?? [],
+          create: this.buildEducationCreates(data.education),
         },
         languageSkills: {
           create: [
@@ -197,9 +189,15 @@ export class StudentsService {
         studiedInChina: student.studiedInChina,
         desiredField: student.desiredField ?? undefined,
       },
-      education: student.education.map((education) => ({
-        degree: education.degree,
-        institution: education.institution,
+      education: [...student.education]
+        .sort((a, b) => this.educationRank(a.level) - this.educationRank(b.level))
+        .map((education) => ({
+        level:
+          education.level === 'school' || education.level === 'higher'
+            ? education.level
+            : undefined,
+        degree: education.degree ?? undefined,
+        institution: education.institution ?? undefined,
         major: education.major ?? undefined,
         periodStart: education.periodStart?.toISOString(),
         periodEnd: education.periodEnd?.toISOString(),
@@ -384,6 +382,86 @@ export class StudentsService {
     }
 
     return this.getFullProfile(studentId);
+  }
+
+  private buildEducationCreates(raw: unknown) {
+    const entries = this.toArray<EducationInput>(
+      raw as EducationInput[] | undefined,
+    );
+    // Webhook: [0]=school (institution/periods + degree/major), [1]=higher (institution/periods)
+    const school = entries[0];
+    const higher = entries[1];
+
+    const schoolInstitution = school?.institution?.trim() || undefined;
+    const higherInstitution = higher?.institution?.trim() || undefined;
+    const hasHigherPeriods = Boolean(
+      higher?.periodStart || higher?.periodEnd,
+    );
+    const hasHigher = hasHigherPeriods || Boolean(higherInstitution);
+    const hasSchoolPeriods = Boolean(
+      school?.periodStart || school?.periodEnd,
+    );
+    const degree = school?.degree?.trim() || undefined;
+    const major = school?.major?.trim() || undefined;
+
+    const creates: Array<{
+      level: string;
+      degree: string | null;
+      institution: string | null;
+      major: string | null;
+      periodStart: Date | null;
+      periodEnd: Date | null;
+    }> = [];
+
+    if (hasHigher) {
+      // education.0 in profile = highest (uni schemas / fillers)
+      creates.push({
+        level: 'higher',
+        degree: degree ?? null,
+        institution: higherInstitution ?? null,
+        major: major ?? null,
+        periodStart: this.toDate(higher?.periodStart),
+        periodEnd: this.toDate(higher?.periodEnd),
+      });
+
+      if (hasSchoolPeriods || schoolInstitution) {
+        creates.push({
+          level: 'school',
+          degree: null,
+          institution: schoolInstitution ?? null,
+          major: null,
+          periodStart: this.toDate(school?.periodStart),
+          periodEnd: this.toDate(school?.periodEnd),
+        });
+      }
+    } else if (hasSchoolPeriods || schoolInstitution || degree) {
+      creates.push({
+        level: 'school',
+        degree: degree ?? null,
+        institution: schoolInstitution ?? null,
+        major: major ?? null,
+        periodStart: this.toDate(school?.periodStart),
+        periodEnd: this.toDate(school?.periodEnd),
+      });
+    }
+
+    return creates.filter(
+      (education) =>
+        education.degree ||
+        education.institution ||
+        education.periodStart ||
+        education.periodEnd,
+    );
+  }
+
+  private educationRank(level?: string | null) {
+    if (level === 'higher') {
+      return 0;
+    }
+    if (level === 'school') {
+      return 1;
+    }
+    return 2;
   }
 
   private hasContactData(contact?: ContactInput) {

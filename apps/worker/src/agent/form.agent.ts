@@ -11,6 +11,7 @@ import {
   type FieldConfig,
   type StudentProfile,
   type UniversitySchema,
+  primaryEducation,
 } from '@uni-apply/shared';
 import type { Page } from 'playwright';
 import { resolveMaxAgentSteps, shouldUseVision } from './agent.config.js';
@@ -370,7 +371,7 @@ export class FormAgent {
     );
     push('Post Code', 'text', p.postCode, false);
 
-    const edu = profile.education?.[0];
+    const edu = primaryEducation(profile);
     if (edu) {
       push('School Name / Institution', 'text', edu.institution, true);
       push('Field of Study / Major', 'text', edu.major ?? 'General Studies', false);

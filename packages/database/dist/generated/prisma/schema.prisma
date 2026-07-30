@@ -29,6 +29,7 @@ model Student {
   currentInstitution String?
   beenToChina        Boolean   @default(false)
   studiedInChina     Boolean   @default(false)
+  desiredField       String?
   createdAt          DateTime  @default(now())
 
   education          Education[]
@@ -46,8 +47,10 @@ model Education {
   id          String    @id @default(uuid())
   studentId   String
   student     Student   @relation(fields: [studentId], references: [id])
-  degree      String
-  institution String
+  /// 'school' | 'higher' — school = среднее, higher = высшее (магистратура+)
+  level       String?
+  degree      String?
+  institution String?
   major       String?
   periodStart DateTime?
   periodEnd   DateTime?

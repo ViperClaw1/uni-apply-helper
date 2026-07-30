@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { FieldConfig, StudentProfile, UniversitySchema } from '@uni-apply/shared';
+import { primaryEducation } from '@uni-apply/shared';
 import type { Locator, Page } from 'playwright';
 import { resolveFillMode, isAgentFallbackEnabled } from '../agent/agent.config.js';
 import { FormAgent } from '../agent/form.agent.js';
@@ -2320,7 +2321,7 @@ export class FormFiller {
     await this.dismissFormOverlays(page);
     await this.closeDatePickers(page);
 
-    const edu = profile.education?.[0];
+    const edu = primaryEducation(profile);
     const school =
       edu?.institution?.trim() ||
       profile.personal.currentInstitution?.trim() ||

@@ -2318,6 +2318,7 @@ export namespace Prisma {
     currentInstitution: string | null
     beenToChina: boolean | null
     studiedInChina: boolean | null
+    desiredField: string | null
     createdAt: Date | null
   }
 
@@ -2343,6 +2344,7 @@ export namespace Prisma {
     currentInstitution: string | null
     beenToChina: boolean | null
     studiedInChina: boolean | null
+    desiredField: string | null
     createdAt: Date | null
   }
 
@@ -2368,6 +2370,7 @@ export namespace Prisma {
     currentInstitution: number
     beenToChina: number
     studiedInChina: number
+    desiredField: number
     createdAt: number
     _all: number
   }
@@ -2395,6 +2398,7 @@ export namespace Prisma {
     currentInstitution?: true
     beenToChina?: true
     studiedInChina?: true
+    desiredField?: true
     createdAt?: true
   }
 
@@ -2420,6 +2424,7 @@ export namespace Prisma {
     currentInstitution?: true
     beenToChina?: true
     studiedInChina?: true
+    desiredField?: true
     createdAt?: true
   }
 
@@ -2445,6 +2450,7 @@ export namespace Prisma {
     currentInstitution?: true
     beenToChina?: true
     studiedInChina?: true
+    desiredField?: true
     createdAt?: true
     _all?: true
   }
@@ -2543,6 +2549,7 @@ export namespace Prisma {
     currentInstitution: string | null
     beenToChina: boolean
     studiedInChina: boolean
+    desiredField: string | null
     createdAt: Date
     _count: StudentCountAggregateOutputType | null
     _min: StudentMinAggregateOutputType | null
@@ -2585,6 +2592,7 @@ export namespace Prisma {
     currentInstitution?: boolean
     beenToChina?: boolean
     studiedInChina?: boolean
+    desiredField?: boolean
     createdAt?: boolean
     education?: boolean | Student$educationArgs<ExtArgs>
     workExperience?: boolean | Student$workExperienceArgs<ExtArgs>
@@ -2620,6 +2628,7 @@ export namespace Prisma {
     currentInstitution?: boolean
     beenToChina?: boolean
     studiedInChina?: boolean
+    desiredField?: boolean
     createdAt?: boolean
   }, ExtArgs["result"]["student"]>
 
@@ -2645,6 +2654,7 @@ export namespace Prisma {
     currentInstitution?: boolean
     beenToChina?: boolean
     studiedInChina?: boolean
+    desiredField?: boolean
     createdAt?: boolean
   }, ExtArgs["result"]["student"]>
 
@@ -2670,10 +2680,11 @@ export namespace Prisma {
     currentInstitution?: boolean
     beenToChina?: boolean
     studiedInChina?: boolean
+    desiredField?: boolean
     createdAt?: boolean
   }
 
-  export type StudentOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "surname" | "givenName" | "sex" | "nationality" | "cityOfBirth" | "dateOfBirth" | "chineseName" | "religion" | "passportNo" | "passportExpiry" | "consulate" | "maritalStatus" | "email" | "phone" | "hobby" | "permanentAddress" | "postCode" | "currentInstitution" | "beenToChina" | "studiedInChina" | "createdAt", ExtArgs["result"]["student"]>
+  export type StudentOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "surname" | "givenName" | "sex" | "nationality" | "cityOfBirth" | "dateOfBirth" | "chineseName" | "religion" | "passportNo" | "passportExpiry" | "consulate" | "maritalStatus" | "email" | "phone" | "hobby" | "permanentAddress" | "postCode" | "currentInstitution" | "beenToChina" | "studiedInChina" | "desiredField" | "createdAt", ExtArgs["result"]["student"]>
   export type StudentInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     education?: boolean | Student$educationArgs<ExtArgs>
     workExperience?: boolean | Student$workExperienceArgs<ExtArgs>
@@ -2724,6 +2735,7 @@ export namespace Prisma {
       currentInstitution: string | null
       beenToChina: boolean
       studiedInChina: boolean
+      desiredField: string | null
       createdAt: Date
     }, ExtArgs["result"]["student"]>
     composites: {}
@@ -3178,6 +3190,7 @@ export namespace Prisma {
     readonly currentInstitution: FieldRef<"Student", 'String'>
     readonly beenToChina: FieldRef<"Student", 'Boolean'>
     readonly studiedInChina: FieldRef<"Student", 'Boolean'>
+    readonly desiredField: FieldRef<"Student", 'String'>
     readonly createdAt: FieldRef<"Student", 'DateTime'>
   }
     
@@ -3809,6 +3822,7 @@ export namespace Prisma {
   export type EducationMinAggregateOutputType = {
     id: string | null
     studentId: string | null
+    level: string | null
     degree: string | null
     institution: string | null
     major: string | null
@@ -3819,6 +3833,7 @@ export namespace Prisma {
   export type EducationMaxAggregateOutputType = {
     id: string | null
     studentId: string | null
+    level: string | null
     degree: string | null
     institution: string | null
     major: string | null
@@ -3829,6 +3844,7 @@ export namespace Prisma {
   export type EducationCountAggregateOutputType = {
     id: number
     studentId: number
+    level: number
     degree: number
     institution: number
     major: number
@@ -3841,6 +3857,7 @@ export namespace Prisma {
   export type EducationMinAggregateInputType = {
     id?: true
     studentId?: true
+    level?: true
     degree?: true
     institution?: true
     major?: true
@@ -3851,6 +3868,7 @@ export namespace Prisma {
   export type EducationMaxAggregateInputType = {
     id?: true
     studentId?: true
+    level?: true
     degree?: true
     institution?: true
     major?: true
@@ -3861,6 +3879,7 @@ export namespace Prisma {
   export type EducationCountAggregateInputType = {
     id?: true
     studentId?: true
+    level?: true
     degree?: true
     institution?: true
     major?: true
@@ -3944,8 +3963,9 @@ export namespace Prisma {
   export type EducationGroupByOutputType = {
     id: string
     studentId: string
-    degree: string
-    institution: string
+    level: string | null
+    degree: string | null
+    institution: string | null
     major: string | null
     periodStart: Date | null
     periodEnd: Date | null
@@ -3971,6 +3991,7 @@ export namespace Prisma {
   export type EducationSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
     studentId?: boolean
+    level?: boolean
     degree?: boolean
     institution?: boolean
     major?: boolean
@@ -3982,6 +4003,7 @@ export namespace Prisma {
   export type EducationSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
     studentId?: boolean
+    level?: boolean
     degree?: boolean
     institution?: boolean
     major?: boolean
@@ -3993,6 +4015,7 @@ export namespace Prisma {
   export type EducationSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
     studentId?: boolean
+    level?: boolean
     degree?: boolean
     institution?: boolean
     major?: boolean
@@ -4004,6 +4027,7 @@ export namespace Prisma {
   export type EducationSelectScalar = {
     id?: boolean
     studentId?: boolean
+    level?: boolean
     degree?: boolean
     institution?: boolean
     major?: boolean
@@ -4011,7 +4035,7 @@ export namespace Prisma {
     periodEnd?: boolean
   }
 
-  export type EducationOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "studentId" | "degree" | "institution" | "major" | "periodStart" | "periodEnd", ExtArgs["result"]["education"]>
+  export type EducationOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "studentId" | "level" | "degree" | "institution" | "major" | "periodStart" | "periodEnd", ExtArgs["result"]["education"]>
   export type EducationInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     student?: boolean | StudentDefaultArgs<ExtArgs>
   }
@@ -4030,8 +4054,12 @@ export namespace Prisma {
     scalars: $Extensions.GetPayloadResult<{
       id: string
       studentId: string
-      degree: string
-      institution: string
+      /**
+       * 'school' | 'higher' — school = среднее, higher = высшее (магистратура+)
+       */
+      level: string | null
+      degree: string | null
+      institution: string | null
       major: string | null
       periodStart: Date | null
       periodEnd: Date | null
@@ -4461,6 +4489,7 @@ export namespace Prisma {
   interface EducationFieldRefs {
     readonly id: FieldRef<"Education", 'String'>
     readonly studentId: FieldRef<"Education", 'String'>
+    readonly level: FieldRef<"Education", 'String'>
     readonly degree: FieldRef<"Education", 'String'>
     readonly institution: FieldRef<"Education", 'String'>
     readonly major: FieldRef<"Education", 'String'>
@@ -19160,6 +19189,7 @@ export namespace Prisma {
     currentInstitution: 'currentInstitution',
     beenToChina: 'beenToChina',
     studiedInChina: 'studiedInChina',
+    desiredField: 'desiredField',
     createdAt: 'createdAt'
   };
 
@@ -19169,6 +19199,7 @@ export namespace Prisma {
   export const EducationScalarFieldEnum: {
     id: 'id',
     studentId: 'studentId',
+    level: 'level',
     degree: 'degree',
     institution: 'institution',
     major: 'major',
@@ -19517,6 +19548,7 @@ export namespace Prisma {
     currentInstitution?: StringNullableFilter<"Student"> | string | null
     beenToChina?: BoolFilter<"Student"> | boolean
     studiedInChina?: BoolFilter<"Student"> | boolean
+    desiredField?: StringNullableFilter<"Student"> | string | null
     createdAt?: DateTimeFilter<"Student"> | Date | string
     education?: EducationListRelationFilter
     workExperience?: WorkExperienceListRelationFilter
@@ -19551,6 +19583,7 @@ export namespace Prisma {
     currentInstitution?: SortOrderInput | SortOrder
     beenToChina?: SortOrder
     studiedInChina?: SortOrder
+    desiredField?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     education?: EducationOrderByRelationAggregateInput
     workExperience?: WorkExperienceOrderByRelationAggregateInput
@@ -19588,6 +19621,7 @@ export namespace Prisma {
     currentInstitution?: StringNullableFilter<"Student"> | string | null
     beenToChina?: BoolFilter<"Student"> | boolean
     studiedInChina?: BoolFilter<"Student"> | boolean
+    desiredField?: StringNullableFilter<"Student"> | string | null
     createdAt?: DateTimeFilter<"Student"> | Date | string
     education?: EducationListRelationFilter
     workExperience?: WorkExperienceListRelationFilter
@@ -19622,6 +19656,7 @@ export namespace Prisma {
     currentInstitution?: SortOrderInput | SortOrder
     beenToChina?: SortOrder
     studiedInChina?: SortOrder
+    desiredField?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     _count?: StudentCountOrderByAggregateInput
     _max?: StudentMaxOrderByAggregateInput
@@ -19653,6 +19688,7 @@ export namespace Prisma {
     currentInstitution?: StringNullableWithAggregatesFilter<"Student"> | string | null
     beenToChina?: BoolWithAggregatesFilter<"Student"> | boolean
     studiedInChina?: BoolWithAggregatesFilter<"Student"> | boolean
+    desiredField?: StringNullableWithAggregatesFilter<"Student"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"Student"> | Date | string
   }
 
@@ -19662,8 +19698,9 @@ export namespace Prisma {
     NOT?: EducationWhereInput | EducationWhereInput[]
     id?: StringFilter<"Education"> | string
     studentId?: StringFilter<"Education"> | string
-    degree?: StringFilter<"Education"> | string
-    institution?: StringFilter<"Education"> | string
+    level?: StringNullableFilter<"Education"> | string | null
+    degree?: StringNullableFilter<"Education"> | string | null
+    institution?: StringNullableFilter<"Education"> | string | null
     major?: StringNullableFilter<"Education"> | string | null
     periodStart?: DateTimeNullableFilter<"Education"> | Date | string | null
     periodEnd?: DateTimeNullableFilter<"Education"> | Date | string | null
@@ -19673,8 +19710,9 @@ export namespace Prisma {
   export type EducationOrderByWithRelationInput = {
     id?: SortOrder
     studentId?: SortOrder
-    degree?: SortOrder
-    institution?: SortOrder
+    level?: SortOrderInput | SortOrder
+    degree?: SortOrderInput | SortOrder
+    institution?: SortOrderInput | SortOrder
     major?: SortOrderInput | SortOrder
     periodStart?: SortOrderInput | SortOrder
     periodEnd?: SortOrderInput | SortOrder
@@ -19687,8 +19725,9 @@ export namespace Prisma {
     OR?: EducationWhereInput[]
     NOT?: EducationWhereInput | EducationWhereInput[]
     studentId?: StringFilter<"Education"> | string
-    degree?: StringFilter<"Education"> | string
-    institution?: StringFilter<"Education"> | string
+    level?: StringNullableFilter<"Education"> | string | null
+    degree?: StringNullableFilter<"Education"> | string | null
+    institution?: StringNullableFilter<"Education"> | string | null
     major?: StringNullableFilter<"Education"> | string | null
     periodStart?: DateTimeNullableFilter<"Education"> | Date | string | null
     periodEnd?: DateTimeNullableFilter<"Education"> | Date | string | null
@@ -19698,8 +19737,9 @@ export namespace Prisma {
   export type EducationOrderByWithAggregationInput = {
     id?: SortOrder
     studentId?: SortOrder
-    degree?: SortOrder
-    institution?: SortOrder
+    level?: SortOrderInput | SortOrder
+    degree?: SortOrderInput | SortOrder
+    institution?: SortOrderInput | SortOrder
     major?: SortOrderInput | SortOrder
     periodStart?: SortOrderInput | SortOrder
     periodEnd?: SortOrderInput | SortOrder
@@ -19714,8 +19754,9 @@ export namespace Prisma {
     NOT?: EducationScalarWhereWithAggregatesInput | EducationScalarWhereWithAggregatesInput[]
     id?: StringWithAggregatesFilter<"Education"> | string
     studentId?: StringWithAggregatesFilter<"Education"> | string
-    degree?: StringWithAggregatesFilter<"Education"> | string
-    institution?: StringWithAggregatesFilter<"Education"> | string
+    level?: StringNullableWithAggregatesFilter<"Education"> | string | null
+    degree?: StringNullableWithAggregatesFilter<"Education"> | string | null
+    institution?: StringNullableWithAggregatesFilter<"Education"> | string | null
     major?: StringNullableWithAggregatesFilter<"Education"> | string | null
     periodStart?: DateTimeNullableWithAggregatesFilter<"Education"> | Date | string | null
     periodEnd?: DateTimeNullableWithAggregatesFilter<"Education"> | Date | string | null
@@ -20644,6 +20685,7 @@ export namespace Prisma {
     currentInstitution?: string | null
     beenToChina?: boolean
     studiedInChina?: boolean
+    desiredField?: string | null
     createdAt?: Date | string
     education?: EducationCreateNestedManyWithoutStudentInput
     workExperience?: WorkExperienceCreateNestedManyWithoutStudentInput
@@ -20678,6 +20720,7 @@ export namespace Prisma {
     currentInstitution?: string | null
     beenToChina?: boolean
     studiedInChina?: boolean
+    desiredField?: string | null
     createdAt?: Date | string
     education?: EducationUncheckedCreateNestedManyWithoutStudentInput
     workExperience?: WorkExperienceUncheckedCreateNestedManyWithoutStudentInput
@@ -20712,6 +20755,7 @@ export namespace Prisma {
     currentInstitution?: NullableStringFieldUpdateOperationsInput | string | null
     beenToChina?: BoolFieldUpdateOperationsInput | boolean
     studiedInChina?: BoolFieldUpdateOperationsInput | boolean
+    desiredField?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     education?: EducationUpdateManyWithoutStudentNestedInput
     workExperience?: WorkExperienceUpdateManyWithoutStudentNestedInput
@@ -20746,6 +20790,7 @@ export namespace Prisma {
     currentInstitution?: NullableStringFieldUpdateOperationsInput | string | null
     beenToChina?: BoolFieldUpdateOperationsInput | boolean
     studiedInChina?: BoolFieldUpdateOperationsInput | boolean
+    desiredField?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     education?: EducationUncheckedUpdateManyWithoutStudentNestedInput
     workExperience?: WorkExperienceUncheckedUpdateManyWithoutStudentNestedInput
@@ -20780,6 +20825,7 @@ export namespace Prisma {
     currentInstitution?: string | null
     beenToChina?: boolean
     studiedInChina?: boolean
+    desiredField?: string | null
     createdAt?: Date | string
   }
 
@@ -20805,6 +20851,7 @@ export namespace Prisma {
     currentInstitution?: NullableStringFieldUpdateOperationsInput | string | null
     beenToChina?: BoolFieldUpdateOperationsInput | boolean
     studiedInChina?: BoolFieldUpdateOperationsInput | boolean
+    desiredField?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -20830,13 +20877,15 @@ export namespace Prisma {
     currentInstitution?: NullableStringFieldUpdateOperationsInput | string | null
     beenToChina?: BoolFieldUpdateOperationsInput | boolean
     studiedInChina?: BoolFieldUpdateOperationsInput | boolean
+    desiredField?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type EducationCreateInput = {
     id?: string
-    degree: string
-    institution: string
+    level?: string | null
+    degree?: string | null
+    institution?: string | null
     major?: string | null
     periodStart?: Date | string | null
     periodEnd?: Date | string | null
@@ -20846,8 +20895,9 @@ export namespace Prisma {
   export type EducationUncheckedCreateInput = {
     id?: string
     studentId: string
-    degree: string
-    institution: string
+    level?: string | null
+    degree?: string | null
+    institution?: string | null
     major?: string | null
     periodStart?: Date | string | null
     periodEnd?: Date | string | null
@@ -20855,8 +20905,9 @@ export namespace Prisma {
 
   export type EducationUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
-    degree?: StringFieldUpdateOperationsInput | string
-    institution?: StringFieldUpdateOperationsInput | string
+    level?: NullableStringFieldUpdateOperationsInput | string | null
+    degree?: NullableStringFieldUpdateOperationsInput | string | null
+    institution?: NullableStringFieldUpdateOperationsInput | string | null
     major?: NullableStringFieldUpdateOperationsInput | string | null
     periodStart?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     periodEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -20866,8 +20917,9 @@ export namespace Prisma {
   export type EducationUncheckedUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
     studentId?: StringFieldUpdateOperationsInput | string
-    degree?: StringFieldUpdateOperationsInput | string
-    institution?: StringFieldUpdateOperationsInput | string
+    level?: NullableStringFieldUpdateOperationsInput | string | null
+    degree?: NullableStringFieldUpdateOperationsInput | string | null
+    institution?: NullableStringFieldUpdateOperationsInput | string | null
     major?: NullableStringFieldUpdateOperationsInput | string | null
     periodStart?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     periodEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -20876,8 +20928,9 @@ export namespace Prisma {
   export type EducationCreateManyInput = {
     id?: string
     studentId: string
-    degree: string
-    institution: string
+    level?: string | null
+    degree?: string | null
+    institution?: string | null
     major?: string | null
     periodStart?: Date | string | null
     periodEnd?: Date | string | null
@@ -20885,8 +20938,9 @@ export namespace Prisma {
 
   export type EducationUpdateManyMutationInput = {
     id?: StringFieldUpdateOperationsInput | string
-    degree?: StringFieldUpdateOperationsInput | string
-    institution?: StringFieldUpdateOperationsInput | string
+    level?: NullableStringFieldUpdateOperationsInput | string | null
+    degree?: NullableStringFieldUpdateOperationsInput | string | null
+    institution?: NullableStringFieldUpdateOperationsInput | string | null
     major?: NullableStringFieldUpdateOperationsInput | string | null
     periodStart?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     periodEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -20895,8 +20949,9 @@ export namespace Prisma {
   export type EducationUncheckedUpdateManyInput = {
     id?: StringFieldUpdateOperationsInput | string
     studentId?: StringFieldUpdateOperationsInput | string
-    degree?: StringFieldUpdateOperationsInput | string
-    institution?: StringFieldUpdateOperationsInput | string
+    level?: NullableStringFieldUpdateOperationsInput | string | null
+    degree?: NullableStringFieldUpdateOperationsInput | string | null
+    institution?: NullableStringFieldUpdateOperationsInput | string | null
     major?: NullableStringFieldUpdateOperationsInput | string | null
     periodStart?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     periodEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -22051,6 +22106,7 @@ export namespace Prisma {
     currentInstitution?: SortOrder
     beenToChina?: SortOrder
     studiedInChina?: SortOrder
+    desiredField?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -22076,6 +22132,7 @@ export namespace Prisma {
     currentInstitution?: SortOrder
     beenToChina?: SortOrder
     studiedInChina?: SortOrder
+    desiredField?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -22101,6 +22158,7 @@ export namespace Prisma {
     currentInstitution?: SortOrder
     beenToChina?: SortOrder
     studiedInChina?: SortOrder
+    desiredField?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -22184,6 +22242,7 @@ export namespace Prisma {
   export type EducationCountOrderByAggregateInput = {
     id?: SortOrder
     studentId?: SortOrder
+    level?: SortOrder
     degree?: SortOrder
     institution?: SortOrder
     major?: SortOrder
@@ -22194,6 +22253,7 @@ export namespace Prisma {
   export type EducationMaxOrderByAggregateInput = {
     id?: SortOrder
     studentId?: SortOrder
+    level?: SortOrder
     degree?: SortOrder
     institution?: SortOrder
     major?: SortOrder
@@ -22204,6 +22264,7 @@ export namespace Prisma {
   export type EducationMinOrderByAggregateInput = {
     id?: SortOrder
     studentId?: SortOrder
+    level?: SortOrder
     degree?: SortOrder
     institution?: SortOrder
     major?: SortOrder
@@ -23713,8 +23774,9 @@ export namespace Prisma {
 
   export type EducationCreateWithoutStudentInput = {
     id?: string
-    degree: string
-    institution: string
+    level?: string | null
+    degree?: string | null
+    institution?: string | null
     major?: string | null
     periodStart?: Date | string | null
     periodEnd?: Date | string | null
@@ -23722,8 +23784,9 @@ export namespace Prisma {
 
   export type EducationUncheckedCreateWithoutStudentInput = {
     id?: string
-    degree: string
-    institution: string
+    level?: string | null
+    degree?: string | null
+    institution?: string | null
     major?: string | null
     periodStart?: Date | string | null
     periodEnd?: Date | string | null
@@ -23993,8 +24056,9 @@ export namespace Prisma {
     NOT?: EducationScalarWhereInput | EducationScalarWhereInput[]
     id?: StringFilter<"Education"> | string
     studentId?: StringFilter<"Education"> | string
-    degree?: StringFilter<"Education"> | string
-    institution?: StringFilter<"Education"> | string
+    level?: StringNullableFilter<"Education"> | string | null
+    degree?: StringNullableFilter<"Education"> | string | null
+    institution?: StringNullableFilter<"Education"> | string | null
     major?: StringNullableFilter<"Education"> | string | null
     periodStart?: DateTimeNullableFilter<"Education"> | Date | string | null
     periodEnd?: DateTimeNullableFilter<"Education"> | Date | string | null
@@ -24267,6 +24331,7 @@ export namespace Prisma {
     currentInstitution?: string | null
     beenToChina?: boolean
     studiedInChina?: boolean
+    desiredField?: string | null
     createdAt?: Date | string
     workExperience?: WorkExperienceCreateNestedManyWithoutStudentInput
     languageSkills?: LanguageSkillCreateNestedManyWithoutStudentInput
@@ -24300,6 +24365,7 @@ export namespace Prisma {
     currentInstitution?: string | null
     beenToChina?: boolean
     studiedInChina?: boolean
+    desiredField?: string | null
     createdAt?: Date | string
     workExperience?: WorkExperienceUncheckedCreateNestedManyWithoutStudentInput
     languageSkills?: LanguageSkillUncheckedCreateNestedManyWithoutStudentInput
@@ -24349,6 +24415,7 @@ export namespace Prisma {
     currentInstitution?: NullableStringFieldUpdateOperationsInput | string | null
     beenToChina?: BoolFieldUpdateOperationsInput | boolean
     studiedInChina?: BoolFieldUpdateOperationsInput | boolean
+    desiredField?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     workExperience?: WorkExperienceUpdateManyWithoutStudentNestedInput
     languageSkills?: LanguageSkillUpdateManyWithoutStudentNestedInput
@@ -24382,6 +24449,7 @@ export namespace Prisma {
     currentInstitution?: NullableStringFieldUpdateOperationsInput | string | null
     beenToChina?: BoolFieldUpdateOperationsInput | boolean
     studiedInChina?: BoolFieldUpdateOperationsInput | boolean
+    desiredField?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     workExperience?: WorkExperienceUncheckedUpdateManyWithoutStudentNestedInput
     languageSkills?: LanguageSkillUncheckedUpdateManyWithoutStudentNestedInput
@@ -24415,6 +24483,7 @@ export namespace Prisma {
     currentInstitution?: string | null
     beenToChina?: boolean
     studiedInChina?: boolean
+    desiredField?: string | null
     createdAt?: Date | string
     education?: EducationCreateNestedManyWithoutStudentInput
     languageSkills?: LanguageSkillCreateNestedManyWithoutStudentInput
@@ -24448,6 +24517,7 @@ export namespace Prisma {
     currentInstitution?: string | null
     beenToChina?: boolean
     studiedInChina?: boolean
+    desiredField?: string | null
     createdAt?: Date | string
     education?: EducationUncheckedCreateNestedManyWithoutStudentInput
     languageSkills?: LanguageSkillUncheckedCreateNestedManyWithoutStudentInput
@@ -24497,6 +24567,7 @@ export namespace Prisma {
     currentInstitution?: NullableStringFieldUpdateOperationsInput | string | null
     beenToChina?: BoolFieldUpdateOperationsInput | boolean
     studiedInChina?: BoolFieldUpdateOperationsInput | boolean
+    desiredField?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     education?: EducationUpdateManyWithoutStudentNestedInput
     languageSkills?: LanguageSkillUpdateManyWithoutStudentNestedInput
@@ -24530,6 +24601,7 @@ export namespace Prisma {
     currentInstitution?: NullableStringFieldUpdateOperationsInput | string | null
     beenToChina?: BoolFieldUpdateOperationsInput | boolean
     studiedInChina?: BoolFieldUpdateOperationsInput | boolean
+    desiredField?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     education?: EducationUncheckedUpdateManyWithoutStudentNestedInput
     languageSkills?: LanguageSkillUncheckedUpdateManyWithoutStudentNestedInput
@@ -24563,6 +24635,7 @@ export namespace Prisma {
     currentInstitution?: string | null
     beenToChina?: boolean
     studiedInChina?: boolean
+    desiredField?: string | null
     createdAt?: Date | string
     education?: EducationCreateNestedManyWithoutStudentInput
     workExperience?: WorkExperienceCreateNestedManyWithoutStudentInput
@@ -24596,6 +24669,7 @@ export namespace Prisma {
     currentInstitution?: string | null
     beenToChina?: boolean
     studiedInChina?: boolean
+    desiredField?: string | null
     createdAt?: Date | string
     education?: EducationUncheckedCreateNestedManyWithoutStudentInput
     workExperience?: WorkExperienceUncheckedCreateNestedManyWithoutStudentInput
@@ -24645,6 +24719,7 @@ export namespace Prisma {
     currentInstitution?: NullableStringFieldUpdateOperationsInput | string | null
     beenToChina?: BoolFieldUpdateOperationsInput | boolean
     studiedInChina?: BoolFieldUpdateOperationsInput | boolean
+    desiredField?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     education?: EducationUpdateManyWithoutStudentNestedInput
     workExperience?: WorkExperienceUpdateManyWithoutStudentNestedInput
@@ -24678,6 +24753,7 @@ export namespace Prisma {
     currentInstitution?: NullableStringFieldUpdateOperationsInput | string | null
     beenToChina?: BoolFieldUpdateOperationsInput | boolean
     studiedInChina?: BoolFieldUpdateOperationsInput | boolean
+    desiredField?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     education?: EducationUncheckedUpdateManyWithoutStudentNestedInput
     workExperience?: WorkExperienceUncheckedUpdateManyWithoutStudentNestedInput
@@ -24711,6 +24787,7 @@ export namespace Prisma {
     currentInstitution?: string | null
     beenToChina?: boolean
     studiedInChina?: boolean
+    desiredField?: string | null
     createdAt?: Date | string
     education?: EducationCreateNestedManyWithoutStudentInput
     workExperience?: WorkExperienceCreateNestedManyWithoutStudentInput
@@ -24744,6 +24821,7 @@ export namespace Prisma {
     currentInstitution?: string | null
     beenToChina?: boolean
     studiedInChina?: boolean
+    desiredField?: string | null
     createdAt?: Date | string
     education?: EducationUncheckedCreateNestedManyWithoutStudentInput
     workExperience?: WorkExperienceUncheckedCreateNestedManyWithoutStudentInput
@@ -24793,6 +24871,7 @@ export namespace Prisma {
     currentInstitution?: NullableStringFieldUpdateOperationsInput | string | null
     beenToChina?: BoolFieldUpdateOperationsInput | boolean
     studiedInChina?: BoolFieldUpdateOperationsInput | boolean
+    desiredField?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     education?: EducationUpdateManyWithoutStudentNestedInput
     workExperience?: WorkExperienceUpdateManyWithoutStudentNestedInput
@@ -24826,6 +24905,7 @@ export namespace Prisma {
     currentInstitution?: NullableStringFieldUpdateOperationsInput | string | null
     beenToChina?: BoolFieldUpdateOperationsInput | boolean
     studiedInChina?: BoolFieldUpdateOperationsInput | boolean
+    desiredField?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     education?: EducationUncheckedUpdateManyWithoutStudentNestedInput
     workExperience?: WorkExperienceUncheckedUpdateManyWithoutStudentNestedInput
@@ -24859,6 +24939,7 @@ export namespace Prisma {
     currentInstitution?: string | null
     beenToChina?: boolean
     studiedInChina?: boolean
+    desiredField?: string | null
     createdAt?: Date | string
     education?: EducationCreateNestedManyWithoutStudentInput
     workExperience?: WorkExperienceCreateNestedManyWithoutStudentInput
@@ -24892,6 +24973,7 @@ export namespace Prisma {
     currentInstitution?: string | null
     beenToChina?: boolean
     studiedInChina?: boolean
+    desiredField?: string | null
     createdAt?: Date | string
     education?: EducationUncheckedCreateNestedManyWithoutStudentInput
     workExperience?: WorkExperienceUncheckedCreateNestedManyWithoutStudentInput
@@ -24941,6 +25023,7 @@ export namespace Prisma {
     currentInstitution?: NullableStringFieldUpdateOperationsInput | string | null
     beenToChina?: BoolFieldUpdateOperationsInput | boolean
     studiedInChina?: BoolFieldUpdateOperationsInput | boolean
+    desiredField?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     education?: EducationUpdateManyWithoutStudentNestedInput
     workExperience?: WorkExperienceUpdateManyWithoutStudentNestedInput
@@ -24974,6 +25057,7 @@ export namespace Prisma {
     currentInstitution?: NullableStringFieldUpdateOperationsInput | string | null
     beenToChina?: BoolFieldUpdateOperationsInput | boolean
     studiedInChina?: BoolFieldUpdateOperationsInput | boolean
+    desiredField?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     education?: EducationUncheckedUpdateManyWithoutStudentNestedInput
     workExperience?: WorkExperienceUncheckedUpdateManyWithoutStudentNestedInput
@@ -25007,6 +25091,7 @@ export namespace Prisma {
     currentInstitution?: string | null
     beenToChina?: boolean
     studiedInChina?: boolean
+    desiredField?: string | null
     createdAt?: Date | string
     education?: EducationCreateNestedManyWithoutStudentInput
     workExperience?: WorkExperienceCreateNestedManyWithoutStudentInput
@@ -25040,6 +25125,7 @@ export namespace Prisma {
     currentInstitution?: string | null
     beenToChina?: boolean
     studiedInChina?: boolean
+    desiredField?: string | null
     createdAt?: Date | string
     education?: EducationUncheckedCreateNestedManyWithoutStudentInput
     workExperience?: WorkExperienceUncheckedCreateNestedManyWithoutStudentInput
@@ -25089,6 +25175,7 @@ export namespace Prisma {
     currentInstitution?: NullableStringFieldUpdateOperationsInput | string | null
     beenToChina?: BoolFieldUpdateOperationsInput | boolean
     studiedInChina?: BoolFieldUpdateOperationsInput | boolean
+    desiredField?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     education?: EducationUpdateManyWithoutStudentNestedInput
     workExperience?: WorkExperienceUpdateManyWithoutStudentNestedInput
@@ -25122,6 +25209,7 @@ export namespace Prisma {
     currentInstitution?: NullableStringFieldUpdateOperationsInput | string | null
     beenToChina?: BoolFieldUpdateOperationsInput | boolean
     studiedInChina?: BoolFieldUpdateOperationsInput | boolean
+    desiredField?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     education?: EducationUncheckedUpdateManyWithoutStudentNestedInput
     workExperience?: WorkExperienceUncheckedUpdateManyWithoutStudentNestedInput
@@ -25155,6 +25243,7 @@ export namespace Prisma {
     currentInstitution?: string | null
     beenToChina?: boolean
     studiedInChina?: boolean
+    desiredField?: string | null
     createdAt?: Date | string
     education?: EducationCreateNestedManyWithoutStudentInput
     workExperience?: WorkExperienceCreateNestedManyWithoutStudentInput
@@ -25188,6 +25277,7 @@ export namespace Prisma {
     currentInstitution?: string | null
     beenToChina?: boolean
     studiedInChina?: boolean
+    desiredField?: string | null
     createdAt?: Date | string
     education?: EducationUncheckedCreateNestedManyWithoutStudentInput
     workExperience?: WorkExperienceUncheckedCreateNestedManyWithoutStudentInput
@@ -25237,6 +25327,7 @@ export namespace Prisma {
     currentInstitution?: NullableStringFieldUpdateOperationsInput | string | null
     beenToChina?: BoolFieldUpdateOperationsInput | boolean
     studiedInChina?: BoolFieldUpdateOperationsInput | boolean
+    desiredField?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     education?: EducationUpdateManyWithoutStudentNestedInput
     workExperience?: WorkExperienceUpdateManyWithoutStudentNestedInput
@@ -25270,6 +25361,7 @@ export namespace Prisma {
     currentInstitution?: NullableStringFieldUpdateOperationsInput | string | null
     beenToChina?: BoolFieldUpdateOperationsInput | boolean
     studiedInChina?: BoolFieldUpdateOperationsInput | boolean
+    desiredField?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     education?: EducationUncheckedUpdateManyWithoutStudentNestedInput
     workExperience?: WorkExperienceUncheckedUpdateManyWithoutStudentNestedInput
@@ -25303,6 +25395,7 @@ export namespace Prisma {
     currentInstitution?: string | null
     beenToChina?: boolean
     studiedInChina?: boolean
+    desiredField?: string | null
     createdAt?: Date | string
     education?: EducationCreateNestedManyWithoutStudentInput
     workExperience?: WorkExperienceCreateNestedManyWithoutStudentInput
@@ -25336,6 +25429,7 @@ export namespace Prisma {
     currentInstitution?: string | null
     beenToChina?: boolean
     studiedInChina?: boolean
+    desiredField?: string | null
     createdAt?: Date | string
     education?: EducationUncheckedCreateNestedManyWithoutStudentInput
     workExperience?: WorkExperienceUncheckedCreateNestedManyWithoutStudentInput
@@ -25385,6 +25479,7 @@ export namespace Prisma {
     currentInstitution?: NullableStringFieldUpdateOperationsInput | string | null
     beenToChina?: BoolFieldUpdateOperationsInput | boolean
     studiedInChina?: BoolFieldUpdateOperationsInput | boolean
+    desiredField?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     education?: EducationUpdateManyWithoutStudentNestedInput
     workExperience?: WorkExperienceUpdateManyWithoutStudentNestedInput
@@ -25418,6 +25513,7 @@ export namespace Prisma {
     currentInstitution?: NullableStringFieldUpdateOperationsInput | string | null
     beenToChina?: BoolFieldUpdateOperationsInput | boolean
     studiedInChina?: BoolFieldUpdateOperationsInput | boolean
+    desiredField?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     education?: EducationUncheckedUpdateManyWithoutStudentNestedInput
     workExperience?: WorkExperienceUncheckedUpdateManyWithoutStudentNestedInput
@@ -25451,6 +25547,7 @@ export namespace Prisma {
     currentInstitution?: string | null
     beenToChina?: boolean
     studiedInChina?: boolean
+    desiredField?: string | null
     createdAt?: Date | string
     education?: EducationCreateNestedManyWithoutStudentInput
     workExperience?: WorkExperienceCreateNestedManyWithoutStudentInput
@@ -25484,6 +25581,7 @@ export namespace Prisma {
     currentInstitution?: string | null
     beenToChina?: boolean
     studiedInChina?: boolean
+    desiredField?: string | null
     createdAt?: Date | string
     education?: EducationUncheckedCreateNestedManyWithoutStudentInput
     workExperience?: WorkExperienceUncheckedCreateNestedManyWithoutStudentInput
@@ -25571,6 +25669,7 @@ export namespace Prisma {
     currentInstitution?: NullableStringFieldUpdateOperationsInput | string | null
     beenToChina?: BoolFieldUpdateOperationsInput | boolean
     studiedInChina?: BoolFieldUpdateOperationsInput | boolean
+    desiredField?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     education?: EducationUpdateManyWithoutStudentNestedInput
     workExperience?: WorkExperienceUpdateManyWithoutStudentNestedInput
@@ -25604,6 +25703,7 @@ export namespace Prisma {
     currentInstitution?: NullableStringFieldUpdateOperationsInput | string | null
     beenToChina?: BoolFieldUpdateOperationsInput | boolean
     studiedInChina?: BoolFieldUpdateOperationsInput | boolean
+    desiredField?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     education?: EducationUncheckedUpdateManyWithoutStudentNestedInput
     workExperience?: WorkExperienceUncheckedUpdateManyWithoutStudentNestedInput
@@ -25839,8 +25939,9 @@ export namespace Prisma {
 
   export type EducationCreateManyStudentInput = {
     id?: string
-    degree: string
-    institution: string
+    level?: string | null
+    degree?: string | null
+    institution?: string | null
     major?: string | null
     periodStart?: Date | string | null
     periodEnd?: Date | string | null
@@ -25905,8 +26006,9 @@ export namespace Prisma {
 
   export type EducationUpdateWithoutStudentInput = {
     id?: StringFieldUpdateOperationsInput | string
-    degree?: StringFieldUpdateOperationsInput | string
-    institution?: StringFieldUpdateOperationsInput | string
+    level?: NullableStringFieldUpdateOperationsInput | string | null
+    degree?: NullableStringFieldUpdateOperationsInput | string | null
+    institution?: NullableStringFieldUpdateOperationsInput | string | null
     major?: NullableStringFieldUpdateOperationsInput | string | null
     periodStart?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     periodEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -25914,8 +26016,9 @@ export namespace Prisma {
 
   export type EducationUncheckedUpdateWithoutStudentInput = {
     id?: StringFieldUpdateOperationsInput | string
-    degree?: StringFieldUpdateOperationsInput | string
-    institution?: StringFieldUpdateOperationsInput | string
+    level?: NullableStringFieldUpdateOperationsInput | string | null
+    degree?: NullableStringFieldUpdateOperationsInput | string | null
+    institution?: NullableStringFieldUpdateOperationsInput | string | null
     major?: NullableStringFieldUpdateOperationsInput | string | null
     periodStart?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     periodEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -25923,8 +26026,9 @@ export namespace Prisma {
 
   export type EducationUncheckedUpdateManyWithoutStudentInput = {
     id?: StringFieldUpdateOperationsInput | string
-    degree?: StringFieldUpdateOperationsInput | string
-    institution?: StringFieldUpdateOperationsInput | string
+    level?: NullableStringFieldUpdateOperationsInput | string | null
+    degree?: NullableStringFieldUpdateOperationsInput | string | null
+    institution?: NullableStringFieldUpdateOperationsInput | string | null
     major?: NullableStringFieldUpdateOperationsInput | string | null
     periodStart?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     periodEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null

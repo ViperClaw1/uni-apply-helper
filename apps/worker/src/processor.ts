@@ -479,9 +479,19 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
         beenToChina: student.beenToChina,
         studiedInChina: student.studiedInChina,
       },
-      education: student.education.map((education: any) => ({
-        degree: education.degree,
-        institution: education.institution,
+      education: [...student.education]
+        .sort((a: any, b: any) => {
+          const rank = (level?: string | null) =>
+            level === 'higher' ? 0 : level === 'school' ? 1 : 2;
+          return rank(a.level) - rank(b.level);
+        })
+        .map((education: any) => ({
+        level:
+          education.level === 'school' || education.level === 'higher'
+            ? education.level
+            : undefined,
+        degree: education.degree ?? undefined,
+        institution: education.institution ?? undefined,
         major: education.major ?? undefined,
         periodStart: education.periodStart?.toISOString(),
         periodEnd: education.periodEnd?.toISOString(),

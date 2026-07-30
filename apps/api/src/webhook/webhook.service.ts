@@ -33,16 +33,32 @@ const FIELD_MAP: Record<string, string> = {
   'Учились или работали ли вы в Китае? / Have you ever studied or worked in China?':
     'personal.studiedInChina',
   'Высшее образование (степень) / Highest Degree': 'education.0.degree',
+  // School institution (renamed; keep legacy title as alias)
+  'Название вашей школы / Your school of graduation':
+    'education.0.institution',
   'Учебное заведение окончания / School of Graduation':
     'education.0.institution',
+  // Higher education institution (master's+ applicants)
+  'Название вашего высшего учебного заведения / Institution of higher education':
+    'education.1.institution',
   'Специальность / Major': 'education.0.major',
   'Уровень китайского языка (HSK, баллы) / Chinese language level':
     'languages.chinese',
   'Уровень английского языка / English language level': 'languages.english',
   'Специальность заявки / Application Major': 'applicationMajor',
   'Степень / Degree': 'applicationDegree',
+  // School education periods (renamed; keep legacy titles as aliases)
+  'Год начала (среднее образование) / Study Period Start (school education)':
+    'education.0.periodStart',
+  'Год окончания (среднее образование) / Study Period End (school education)':
+    'education.0.periodEnd',
   'Год начала обучения / Study Period Start': 'education.0.periodStart',
   'Год окончания / Study Period End': 'education.0.periodEnd',
+  // Higher education periods (master's+ applicants)
+  "Год начала (высшее образование - при подаче в магистратуру и выше) / Study Period Start (higher education - when applying for a master's degree or higher)":
+    'education.1.periodStart',
+  "Год окончания (высшее образование - при подаче в магистратуру и выше) / Study Period End (higher education - when applying for a master's degree or higher)":
+    'education.1.periodEnd',
   'Источник финансирования / Financial resources for study':
     'applicationFunding',
 
@@ -102,6 +118,7 @@ const FORM_VALUES_PATHS = [
   'personal.studiedInChina',
   'education.0.degree',
   'education.0.institution',
+  'education.1.institution',
   'education.0.major',
   'languages.chinese',
   'languages.english',
@@ -109,6 +126,8 @@ const FORM_VALUES_PATHS = [
   'applicationDegree',
   'education.0.periodStart',
   'education.0.periodEnd',
+  'education.1.periodStart',
+  'education.1.periodEnd',
   'applicationFunding',
   // Section 3
   'guarantor.name',
@@ -465,14 +484,32 @@ export class WebhookService {
       return 'personal.studiedInChina';
     }
 
-    if (this.hasAny(normalizedKey, ['highest degree', 'высшее образование'])) {
+    if (
+      this.hasAny(normalizedKey, ['highest degree']) ||
+      (this.hasAny(normalizedKey, ['высшее образование']) &&
+        this.hasAny(normalizedKey, ['степень', 'degree']) &&
+        !this.isStudyPeriodKey(normalizedKey))
+    ) {
       return 'education.0.degree';
+    }
+
+    if (
+      !this.isStudyPeriodKey(normalizedKey) &&
+      this.hasAny(normalizedKey, [
+        'institution of higher education',
+        'высшего учебного заведения',
+        'название вашего высшего',
+      ])
+    ) {
+      return 'education.1.institution';
     }
 
     if (
       this.hasAny(normalizedKey, [
         'school of graduation',
+        'your school of graduation',
         'учебное заведение окончания',
+        'название вашей школы',
       ])
     ) {
       return 'education.0.institution';
@@ -489,6 +526,27 @@ export class WebhookService {
       !this.hasAny(normalizedKey, ['application', 'заявки'])
     ) {
       return 'education.0.major';
+    }
+
+    // Higher education periods before school / legacy (titles contain overlapping words)
+    if (this.isHigherEducationPeriodKey(normalizedKey)) {
+      return this.hasAny(normalizedKey, [
+        'start',
+        'начала',
+        'начало',
+      ])
+        ? 'education.1.periodStart'
+        : 'education.1.periodEnd';
+    }
+
+    if (this.isSchoolEducationPeriodKey(normalizedKey)) {
+      return this.hasAny(normalizedKey, [
+        'start',
+        'начала',
+        'начало',
+      ])
+        ? 'education.0.periodStart'
+        : 'education.0.periodEnd';
     }
 
     if (
@@ -639,6 +697,42 @@ export class WebhookService {
       .replace(/[^a-zа-я0-9]+/g, ' ')
       .trim()
       .replace(/\s+/g, ' ');
+  }
+
+  private isStudyPeriodKey(normalizedKey: string) {
+    return this.hasAny(normalizedKey, [
+      'study period',
+      'period start',
+      'period end',
+      'год начала',
+      'год окончания',
+    ]);
+  }
+
+  private isHigherEducationPeriodKey(normalizedKey: string) {
+    if (!this.isStudyPeriodKey(normalizedKey)) {
+      return false;
+    }
+
+    return this.hasAny(normalizedKey, [
+      'higher education',
+      'master',
+      'высшее образование',
+      'магистратуру',
+      'магистратура',
+    ]);
+  }
+
+  private isSchoolEducationPeriodKey(normalizedKey: string) {
+    if (!this.isStudyPeriodKey(normalizedKey)) {
+      return false;
+    }
+
+    return this.hasAny(normalizedKey, [
+      'school education',
+      'среднее образование',
+      'среднее',
+    ]);
   }
 
   private hasAny(value: string, needles: string[]) {

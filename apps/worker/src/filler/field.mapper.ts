@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { FieldConfig, StudentProfile } from '@uni-apply/shared';
-import { mapsToPaths } from '@uni-apply/shared';
+import { mapsToPaths, primaryEducation } from '@uni-apply/shared';
 import get from 'lodash/get.js';
 
 @Injectable()
@@ -21,7 +21,7 @@ export class FieldMapper {
     ) {
       const fromProfile =
         get(profile, 'personal.currentInstitution') ||
-        profile.education?.[0]?.institution?.trim();
+        primaryEducation(profile)?.institution?.trim();
       if (
         fromProfile &&
         !/^currently not studying$/i.test(String(fromProfile)) &&
@@ -50,20 +50,25 @@ export class FieldMapper {
 
     // Soft defaults for education history when profile sparse
     if (field.selector?.includes('sh.startDate') || /year attended.*from/i.test(field.labelHint || '')) {
-      return get(profile, 'education.0.periodStart') || '2018-09-01';
+      const edu = primaryEducation(profile);
+      return edu?.periodStart || get(profile, 'education.0.periodStart') || '2018-09-01';
     }
     if (field.selector?.includes('sh.endDate') || /year attended.*to/i.test(field.labelHint || '')) {
-      return get(profile, 'education.0.periodEnd') || '2022-06-30';
+      const edu = primaryEducation(profile);
+      return edu?.periodEnd || get(profile, 'education.0.periodEnd') || '2022-06-30';
     }
     if (field.selector?.includes('sh.studyPlace')) {
+      const edu = primaryEducation(profile);
       return (
+        edu?.institution ||
         get(profile, 'education.0.institution') ||
         profile.personal.currentInstitution ||
         'High School'
       );
     }
     if (field.selector?.includes('sh.stuhisMajor')) {
-      return get(profile, 'education.0.major') || 'General Studies';
+      const edu = primaryEducation(profile);
+      return edu?.major || get(profile, 'education.0.major') || 'General Studies';
     }
 
     // Native Language cert still requires score + issue date on PKU.
@@ -268,7 +273,7 @@ export class FieldMapper {
       return (
         profile.personal.currentInstitution?.trim() ||
         profile.workExperience?.[0]?.company?.trim() ||
-        profile.education?.[0]?.institution?.trim() ||
+        primaryEducation(profile)?.institution?.trim() ||
         'unemployed'
       );
     }
@@ -299,7 +304,7 @@ export class FieldMapper {
       field.selector?.includes('lastSchool') ||
       /institution of highest/i.test(field.labelHint || '')
     ) {
-      const fromEducation = profile.education?.[0]?.institution?.trim();
+      const fromEducation = primaryEducation(profile)?.institution?.trim();
       if (fromEducation) {
         return fromEducation;
       }
@@ -387,7 +392,7 @@ export class FieldMapper {
     if (fromTarget) {
       return fromTarget;
     }
-    const fromEducation = profile.education?.[0]?.major?.trim();
+    const fromEducation = primaryEducation(profile)?.major?.trim();
     if (fromEducation) {
       return fromEducation;
     }
