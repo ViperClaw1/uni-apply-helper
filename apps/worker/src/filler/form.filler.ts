@@ -1366,6 +1366,36 @@ export class FormFiller {
 
     await this.checkRadioGroupNo(page, 'apply.isOversea');
     await this.checkRadioGroupNo(page, 'applyEx.inChinaOnApply');
+    // Force-clear Yes leftovers from a previous save / profile beenToChina=true
+    await page
+      .evaluate(() => {
+        const yes = document.querySelector(
+          'input[name="applyEx.inChinaOnApply"][value="1"]',
+        ) as HTMLInputElement | null;
+        const no = document.querySelector(
+          'input[name="applyEx.inChinaOnApply"][value="0"]',
+        ) as HTMLInputElement | null;
+        if (!no) {
+          return;
+        }
+        if (yes) {
+          yes.checked = false;
+        }
+        no.checked = true;
+        const label = no.closest('label');
+        if (label) {
+          label.click();
+        } else {
+          no.click();
+        }
+        no.dispatchEvent(new Event('change', { bubbles: true }));
+      })
+      .catch(() => undefined);
+    await this.checkRadioNearLabel(
+      page,
+      /Whether in Chinese mainland|in Chinese mainland now/i,
+      'No',
+    );
 
     // Current Employer — fill by row label (name unknown / not apply.careerName on PKU).
     // Also repair lastSchool if a previous run appended the employer fallback.
@@ -1691,6 +1721,22 @@ export class FormFiller {
           ) as HTMLInputElement,
           'N/A',
         );
+        // "Current School / Organisation" — name varies across 17gz skins
+        for (const name of [
+          'applyEx.chinaSchool',
+          'apply.chinaSchool',
+          'applyEx.currentSchool',
+          'apply.currentSchool',
+          'applyEx.chinaOrg',
+          'apply.workplaceInChina',
+        ]) {
+          setInput(
+            document.querySelector(
+              `input[name="${name}"]`,
+            ) as HTMLInputElement | null,
+            'N/A',
+          );
+        }
         setInput(
           document.querySelector(
             'input[name="apply.visaNo"]',

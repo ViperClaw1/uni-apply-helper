@@ -341,8 +341,13 @@ export class FieldMapper {
       return field.required ? 'Unmarried' : undefined;
     }
 
-    if (path === 'personal.studiedInChina' || path === 'personal.beenToChina') {
+    if (path === 'personal.studiedInChina') {
       return this.normalizeYesNo(get(profile, path), 'No');
+    }
+
+    // Yes unlocks visa/school requireds we never have in profile → always No for autofill.
+    if (path === 'personal.beenToChina') {
+      return 'No';
     }
 
     if (path === 'emergencyContact.name' && field.required) {

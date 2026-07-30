@@ -38,6 +38,8 @@ export function buildPlannerPrompt(
     '- Prefer role/label/placeholder targets over raw CSS selectors.',
     '- Use accessibility tree fields: required, options=[...], hint, near=surrounding text when choosing fill/select.',
     '- For select: pick an option label that exists in options=[...] from the tree.',
+    '- For "Whether in Chinese mainland now?" ALWAYS choose No unless Visa Type/No/Expiry are already filled.',
+    '- If mainland/visa conditionals appear, use pending defaults: No Visa / N/A / passport expiry.',
     '- For file/document fields use type=upload with value/filePath set to the pending field URL.',
     '- Use type=done when the goal is reached (confirmation/submitted/summary page).',
     '- Use type=fail only if the page is blocked and cannot continue.',

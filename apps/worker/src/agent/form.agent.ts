@@ -238,7 +238,17 @@ export class FormAgent {
         continue;
       }
 
-      const value = getFieldValue(profile, field, motivationLetterContent);
+      let value = getFieldValue(profile, field, motivationLetterContent);
+
+      // Never feed Yes for mainland-now — unlocks visa/school requireds without data.
+      if (
+        /inChinaOnApply|beenToChina|chinese mainland now/i.test(
+          `${field.selector || ''} ${field.labelHint || ''} ${field.mapsTo || ''}`,
+        )
+      ) {
+        value = 'No';
+      }
+
       if (value === undefined || value === null || value === '') {
         continue;
       }
@@ -258,6 +268,45 @@ export class FormAgent {
         labelHint: field.labelHint,
       });
     }
+
+    // Soft defaults if Yes somehow still on page from a prior save
+    hints.push(
+      {
+        mapsTo: null,
+        label: 'Whether in Chinese mainland now?',
+        type: 'radio',
+        value: 'No',
+        required: true,
+      },
+      {
+        mapsTo: null,
+        label: 'Visa Type',
+        type: 'select',
+        value: 'No Visa',
+        required: false,
+      },
+      {
+        mapsTo: null,
+        label: 'Visa No.',
+        type: 'text',
+        value: 'N/A',
+        required: false,
+      },
+      {
+        mapsTo: null,
+        label: 'Visa Expiry Date',
+        type: 'text',
+        value: profile.personal.passportExpiry || '2030-12-31',
+        required: false,
+      },
+      {
+        mapsTo: null,
+        label: 'Current School / Organisation',
+        type: 'text',
+        value: 'N/A',
+        required: false,
+      },
+    );
 
     return hints;
   }
@@ -354,6 +403,10 @@ export class FormAgent {
     push('Are you Ethnic Chinese?', 'radio', 'No', true);
     push('Whether in Chinese mainland now?', 'radio', 'No', true);
     push('Have you ever studied in China?', 'radio', 'No', true);
+    push('Visa Type', 'select', 'No Visa', false);
+    push('Visa No.', 'text', 'N/A', false);
+    push('Visa Expiry Date', 'text', p.passportExpiry || '2030-12-31', false);
+    push('Current School / Organisation', 'text', 'N/A', false);
     push('Chinese Language Proficiency', 'select', 'None', true);
     push('Level of HSK', 'select', 'None', true);
     push('Level of HSKK', 'select', 'None', true);
