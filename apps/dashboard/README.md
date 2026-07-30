@@ -23,7 +23,8 @@ pnpm dev
 
 - Root Directory: `apps/dashboard`
 - Environment Variables:
-  - `NEXT_PUBLIC_API_URL=https://<railway-api-url>`
+  - `API_ORIGIN=https://<railway-api-url>` (без trailing slash; proxy `/api/*` → Railway)
+  - `NEXT_PUBLIC_API_URL` — **не задавать** (браузер ходит на same-origin `/api`)
   - `NEXT_PUBLIC_EXTENSION_ID=<chrome-extension-id>` (optional)
 
 `vercel.json` в этой папке запускает `turbo build --filter=@uni-apply/dashboard` из корня монорепо.
