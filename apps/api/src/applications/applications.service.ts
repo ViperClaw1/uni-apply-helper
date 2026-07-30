@@ -96,13 +96,28 @@ export class ApplicationsService {
     }
 
     const profile = await this.studentsService.getFullProfile(input.studentId);
-    const selectedTargets = profile.applicationTargets.filter((target) =>
+    const resolvedTargets = profile.applicationTargets.filter((target) =>
       Boolean(target.universityId),
+    );
+
+    if (resolvedTargets.length === 0) {
+      throw new BadRequestException(
+        'Student has no resolved application targets. Add universities by form URL first.',
+      );
+    }
+
+    const submittedUniversityIds = await this.findSubmittedUniversityIds(
+      input.studentId,
+    );
+    const selectedTargets = resolvedTargets.filter(
+      (target) =>
+        target.universityId &&
+        !submittedUniversityIds.has(target.universityId),
     );
 
     if (selectedTargets.length === 0) {
       throw new BadRequestException(
-        'Student has no resolved application targets. Add universities by form URL first.',
+        'All selected universities already have a submitted application.',
       );
     }
 
@@ -521,6 +536,22 @@ export class ApplicationsService {
       orderBy: { approvedAt: 'desc' },
       select: { id: true },
     });
+  }
+
+  /** Universities that already have a successful submission for this student. */
+  private async findSubmittedUniversityIds(
+    studentId: string,
+  ): Promise<Set<string>> {
+    const rows = await this.prisma.application.findMany({
+      where: {
+        status: 'submitted',
+        batch: { studentId },
+      },
+      select: { universityId: true },
+      distinct: ['universityId'],
+    });
+
+    return new Set(rows.map((row) => row.universityId));
   }
 
   private async notifyUnresolvedTargets(

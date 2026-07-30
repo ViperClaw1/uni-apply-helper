@@ -135,6 +135,27 @@ export function StudentProfilePage() {
     [student?.applicationTargets],
   );
 
+  const submittedUniversityIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const batch of batches) {
+      for (const application of batch.applications) {
+        if (application.status === "submitted") {
+          ids.add(application.universityId);
+        }
+      }
+    }
+    return ids;
+  }, [batches]);
+
+  const pendingTargets = useMemo(
+    () =>
+      resolvedTargets.filter(
+        (target) =>
+          target.universityId && !submittedUniversityIds.has(target.universityId),
+      ),
+    [resolvedTargets, submittedUniversityIds],
+  );
+
   function handleTargetsChange(targets: ApplicationTarget[]) {
     setStudent((current) =>
       current ? { ...current, applicationTargets: targets } : current,
@@ -144,6 +165,11 @@ export function StudentProfilePage() {
   async function handleCreateBatch() {
     if (resolvedTargets.length === 0) {
       setSubmitError("Сначала добавьте хотя бы один вуз по URL формы.");
+      return;
+    }
+
+    if (pendingTargets.length === 0) {
+      setSubmitError("Все добавленные вузы уже имеют отправленные заявки.");
       return;
     }
 
@@ -306,14 +332,16 @@ export function StudentProfilePage() {
             <button
               type="button"
               onClick={handleCreateBatch}
-              disabled={isSubmitting || resolvedTargets.length === 0}
+              disabled={isSubmitting || pendingTargets.length === 0}
               className="mt-4 inline-flex h-12 w-full cursor-pointer items-center justify-center rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm transition-transform hover:bg-slate-800 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-60"
             >
               {isSubmitting
                 ? "Запускаем..."
                 : resolvedTargets.length === 0
                   ? "Добавьте вузы для батча"
-                  : `Отправить заявки (${resolvedTargets.length})`}
+                  : pendingTargets.length === 0
+                    ? "Все заявки уже отправлены"
+                    : `Отправить заявки (${pendingTargets.length})`}
             </button>
           </section>
         </div>

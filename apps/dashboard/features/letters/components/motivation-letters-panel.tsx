@@ -171,7 +171,7 @@ export function MotivationLettersPanel({
                 type="button"
                 onClick={() => handleGenerate(target.universityId)}
                 disabled={generatingUniversityId !== null}
-                className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-slate-950 px-4 text-xs font-semibold text-white transition-colors hover:bg-slate-800 disabled:pointer-events-none disabled:opacity-60"
+                className="inline-flex h-10 w-full cursor-pointer items-center justify-center rounded-xl bg-slate-950 px-4 text-xs font-semibold text-white transition-colors hover:bg-slate-800 disabled:pointer-events-none disabled:opacity-60"
               >
                 {generatingUniversityId === target.universityId
                   ? "Генерируем..."
