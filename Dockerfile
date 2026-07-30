@@ -20,6 +20,13 @@ COPY packages/shared/package.json packages/shared/package.json
 
 RUN pnpm install --frozen-lockfile
 
+# Cached across code-only deploys (busts only on lockfile / package.json).
+FROM deps AS playwright
+
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+RUN pnpm --filter worker exec playwright install --with-deps chromium
+
 FROM deps AS build
 
 ARG APP
@@ -38,16 +45,19 @@ RUN pnpm --filter @uni-apply/shared build \
   && pnpm prune --prod --config.confirmModulesPurge=false \
   && pnpm install --prod --frozen-lockfile
 
-FROM base AS runner
+# worker keeps Playwright OS deps; api stays slim (BuildKit skips unused stage).
+FROM playwright AS worker-runner
+FROM base AS api-runner
+
+ARG APP
+FROM ${APP}-runner AS runner
 
 ARG APP
 ENV APP=$APP
 ENV UNI_APPLY_RUNTIME=$APP
 ENV NODE_ENV=production
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 COPY --from=build /app /app
 
-RUN if [ "$APP" = "worker" ]; then pnpm --filter worker exec playwright install --with-deps chromium; fi
-
 CMD ["sh", "-c", "pnpm --filter \"$APP\" start:prod"]
-

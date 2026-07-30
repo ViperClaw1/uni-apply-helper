@@ -20,6 +20,14 @@ COPY packages/shared/package.json packages/shared/package.json
 
 RUN pnpm install --frozen-lockfile
 
+# Chromium + OS deps — only invalidates when package.json / lockfile change,
+# NOT on every source code deploy (was the 10min bottleneck).
+FROM deps AS playwright
+
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+RUN pnpm --filter worker exec playwright install --with-deps chromium
+
 FROM deps AS build
 
 ENV CI=true
@@ -33,15 +41,14 @@ RUN pnpm --filter @uni-apply/shared build \
   && pnpm prune --prod --config.confirmModulesPurge=false \
   && pnpm install --prod --frozen-lockfile
 
-FROM base AS runner
+# Keep apt libs from --with-deps; browsers live outside /app.
+FROM playwright AS runner
 
 ENV APP=worker
 ENV UNI_APPLY_RUNTIME=worker
 ENV NODE_ENV=production
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 COPY --from=build /app /app
 
-RUN pnpm --filter worker exec playwright install --with-deps chromium
-
 CMD ["pnpm", "--filter", "worker", "start:prod"]
-
