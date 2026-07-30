@@ -1262,9 +1262,50 @@ export class FormFiller {
       return this.sanitizeCityOfBirth(value);
     }
     if (/lastSchool|institution of highest|highest diploma/i.test(key)) {
-      return value.trim().slice(0, 100);
+      return this.shortenInstitutionName(value);
     }
     return value;
+  }
+
+  /**
+   * 17gz DB columns for school names are often VARCHAR(50).
+   * Full Russian legal names blow Save and Next with:
+   * "Your data field is too long…"
+   */
+  private shortenInstitutionName(raw: string): string {
+    const MAX = 50;
+    const s = raw.replace(/\s+/g, ' ').trim();
+    if (!s) {
+      return 'Higher Education Institution'.slice(0, MAX);
+    }
+    if (s.length <= MAX) {
+      return s;
+    }
+
+    const schoolNo =
+      s.match(/School\s*No\.?\s*\d+/i)?.[0]?.trim() ||
+      s.match(/(?:№|No\.?)\s*\d+/i)?.[0]?.trim() ||
+      s.match(/школа\s*(?:№|No\.?)?\s*\d+/i)?.[0]?.trim();
+    const city = s.match(/City of\s+([A-Za-z\-]+)/i)?.[1];
+    if (schoolNo) {
+      const withCity =
+        city && `${schoolNo}, ${city}`.length <= MAX
+          ? `${schoolNo}, ${city}`
+          : schoolNo;
+      return withCity.slice(0, MAX).trim();
+    }
+
+    // Prefer a trailing meaningful chunk over a head-truncated legal prefix.
+    const commaParts = s
+      .split(',')
+      .map((p) => p.trim())
+      .filter(Boolean);
+    const last = commaParts[commaParts.length - 1];
+    if (last && last.length <= MAX && last.length >= 8) {
+      return last;
+    }
+
+    return s.slice(0, MAX).trim();
   }
 
   /** "Bayevo village, Altai Krai, Russia" → "Bayevo" */
@@ -1895,7 +1936,12 @@ export class FormFiller {
       profile?.personal.currentInstitution?.trim() ||
       profile?.education?.[0]?.institution?.trim() ||
       'Higher Education Institution';
-    const school = schoolRaw.replace(/\s+/g, ' ').trim().slice(0, 100);
+    const school = this.shortenInstitutionName(schoolRaw);
+    if (schoolRaw !== school) {
+      this.logger.warn(
+        `Step1 institution shortened: "${schoolRaw.slice(0, 80)}…" → "${school}"`,
+      );
+    }
     const passportExpire = this.normalizeDateValue(
       profile?.personal.passportExpiry?.trim() || '2030-12-31',
     );
@@ -1910,6 +1956,23 @@ export class FormFiller {
           }
         ).jQuery;
 
+        const readMax = (input: HTMLInputElement): number => {
+          const attr = Number(input.getAttribute('maxlength'));
+          if (Number.isFinite(attr) && attr > 0) {
+            return attr;
+          }
+          if (input.maxLength > 0) {
+            return input.maxLength;
+          }
+          const v = input.getAttribute('validate') || '';
+          const m = v.match(/length\[\s*\d+\s*,\s*(\d+)\s*]/);
+          if (m) {
+            return Number(m[1]);
+          }
+          // 17gz server-side VARCHAR for free-text is often 50.
+          return 50;
+        };
+
         const forceSet = (name: string, value: string) => {
           const input = document.querySelector(
             `input[name="${name}"]`,
@@ -1917,14 +1980,7 @@ export class FormFiller {
           if (!input || !value) {
             return;
           }
-          const max =
-            Number(input.getAttribute('maxlength')) ||
-            (() => {
-              const v = input.getAttribute('validate') || '';
-              const m = v.match(/length\[\s*\d+\s*,\s*(\d+)\s*]/);
-              return m ? Number(m[1]) : 0;
-            })();
-          const next = max > 0 ? value.slice(0, max) : value;
+          const next = value.slice(0, readMax(input));
           input.value = next;
           input.setAttribute('value', next);
           input.classList.remove('validatebox-invalid');
@@ -1950,6 +2006,46 @@ export class FormFiller {
         // Prefer short city in OCR mirror too (some skins re-copy ocr→apply).
         forceSet('ocr.bornedAddress', city);
         forceSet('ocr.bornedDate', birth);
+
+        // Sweep: any apply*/ocr* text still over limit (OCR dumps long strings).
+        const skipExact = new Set([
+          'apply.bornedDate',
+          'apply.passportExpire',
+          'ocr.bornedDate',
+        ]);
+        for (const el of document.querySelectorAll(
+          'input[type="text"], input:not([type]), textarea',
+        )) {
+          const input = el as HTMLInputElement;
+          const name = input.name || '';
+          if (!/^(apply|applyEx|ocr)\./.test(name) || skipExact.has(name)) {
+            continue;
+          }
+          if (/date|expire|passportNo|mobile|phone|email|zip/i.test(name)) {
+            continue;
+          }
+          const val = (input.value || '').trim();
+          if (!val) {
+            continue;
+          }
+          const max = readMax(input);
+          if (val.length <= max) {
+            continue;
+          }
+          const next = val.slice(0, max);
+          input.value = next;
+          input.setAttribute('value', next);
+          input.classList.remove('validatebox-invalid');
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+          if (typeof jq === 'function') {
+            try {
+              jq(input).val(next).trigger('change');
+            } catch {
+              // ignore
+            }
+          }
+        }
       },
       {
         birthDate,
