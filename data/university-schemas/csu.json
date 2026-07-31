@@ -654,6 +654,18 @@
       ]
     },
     {
+      "selector": "input[type=\"radio\"][name=\"applyEx.haveWorkedInChina\"]",
+      "mapsTo": null,
+      "type": "radio",
+      "required": true,
+      "wizardStep": 3,
+      "labelHint": "Have you ever worked in China",
+      "options": [
+        "No",
+        "Yes"
+      ]
+    },
+    {
       "selector": "input[type=\"radio\"][name=\"haveWorkHistory\"]",
       "mapsTo": null,
       "type": "radio",

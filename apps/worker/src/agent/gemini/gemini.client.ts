@@ -120,8 +120,8 @@ export class GeminiClient {
 
           if (model !== this.model) {
             this.logger.warn(
-              `Gemini model "${this.model}" unavailable, used "${model}". ` +
-                `Update GEMINI_AGENT_MODEL / GEMINI_DOCUMENT_MODEL.`,
+              `Gemini using "${model}" (configured GEMINI_*_MODEL="${this.model}" is legacy/unavailable). ` +
+                `Set GEMINI_AGENT_MODEL=${model} to silence this.`,
             );
           }
           this.resolvedModel = model;
@@ -276,8 +276,10 @@ export function parseJsonResponse<T>(raw: string): T {
     }
   }
 
+  const preview = raw.replace(/\s+/g, ' ').trim().slice(0, 240);
   throw new Error(
-    `Failed to parse Gemini JSON: ${lastError instanceof Error ? lastError.message : 'unknown error'}`,
+    `Failed to parse Gemini JSON: ${lastError instanceof Error ? lastError.message : 'unknown error'}` +
+      (preview ? ` Raw preview: ${preview}` : ''),
   );
 }
 
@@ -292,9 +294,14 @@ function collectJsonCandidates(raw: string): string[] {
   return [...new Set(out.filter(Boolean))];
 }
 
-/** Quote bare ISO dates Gemini often emits as unquoted values (breaks JSON at `T`). */
+/**
+ * Gemini sometimes emits invalid JSON even with responseMimeType=json:
+ * - trailing commas
+ * - bare ISO datetimes
+ * - unquoted string values that contain commas (school names)
+ */
 function repairGeminiJson(raw: string): string {
-  return raw
+  let s = raw
     .replace(/^\uFEFF/, '')
     .replace(/,\s*([}\]])/g, '$1')
     .replace(
@@ -302,6 +309,28 @@ function repairGeminiJson(raw: string): string {
       ': "$1"',
     )
     .replace(/:\s*(\d{4}-\d{2}-\d{2})(?=\s*[,}\]])/g, ': "$1"');
+
+  // Quote bare identifier / prose values: `"key": School Name, City` → quoted
+  // until next top-level comma/brace. Skip already-quoted, numbers, true/false/null.
+  s = s.replace(
+    /:\s*(?!["{\[\d]|true\b|false\b|null\b)([^,\n}\]]+(?:,[^,\n}\]]+)*)/g,
+    (match, value: string) => {
+      const trimmed = value.trim();
+      if (!trimmed || /^["{\[\d]|^(true|false|null)$/i.test(trimmed)) {
+        return match;
+      }
+      // Looks like a number still
+      if (/^-?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(trimmed)) {
+        return match;
+      }
+      const escaped = trimmed
+        .replace(/\\/g, '\\\\')
+        .replace(/"/g, '\\"');
+      return `: "${escaped}"`;
+    },
+  );
+
+  return s;
 }
 
 function extractBalancedJson(

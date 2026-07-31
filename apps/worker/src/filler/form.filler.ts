@@ -14,6 +14,7 @@ import { WizardFieldGroups } from './wizard-field-groups.js';
 import { WizardNavigator } from './wizard.navigator.js';
 import { GeocodingService } from '../geocoding/geocoding.service.js';
 import { detectCurrentWizardStep } from '../browser/zzu-pre-wizard.js';
+import { shortenInstitutionName } from './text-limits.js';
 
 @Injectable()
 export class FormFiller {
@@ -1262,50 +1263,9 @@ export class FormFiller {
       return this.sanitizeCityOfBirth(value);
     }
     if (/lastSchool|institution of highest|highest diploma/i.test(key)) {
-      return this.shortenInstitutionName(value);
+      return shortenInstitutionName(value);
     }
     return value;
-  }
-
-  /**
-   * 17gz DB columns for school names are often VARCHAR(50).
-   * Full Russian legal names blow Save and Next with:
-   * "Your data field is too long…"
-   */
-  private shortenInstitutionName(raw: string): string {
-    const MAX = 50;
-    const s = raw.replace(/\s+/g, ' ').trim();
-    if (!s) {
-      return 'Higher Education Institution'.slice(0, MAX);
-    }
-    if (s.length <= MAX) {
-      return s;
-    }
-
-    const schoolNo =
-      s.match(/School\s*No\.?\s*\d+/i)?.[0]?.trim() ||
-      s.match(/(?:№|No\.?)\s*\d+/i)?.[0]?.trim() ||
-      s.match(/школа\s*(?:№|No\.?)?\s*\d+/i)?.[0]?.trim();
-    const city = s.match(/City of\s+([A-Za-z\-]+)/i)?.[1];
-    if (schoolNo) {
-      const withCity =
-        city && `${schoolNo}, ${city}`.length <= MAX
-          ? `${schoolNo}, ${city}`
-          : schoolNo;
-      return withCity.slice(0, MAX).trim();
-    }
-
-    // Prefer a trailing meaningful chunk over a head-truncated legal prefix.
-    const commaParts = s
-      .split(',')
-      .map((p) => p.trim())
-      .filter(Boolean);
-    const last = commaParts[commaParts.length - 1];
-    if (last && last.length <= MAX && last.length >= 8) {
-      return last;
-    }
-
-    return s.slice(0, MAX).trim();
   }
 
   /** "Bayevo village, Altai Krai, Russia" → "Bayevo" */
@@ -1936,7 +1896,7 @@ export class FormFiller {
       profile?.personal.currentInstitution?.trim() ||
       profile?.education?.[0]?.institution?.trim() ||
       'Higher Education Institution';
-    const school = this.shortenInstitutionName(schoolRaw);
+    const school = shortenInstitutionName(schoolRaw);
     if (schoolRaw !== school) {
       this.logger.warn(
         `Step1 institution shortened: "${schoolRaw.slice(0, 80)}…" → "${school}"`,
@@ -2594,11 +2554,12 @@ export class FormFiller {
     await this.closeDatePickers(page);
 
     const edu = primaryEducation(profile);
-    const school =
+    const school = shortenInstitutionName(
       edu?.institution?.trim() ||
-      profile.personal.currentInstitution?.trim() ||
-      'High School';
-    const major = edu?.major?.trim() || 'General Studies';
+        profile.personal.currentInstitution?.trim() ||
+        'High School',
+    );
+    const major = (edu?.major?.trim() || 'General Studies').slice(0, 50);
     const startRaw = this.normalizeDateValue(edu?.periodStart?.trim() || '');
     const endRaw = this.normalizeDateValue(edu?.periodEnd?.trim() || '');
     const start = /^\d{4}-\d{2}-\d{2}$/.test(startRaw) ? startRaw : '2018-09-01';
@@ -2739,19 +2700,31 @@ export class FormFiller {
         };
 
         checkNo('applyEx.haveStudiedInChina');
+        checkNo('applyEx.haveWorkedInChina');
         checkNo('applyEx.haveWorkHistory');
         checkNo('haveWorkHistory');
       },
       { school, major, start, end, degreeNeedles, nationality },
     );
 
-    // Playwright backup for China = No
+    // Playwright backup for China / work = No
     await this.checkRadioGroupNo(page, 'applyEx.haveStudiedInChina');
+    await this.checkRadioGroupNo(page, 'applyEx.haveWorkedInChina');
     await this.checkRadioGroupNo(page, 'applyEx.haveWorkHistory');
     await this.checkRadioGroupNo(page, 'haveWorkHistory');
     await this.checkRadioNearLabel(
       page,
       /studied online or offline|studied in China|在中国.*学习/i,
+      'No',
+    );
+    await this.checkRadioNearLabel(
+      page,
+      /worked in China|work in China|在中国.*工作|曾经在中国工作/i,
+      'No',
+    );
+    await this.checkRadioNearLabel(
+      page,
+      /Do you have work experience|work experience|工作经历/i,
       'No',
     );
 

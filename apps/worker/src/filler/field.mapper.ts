@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type { FieldConfig, StudentProfile } from '@uni-apply/shared';
 import { mapsToPaths, primaryEducation } from '@uni-apply/shared';
 import get from 'lodash/get.js';
+import { shortenInstitutionName } from './text-limits.js';
 
 @Injectable()
 export class FieldMapper {
@@ -59,16 +60,18 @@ export class FieldMapper {
     }
     if (field.selector?.includes('sh.studyPlace')) {
       const edu = primaryEducation(profile);
-      return (
+      return shortenInstitutionName(
         edu?.institution ||
-        get(profile, 'education.0.institution') ||
-        profile.personal.currentInstitution ||
-        'High School'
+          get(profile, 'education.0.institution') ||
+          profile.personal.currentInstitution ||
+          'High School',
       );
     }
     if (field.selector?.includes('sh.stuhisMajor')) {
       const edu = primaryEducation(profile);
-      return edu?.major || get(profile, 'education.0.major') || 'General Studies';
+      const major =
+        edu?.major || get(profile, 'education.0.major') || 'General Studies';
+      return String(major).trim().slice(0, 50);
     }
 
     // Native Language cert still requires score + issue date on PKU.
