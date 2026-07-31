@@ -905,11 +905,12 @@
     },
     {
       "selector": "input[name=\"apply.homeCity\"]",
-      "mapsTo": "personal.cityOfBirth",
+      "mapsTo": null,
       "type": "text",
       "required": true,
       "wizardStep": 5,
-      "labelHint": "City/Province"
+      "labelHint": "City/Province",
+      "options": ["City"]
     },
     {
       "selector": "select[name=\"apply.homeCountryId\"]",
@@ -970,10 +971,11 @@
     },
     {
       "selector": "input[name=\"apply.receiverCity\"]",
-      "mapsTo": "personal.cityOfBirth",
+      "mapsTo": null,
       "type": "text",
       "required": true,
-      "wizardStep": 5
+      "wizardStep": 5,
+      "options": ["City"]
     },
     {
       "selector": "select[name=\"apply.receiverCountryId\"]",
@@ -1002,11 +1004,13 @@
       "type": "radio",
       "required": true,
       "wizardStep": 5,
-      "labelHint": "Collect from Peking University in Person",
+      "labelHint": "Collect admission notice in person",
       "options": [
-        "Collect from Peking University in Person",
+        "Collect from",
         "in Person",
-        "Collect from"
+        "Collect from Soochow University in Person",
+        "Collect from Peking University in Person",
+        "Collect from Central South University in Person"
       ]
     },
     {

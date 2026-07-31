@@ -299,6 +299,7 @@ function collectJsonCandidates(raw: string): string[] {
  * - trailing commas
  * - bare ISO datetimes
  * - unquoted string values that contain commas (school names)
+ * - truncated responses (missing closing braces)
  */
 function repairGeminiJson(raw: string): string {
   let s = raw
@@ -311,7 +312,6 @@ function repairGeminiJson(raw: string): string {
     .replace(/:\s*(\d{4}-\d{2}-\d{2})(?=\s*[,}\]])/g, ': "$1"');
 
   // Quote bare identifier / prose values: `"key": School Name, City` → quoted
-  // until next top-level comma/brace. Skip already-quoted, numbers, true/false/null.
   s = s.replace(
     /:\s*(?!["{\[\d]|true\b|false\b|null\b)([^,\n}\]]+(?:,[^,\n}\]]+)*)/g,
     (match, value: string) => {
@@ -319,7 +319,6 @@ function repairGeminiJson(raw: string): string {
       if (!trimmed || /^["{\[\d]|^(true|false|null)$/i.test(trimmed)) {
         return match;
       }
-      // Looks like a number still
       if (/^-?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(trimmed)) {
         return match;
       }
@@ -330,7 +329,55 @@ function repairGeminiJson(raw: string): string {
     },
   );
 
-  return s;
+  return closeTruncatedJson(s);
+}
+
+/** Close cut-off Gemini JSON: unclosed strings / braces / brackets. */
+function closeTruncatedJson(raw: string): string {
+  let inString = false;
+  let escaped = false;
+  const stack: string[] = [];
+
+  for (let i = 0; i < raw.length; i += 1) {
+    const ch = raw[i];
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (ch === '\\') {
+        escaped = true;
+        continue;
+      }
+      if (ch === '"') {
+        inString = false;
+      }
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+    if (ch === '{' || ch === '[') {
+      stack.push(ch);
+      continue;
+    }
+    if (ch === '}' || ch === ']') {
+      stack.pop();
+    }
+  }
+
+  let out = raw;
+  if (inString) {
+    out += '"';
+  }
+  // Drop dangling comma before we close
+  out = out.replace(/,\s*$/, '');
+  while (stack.length) {
+    const open = stack.pop();
+    out += open === '{' ? '}' : ']';
+  }
+  return out;
 }
 
 function extractBalancedJson(

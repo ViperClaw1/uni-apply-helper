@@ -598,6 +598,16 @@ export class FormFiller {
       wantLower,
       ...aliasValues.map((v) => v.toLowerCase()).filter((v) => !/^\d+$/.test(v)),
     ];
+    // 17gz admission notice: label is "Collect from <University> in Person"
+    if (/collect|in person/i.test(wantLower)) {
+      labelNeedles.push(
+        'in person',
+        'collect from',
+        'collect.*in person',
+        '本人领取',
+        '到校领取',
+      );
+    }
 
     for (const v of aliasValues) {
       const byValue = page.locator(`${selector}[value="${v}"]`).first();
@@ -674,9 +684,29 @@ export class FormFiller {
           if (lab === wantN || new RegExp(`\\b${wantN}\\b`, 'i').test(lab)) {
             return true;
           }
-          return needles.some(
-            (n) => n.length >= 2 && (lab === n || new RegExp(`\\b${n}\\b`, 'i').test(lab)),
-          );
+          return needles.some((n) => {
+            if (n.length < 2) {
+              return false;
+            }
+            if (lab === n || new RegExp(`\\b${n}\\b`, 'i').test(lab)) {
+              return true;
+            }
+            // "collect.*in person" style / partial university-agnostic match
+            if (n.includes('.*')) {
+              try {
+                return new RegExp(n, 'i').test(lab);
+              } catch {
+                return false;
+              }
+            }
+            if (
+              /in person|collect from/i.test(n) &&
+              /in person|collect from|本人领取|到校领取/i.test(lab)
+            ) {
+              return true;
+            }
+            return lab.includes(n) || (n.length >= 8 && n.includes(lab));
+          });
         });
 
         const byAlias = radios.find((radio) =>
@@ -2068,18 +2098,21 @@ export class FormFiller {
       'N/A';
 
     const geo = await this.geocoding.resolve(rawAddress, {
-      city: profile.personal.cityOfBirth?.trim(),
+      // Do NOT pass cityOfBirth — that is birth place (Bayevo), not home city.
       zip: profile.personal.postCode?.trim(),
       country: nationality,
     });
 
     // Prefer structured street; keep profile text if geocode returned only city-level.
-    const address =
+    const address = (
       (geo.streetAddress && geo.streetAddress !== geo.city
         ? geo.streetAddress
-        : rawAddress) || rawAddress;
-    const city =
-      geo.city && !/^n\/?a$/i.test(geo.city) ? geo.city : profile.personal.cityOfBirth?.trim() || 'N/A';
+        : rawAddress) || rawAddress
+    )
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 100);
+    const city = this.resolveHomeCity(geo.city, rawAddress);
     const zip = geo.zip || profile.personal.postCode?.trim() || '000000';
     const country = geo.country || nationality;
 
@@ -2193,12 +2226,18 @@ export class FormFiller {
       target.dispatchEvent(new Event('change', { bubbles: true }));
     });
 
-    // Keep Collect-in-person selected, but receiver* still required on PKU — already filled.
+    // Keep Collect-in-person selected (label is university-specific on 17gz).
     await page.evaluate(() => {
       const radios = [
         ...document.querySelectorAll('input[name="apply.receiverType"]'),
       ] as HTMLInputElement[];
       const labelOf = (radio: HTMLInputElement) => {
+        if (radio.id) {
+          const forLab = document.querySelector(`label[for="${radio.id}"]`);
+          if (forLab?.textContent) {
+            return forLab.textContent;
+          }
+        }
         const wrap = radio.closest('label');
         if (wrap?.textContent) {
           return wrap.textContent;
@@ -2206,7 +2245,7 @@ export class FormFiller {
         return radio.parentElement?.textContent || '';
       };
       const inPerson = radios.find((r) =>
-        /collect.*in person|in person/i.test(labelOf(r)),
+        /collect.*in person|in person|本人领取|到校领取/i.test(labelOf(r)),
       );
       if (!inPerson) {
         return;
@@ -2219,8 +2258,68 @@ export class FormFiller {
       inPerson.dispatchEvent(new Event('change', { bubbles: true }));
     });
 
+    // Playwright backup — click visible label text (Soochow / PKU / CSU).
+    const collectLabel = page
+      .locator('label, span, td, div')
+      .filter({ hasText: /Collect from .+ in Person|本人领取|到校领取/i })
+      .first();
+    if ((await collectLabel.count()) > 0) {
+      await collectLabel.click({ force: true }).catch(() => undefined);
+    } else {
+      await this.checkRadioNearLabel(
+        page,
+        /How to Collect|Admission Notice|领取/i,
+        'in Person',
+      ).catch(() => undefined);
+    }
+
+    // Force-overwrite phones/city (schema may have left CN fake phone / birth city).
+    for (const [name, value] of fills) {
+      await this.setInputValueJs(page, `input[name="${name}"]`, value);
+    }
+
     await this.closeDatePickers(page);
     await this.dismissFormOverlays(page);
+  }
+
+  /** Home city from address — never birth village. */
+  private resolveHomeCity(geoCity: string | undefined, address: string): string {
+    const clean = (s: string) =>
+      s
+        .replace(/\s+/g, ' ')
+        .replace(/\b(city|village|town|oblast|krai|region)\b/gi, '')
+        .replace(/,+/g, ' ')
+        .trim()
+        .slice(0, 40);
+
+    if (geoCity && !/^n\/?a$/i.test(geoCity) && geoCity.length <= 40) {
+      const c = clean(geoCity);
+      if (c && !/bayevo|birth/i.test(c)) {
+        return c;
+      }
+    }
+
+    // "Russia, Krasnodar city, Ignatova St..." → Krasnodar
+    const parts = address
+      .split(',')
+      .map((p) => p.trim())
+      .filter(Boolean);
+    for (const part of parts) {
+      const m = part.match(/^([A-Za-zА-Яа-я\-]+)\s+city\b/i);
+      if (m?.[1]) {
+        return m[1].slice(0, 40);
+      }
+    }
+    for (const part of parts) {
+      if (
+        part.length >= 3 &&
+        part.length <= 30 &&
+        !/russia|federation|street|st\.|apt|bldg|ignatova|\d/i.test(part)
+      ) {
+        return part;
+      }
+    }
+    return 'N/A';
   }
 
   /**
@@ -3471,13 +3570,27 @@ export class FormFiller {
     );
   }
 
-  /** CUCAS jquery.validate tel:true expects a mainland mobile, not +7… */
+  /** Prefer real intl phones on 17gz; only invent CN mobile when value is unusable. */
   private normalizePhone(value: string): string {
-    const digits = value.replace(/\D/g, '');
+    const trimmed = value.trim();
+    const digits = trimmed.replace(/\D/g, '');
+    if (!digits) {
+      return '13800138000';
+    }
+    // Mainland mobile
     if (/^1\d{10}$/.test(digits)) {
       return digits;
     }
-    if (digits.length >= 11) {
+    // Russian 7XXXXXXXXXX / 8XXXXXXXXXX
+    if (/^[78]\d{10}$/.test(digits)) {
+      return `+7${digits.slice(-10)}`;
+    }
+    // Other intl (≥10 digits) — keep E.164-ish
+    if (digits.length >= 10 && digits.length <= 15) {
+      return trimmed.startsWith('+') ? `+${digits}` : digits;
+    }
+    // Legacy: last 11 if it looks like CN mobile
+    if (digits.length > 11) {
       const last11 = digits.slice(-11);
       if (/^1\d{10}$/.test(last11)) {
         return last11;
