@@ -74,23 +74,44 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
   }
 
   onModuleInit() {
+    // Playwright+Gemini jobs routinely run 5–15+ min. BullMQ default lockDuration
+    // is 30s — if the worker process dies/redeploys mid-job, Redis marks it stalled.
+    const lockDuration = Number(process.env.BULLMQ_LOCK_DURATION_MS) || 15 * 60_000;
+
     this.worker = new Worker<ApplicationProcessJobData>(
       QUEUES.APPLICATION_PROCESS,
       (job) => this.process(job),
       {
         connection: getRedisConnection(),
+        lockDuration,
+        stalledInterval: 60_000,
+        maxStalledCount: 2,
+        concurrency: 1,
       },
     );
 
-    this.logger.log(`Listening on queue "${QUEUES.APPLICATION_PROCESS}"`);
+    this.logger.log(
+      `Listening on queue "${QUEUES.APPLICATION_PROCESS}" (lockDuration=${lockDuration}ms)`,
+    );
 
     this.worker.on('active', (job) => {
       this.logger.log(`Picked up application job ${job.id}`);
     });
 
+    this.worker.on('stalled', (jobId) => {
+      this.logger.warn(
+        `Application job ${jobId} stalled (worker likely killed/redeployed or event-loop blocked)`,
+      );
+    });
+
     this.worker.on('failed', (job, error) => {
       this.logger.error(
         `Application job ${job?.id ?? 'unknown'} failed: ${error.message}`,
+      );
+      // Stall/kill path never hits process() catch — close out UI "processing" forever.
+      void this.markApplicationFailedFromJob(
+        job?.data?.applicationId,
+        error.message,
       );
     });
   }
@@ -100,6 +121,87 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
   }
 
   private async process(job: Job<ApplicationProcessJobData>) {
+    const timeoutMs =
+      Number(process.env.APPLICATION_JOB_TIMEOUT_MS) || 25 * 60_000;
+
+    await this.withTimeout(
+      () => this.processApplication(job),
+      timeoutMs,
+      `Application job timed out after ${Math.round(timeoutMs / 60_000)} minutes`,
+    );
+  }
+
+  private async withTimeout<T>(
+    fn: () => Promise<T>,
+    ms: number,
+    message: string,
+  ): Promise<T> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      return await Promise.race([
+        fn(),
+        new Promise<T>((_, reject) => {
+          timer = setTimeout(() => reject(new Error(message)), ms);
+        }),
+      ]);
+    } finally {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    }
+  }
+
+  /** Stall/redeploy: process() catch never runs — sync DB so dashboard unsticks. */
+  private async markApplicationFailedFromJob(
+    applicationId: string | undefined,
+    errorMessage: string,
+  ): Promise<void> {
+    if (!applicationId) {
+      return;
+    }
+
+    try {
+      const updated = await this.prisma.application.updateMany({
+        where: {
+          id: applicationId,
+          status: { in: ['processing', 'queued', 'ready_for_submission'] },
+        },
+        data: {
+          status: 'failed',
+          errorMessage: errorMessage.slice(0, 2000),
+        },
+      });
+
+      if (updated.count === 0) {
+        return;
+      }
+
+      await this.prisma.applicationStep.updateMany({
+        where: { applicationId, status: 'processing' },
+        data: {
+          status: 'failed',
+          errorMessage: errorMessage.slice(0, 2000),
+          completedAt: new Date(),
+        },
+      });
+
+      const app = await this.prisma.application.findUnique({
+        where: { id: applicationId },
+        select: { batchId: true },
+      });
+      if (app?.batchId) {
+        await this.recalculateBatchCounters(app.batchId);
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Failed to mark application ${applicationId} failed after job error: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+  }
+
+  private async processApplication(job: Job<ApplicationProcessJobData>) {
     const application = await this.prisma.application.findUniqueOrThrow({
       where: { id: job.data.applicationId },
       include: {
