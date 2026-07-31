@@ -132,11 +132,18 @@ export class FormFiller {
         `Deterministic wizard failed, falling back to FormAgent: ${message}`,
       );
 
+      const resumeStep =
+        (await detectCurrentWizardStep(page).catch(() => null)) ?? 1;
+      this.logger.warn(
+        `FormAgent fallback resume at wizard step ${resumeStep}`,
+      );
+
       const result = await this.formAgent.runWizard(
         page,
         profile,
         university,
         motivationLetterContent,
+        { startStep: resumeStep },
       );
 
       if (!result.completed) {
@@ -2312,9 +2319,18 @@ export class FormFiller {
         name: fm?.fullName?.trim() || fallbackName,
         phone: fm?.phone?.trim() || fallbackPhone,
         email: fm?.email?.trim() || fallbackEmail,
-        duty: fm?.position?.trim() || fallbackPosition || 'unemployed',
-        workPlace: fm?.company?.trim() || fallbackCompany || 'unemployed',
-        nationality: fm?.nationality?.trim() || nationality,
+        duty: (fm?.position?.trim() || fallbackPosition || 'unemployed').slice(
+          0,
+          50,
+        ),
+        workPlace: (
+          fm?.company?.trim() ||
+          fallbackCompany ||
+          'unemployed'
+        ).slice(0, 50),
+        nationalityNeedles: this.expandCountryLabels(
+          fm?.nationality?.trim() || nationality,
+        ),
         bornedDate: this.familyBirthDateFromAge(fm?.age),
       };
     });
@@ -2358,7 +2374,7 @@ export class FormFiller {
         ] as HTMLSelectElement[];
         const sel = sels[index];
         if (!sel || !label) {
-          return;
+          return false;
         }
         const want = label.trim().toLowerCase();
         const opt = Array.from(sel.options).find((o) => {
@@ -2366,7 +2382,7 @@ export class FormFiller {
           return t === want || t.includes(want) || want.includes(t);
         });
         if (!opt?.value) {
-          return;
+          return false;
         }
         sel.value = opt.value;
         sel.dispatchEvent(new Event('input', { bubbles: true }));
@@ -2379,12 +2395,17 @@ export class FormFiller {
             // ignore
           }
         }
+        return true;
       };
 
       for (let i = 0; i < slots.length; i += 1) {
         const s = slots[i];
         setSelectByLabel('fm.relativeId', i, s.relative);
-        setSelectByLabel('fm.countryId', i, s.nationality);
+        for (const needle of s.nationalityNeedles) {
+          if (setSelectByLabel('fm.countryId', i, needle)) {
+            break;
+          }
+        }
         setInput('fm.name', i, s.name);
         setInput('fm.phone', i, s.phone);
         setInput('fm.email', i, s.email);
@@ -2396,11 +2417,12 @@ export class FormFiller {
       }
     }, familySlots);
 
-    const selfWork =
+    const selfWork = shortenInstitutionName(
       profile.personal.currentInstitution?.trim() ||
-      profile.workExperience?.[0]?.company?.trim() ||
-      profile.education?.[0]?.institution?.trim() ||
-      'unemployed';
+        profile.workExperience?.[0]?.company?.trim() ||
+        profile.education?.[0]?.institution?.trim() ||
+        'unemployed',
+    );
 
     const singleFills: Array<[string, string]> = [
       ['apply.selfSupporter', fullName],
@@ -2408,9 +2430,9 @@ export class FormFiller {
       ['apply.selfwork', selfWork],
       [
         'apply.ssrelative',
-        profile.guarantor?.relationship?.trim() || 'Self',
+        profile.guarantor?.relationship?.trim() || 'Father',
       ],
-      ['apply.selfaddress', address],
+      ['apply.selfaddress', address.slice(0, 100)],
       ['apply.selfemail', email],
       [
         'apply.emergencyName',
@@ -2438,11 +2460,42 @@ export class FormFiller {
       ],
       [
         'apply.emergencyAddress',
-        profile.emergencyContact?.homeAddress?.trim() ||
+        (
+          profile.emergencyContact?.homeAddress?.trim() ||
           profile.guarantor?.homeAddress?.trim() ||
-          address,
+          address
+        ).slice(0, 100),
       ],
       ['apply.emergencyZip', zip],
+      // Guarantor-in-China block sometimes appears on Step 4 (SUDA skin).
+      [
+        'apply.guarantorEnname',
+        profile.guarantor?.name?.trim() || fullName,
+      ],
+      [
+        'apply.guarMobile',
+        profile.guarantor?.phone?.trim() || phone,
+      ],
+      [
+        'apply.guarPhone',
+        profile.guarantor?.phone?.trim() || phone,
+      ],
+      [
+        'apply.guarEmail',
+        profile.guarantor?.email?.trim() || email,
+      ],
+      [
+        'apply.guarWorkplace',
+        (
+          profile.guarantor?.company?.trim() ||
+          profile.guarantor?.position?.trim() ||
+          'N/A'
+        ).slice(0, 50),
+      ],
+      [
+        'apply.guarAddress',
+        (profile.guarantor?.homeAddress?.trim() || address).slice(0, 100),
+      ],
     ];
 
     await page.evaluate((rows) => {
@@ -2490,6 +2543,75 @@ export class FormFiller {
         await this.setInputValueJs(page, `input[name="${name}"]`, value);
       }
     }
+
+    // Family + guarantor nationality selects — dialog "Nationality is required!"
+    const countryNeedles = this.expandCountryLabels(nationality);
+    await page.evaluate((needles) => {
+      const jq = (
+        window as unknown as {
+          jQuery?: (el: Element) => {
+            val: (v: string) => { trigger: (e: string) => unknown };
+          };
+        }
+      ).jQuery;
+
+      const setCountrySelect = (select: HTMLSelectElement) => {
+        const cur = (
+          select.options[select.selectedIndex]?.text || ''
+        )
+          .replace(/\s+/g, ' ')
+          .trim()
+          .toLowerCase();
+        if (cur && !/please|choose|-choose-|^$/.test(cur)) {
+          return;
+        }
+        const lowered = needles.map((n) => n.toLowerCase());
+        const match = [...select.options].find((opt) => {
+          const t = (opt.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+          return lowered.some(
+            (n) => n && (t === n || t.includes(n) || n.includes(t)),
+          );
+        });
+        if (!match?.value) {
+          return;
+        }
+        select.value = match.value;
+        select.dispatchEvent(new Event('input', { bubbles: true }));
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+        if (typeof jq === 'function') {
+          try {
+            jq(select).val(match.value).trigger('chosen:updated');
+            jq(select).val(match.value).trigger('change');
+          } catch {
+            // ignore
+          }
+        }
+      };
+
+      for (const name of [
+        'fm.countryId',
+        'apply.guarCountryId',
+        'apply.guarCountryId2',
+      ]) {
+        for (const el of document.querySelectorAll(`select[name="${name}"]`)) {
+          setCountrySelect(el as HTMLSelectElement);
+        }
+      }
+
+      // Any empty select whose label says Nationality
+      for (const sel of document.querySelectorAll('select')) {
+        const select = sel as HTMLSelectElement;
+        const row =
+          select.closest('tr') ||
+          select.closest('.form-group') ||
+          select.parentElement;
+        const label = (row?.textContent || '').replace(/\s+/g, ' ');
+        if (!/Nationality|国籍|国家\/地区/i.test(label)) {
+          continue;
+        }
+        setCountrySelect(select);
+      }
+    }, countryNeedles);
 
     await this.closeDatePickers(page);
     await this.dismissFormOverlays(page);

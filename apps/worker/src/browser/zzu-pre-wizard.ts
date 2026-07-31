@@ -255,19 +255,44 @@ export async function detectCurrentWizardStep(
       return el.offsetParent !== null || style.position === 'fixed';
     };
 
+    const active =
+      document
+        .querySelector(
+          '.list_title li.on, .list_title li.cur, .wizard li.active, li.current, .process li.on, .process_li_cur, li[class*="cur"]',
+        )
+        ?.textContent?.replace(/\s+/g, ' ')
+        .trim() ?? '';
+
+    // Prefer stepper label — field markers overlap across skins (guarantor on 2 and 4).
+    if (/Basic Info|基本信息/i.test(active)) return 1;
+    if (/Study Plan|学习计划/i.test(active)) return 2;
+    if (/Education|Employment|教育|工作/i.test(active)) return 3;
+    if (/Additional|其他|补充/i.test(active)) return 4;
+    if (/Contact Info|联系/i.test(active)) return 5;
+    if (/Upload|Document|材料|上传/i.test(active)) return 6;
+    if (/Preview|Submit|预览|提交/i.test(active)) return 7;
+
+    // Later steps first — avoid Step4 guarantor fields matching Step2.
     if (
-      visible('input[name="apply.lastName"]') ||
-      visible('input[name="apply.passportNo"]')
+      document.querySelector(
+        'input[value="Add Document"], [attachTypeId] input[type="file"]',
+      ) &&
+      !visible('input[name="apply.homeMobile"]')
     ) {
-      return 1;
+      return 6;
     }
     if (
-      visible('input[name="apply.fieldEnglish"]') ||
-      visible('input[name="apply.studyStartDate"]') ||
-      visible('select[name="apply.languageSkillId"]') ||
-      visible('input[name="apply.guarantorEnname"]')
+      visible('input[name="apply.homeMobile"]') ||
+      visible('input[name="apply.homePhone"]')
     ) {
-      return 2;
+      return 5;
+    }
+    if (
+      visible('input[name="applyEx.hasCriminalRecord"]') ||
+      visible('input[name="apply.selfSupporter"]') ||
+      visible('input[name="fm.name"]')
+    ) {
+      return 4;
     }
     if (
       visible('input[name="sh.studyPlace"]') ||
@@ -277,35 +302,19 @@ export async function detectCurrentWizardStep(
       return 3;
     }
     if (
-      visible('input[name="apply.emergencyName"]') ||
-      visible('input[name="applyEx.hasCriminalRecord"]')
+      visible('input[name="apply.fieldEnglish"]') ||
+      visible('input[name="apply.studyStartDate"]') ||
+      visible('select[name="apply.languageSkillId"]')
     ) {
-      return 4;
+      return 2;
     }
     if (
-      visible('input[name="apply.homeMobile"]') ||
-      visible('input[name="apply.homePhone"]')
+      visible('input[name="apply.lastName"]') ||
+      visible('input[name="apply.passportNo"]')
     ) {
-      return 5;
+      return 1;
     }
-    if (
-      document.querySelector(
-        'input[value="Add Document"], [attachTypeId] input[type="file"]',
-      )
-    ) {
-      return 6;
-    }
-    const active =
-      document
-        .querySelector(
-          '.list_title li.on, .list_title li.cur, .wizard li.active, li.current, .process li.on',
-        )
-        ?.textContent?.replace(/\s+/g, ' ')
-        .trim() ?? '';
-    if (/preview|submit/i.test(active)) {
-      return 7;
-    }
-    return 1;
+    return null;
   });
 }
 

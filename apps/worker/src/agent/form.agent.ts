@@ -51,6 +51,7 @@ export class FormAgent {
     profile: StudentProfile,
     university: UniversitySchema,
     motivationLetterContent?: string,
+    options?: { startStep?: number },
   ): Promise<AgentLoopResult> {
     const wizard = university.wizard;
 
@@ -72,15 +73,22 @@ export class FormAgent {
     }
 
     const allSteps: AgentLoopResult['steps'] = [];
+    const startStep = Math.min(
+      Math.max(options?.startStep ?? 1, 1),
+      wizard.totalSteps,
+    );
 
-    for (let step = 1; step <= wizard.totalSteps; step += 1) {
+    for (let step = startStep; step <= wizard.totalSteps; step += 1) {
       const stepFields = fieldsForStep(university, step);
       const result = await this.runLoop({
         page,
         profile,
         university,
         motivationLetterContent,
-        goal: `Complete wizard step ${step}/${wizard.totalSteps} for ${university.displayName}`,
+        goal:
+          `Complete ONLY the CURRENT wizard step ${step}/${wizard.totalSteps} for ${university.displayName}. ` +
+          `You are already on this step — do NOT navigate to earlier steps (Step 1, Basic Info, etc.). ` +
+          `Fill empty/required fields on this step, then click Save and Next.`,
         pendingFields: this.buildFieldHints(
           stepFields,
           profile,

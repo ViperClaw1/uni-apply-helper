@@ -737,6 +737,30 @@
       "labelHint": "Family Member Work Place"
     },
     {
+      "selector": "select[name=\"fm.countryId\"]",
+      "mapsTo": "personal.nationality",
+      "type": "select",
+      "required": true,
+      "wizardStep": 4,
+      "labelHint": "Family Member Nationality"
+    },
+    {
+      "selector": "select[name=\"fm.relativeId\"]",
+      "mapsTo": "familyMembers.0.relationship",
+      "type": "select",
+      "required": true,
+      "wizardStep": 4,
+      "labelHint": "Family Member Relationship",
+      "options": [
+        "Father",
+        "Mother",
+        "Spouse",
+        "Brother",
+        "Sister",
+        "Others"
+      ]
+    },
+    {
       "selector": "input[name=\"apply.emergencyName\"]",
       "mapsTo": [
         "emergencyContact.name",
