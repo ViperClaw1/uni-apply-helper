@@ -31,6 +31,14 @@ export class ActionExecutor {
         await this.resolveLocator(page, action.target).check();
         return;
       case 'click':
+        if (this.isForbiddenWizardBackNav(action)) {
+          this.logger.warn(
+            `Blocked agent back-navigation: ${JSON.stringify(action.target)} — stay on current step`,
+          );
+          throw new Error(
+            'Refusing to navigate to an earlier wizard step. Fill the current step and click Save and Next.',
+          );
+        }
         await this.resolveLocator(page, action.target).click({ force: true });
         return;
       case 'upload':
@@ -45,6 +53,32 @@ export class ActionExecutor {
       default:
         throw new Error(`Unsupported agent action: ${action.type}`);
     }
+  }
+
+  /** Agent must never jump back to Step 1/2/… via wizard tabs. */
+  private isForbiddenWizardBackNav(action: AgentAction): boolean {
+    const blob = [
+      action.target?.selector,
+      action.target?.name,
+      action.target?.label,
+      action.reason,
+    ]
+      .filter(Boolean)
+      .join(' ');
+
+    if (
+      /Save and Next|保存并下一步|Next|下一步|Previous|上一步/i.test(blob) &&
+      !/Step\s*[1-3]\b|Basic Info|Study Plan/i.test(blob)
+    ) {
+      return false;
+    }
+
+    return (
+      /step\s*=\s*[123]\b|step-[123]\b|Basic Info|Study Plan|Education & Employment/i.test(
+        blob,
+      ) ||
+      /wizard step\s*[123]\b|navigate bac|go back to step/i.test(blob)
+    );
   }
 
   private async fillValue(page: Page, action: AgentAction): Promise<void> {

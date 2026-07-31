@@ -2531,90 +2531,204 @@ export class FormFiller {
       }
     }, singleFills);
 
-    // Force-empty requireds that skip-if-filled left blank
-    for (const [name, value] of singleFills) {
-      const empty = await page.evaluate((n) => {
-        const el = document.querySelector(
-          `input[name="${n}"]`,
-        ) as HTMLInputElement | null;
-        return !el || !el.value?.trim();
-      }, name);
-      if (empty) {
+    // Force-overwrite length-sensitive fields (schema may have left a 100+ char school name).
+    for (const name of [
+      'apply.selfwork',
+      'apply.guarWorkplace',
+      'apply.selfaddress',
+      'apply.emergencyAddress',
+      'apply.guarAddress',
+    ]) {
+      const value = singleFills.find(([n]) => n === name)?.[1];
+      if (value) {
         await this.setInputValueJs(page, `input[name="${name}"]`, value);
       }
     }
 
-    // Family + guarantor nationality selects — dialog "Nationality is required!"
+    // Family + guarantor nationality — Chosen/"Please choose" must be forced via Playwright.
     const countryNeedles = this.expandCountryLabels(nationality);
-    await page.evaluate((needles) => {
-      const jq = (
-        window as unknown as {
-          jQuery?: (el: Element) => {
-            val: (v: string) => { trigger: (e: string) => unknown };
-          };
-        }
-      ).jQuery;
-
-      const setCountrySelect = (select: HTMLSelectElement) => {
-        const cur = (
-          select.options[select.selectedIndex]?.text || ''
-        )
-          .replace(/\s+/g, ' ')
-          .trim()
-          .toLowerCase();
-        if (cur && !/please|choose|-choose-|^$/.test(cur)) {
-          return;
-        }
-        const lowered = needles.map((n) => n.toLowerCase());
-        const match = [...select.options].find((opt) => {
-          const t = (opt.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
-          return lowered.some(
-            (n) => n && (t === n || t.includes(n) || n.includes(t)),
-          );
-        });
-        if (!match?.value) {
-          return;
-        }
-        select.value = match.value;
-        select.dispatchEvent(new Event('input', { bubbles: true }));
-        select.dispatchEvent(new Event('change', { bubbles: true }));
-        if (typeof jq === 'function') {
-          try {
-            jq(select).val(match.value).trigger('chosen:updated');
-            jq(select).val(match.value).trigger('change');
-          } catch {
-            // ignore
-          }
-        }
-      };
-
-      for (const name of [
-        'fm.countryId',
-        'apply.guarCountryId',
-        'apply.guarCountryId2',
-      ]) {
-        for (const el of document.querySelectorAll(`select[name="${name}"]`)) {
-          setCountrySelect(el as HTMLSelectElement);
-        }
-      }
-
-      // Any empty select whose label says Nationality
-      for (const sel of document.querySelectorAll('select')) {
-        const select = sel as HTMLSelectElement;
-        const row =
-          select.closest('tr') ||
-          select.closest('.form-group') ||
-          select.parentElement;
-        const label = (row?.textContent || '').replace(/\s+/g, ' ');
-        if (!/Nationality|国籍|国家\/地区/i.test(label)) {
-          continue;
-        }
-        setCountrySelect(select);
-      }
-    }, countryNeedles);
+    await this.forceCountrySelects(page, countryNeedles);
 
     await this.closeDatePickers(page);
     await this.dismissFormOverlays(page);
+  }
+
+  /**
+   * 17gz Family Nationality uses Chosen (shows "Please choose" even after JS .value=).
+   * Force every matching select via selectOption + Chosen sync.
+   */
+  private async forceCountrySelects(
+    page: Page,
+    needles: string[],
+  ): Promise<void> {
+    const names = [
+      'fm.countryId',
+      'apply.guarCountryId',
+      'apply.guarCountryId2',
+    ];
+
+    for (const name of names) {
+      const locators = page.locator(`select[name="${name}"]`);
+      const count = await locators.count();
+      for (let i = 0; i < count; i += 1) {
+        const select = locators.nth(i);
+        let filled = false;
+        for (const needle of needles) {
+          try {
+            await select.selectOption({ label: needle }, { force: true, timeout: 1_500 });
+            filled = true;
+            break;
+          } catch {
+            try {
+              await select.selectOption({ value: needle }, { force: true, timeout: 1_000 });
+              filled = true;
+              break;
+            } catch {
+              // try next needle
+            }
+          }
+        }
+
+        if (!filled) {
+          filled = await page.evaluate(
+            ({ selName, index, values }) => {
+              const sels = [
+                ...document.querySelectorAll(`select[name="${selName}"]`),
+              ] as HTMLSelectElement[];
+              const sel = sels[index];
+              if (!sel) {
+                return false;
+              }
+              const needle = values.map((v) => v.trim().toLowerCase()).filter(Boolean);
+              const isPlaceholder = (text: string) =>
+                !text ||
+                /please\s*(choose|select)/i.test(text) ||
+                /^-+$/.test(text) ||
+                /^-choose-$/i.test(text);
+
+              let best: HTMLOptionElement | null = null;
+              let bestScore = 0;
+              for (const opt of sel.options) {
+                const text = (opt.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+                const val = opt.value.trim().toLowerCase();
+                if (!val || isPlaceholder(text)) {
+                  continue;
+                }
+                let score = 0;
+                for (const n of needle) {
+                  if (text === n || val === n) score = Math.max(score, 3);
+                  else if (text.includes(n) || (n.length >= 4 && n.includes(text)))
+                    score = Math.max(score, 2);
+                  else if (text.startsWith(n) || n.startsWith(text))
+                    score = Math.max(score, 1);
+                }
+                if (score > bestScore) {
+                  bestScore = score;
+                  best = opt;
+                }
+              }
+              if (!best?.value || bestScore === 0) {
+                return false;
+              }
+              sel.value = best.value;
+              sel.dispatchEvent(new Event('input', { bubbles: true }));
+              sel.dispatchEvent(new Event('change', { bubbles: true }));
+              const jq = (
+                window as unknown as {
+                  jQuery?: (el: Element) => {
+                    val: (v: string) => { trigger: (e: string) => unknown };
+                    trigger: (e: string) => unknown;
+                  };
+                }
+              ).jQuery;
+              if (typeof jq === 'function') {
+                try {
+                  jq(sel).val(best.value).trigger('chosen:updated');
+                  jq(sel).val(best.value).trigger('liszt:updated');
+                  jq(sel).val(best.value).trigger('change');
+                  const container = sel.nextElementSibling;
+                  if (container?.classList.contains('chosen-container')) {
+                    const span = container.querySelector('.chosen-single span');
+                    if (span) {
+                      span.textContent = (best.textContent || '')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+                    }
+                    container.classList.remove('chosen-container-active');
+                  }
+                } catch {
+                  // ignore
+                }
+              }
+              return sel.value === best.value;
+            },
+            { selName: name, index: i, values: needles },
+          );
+        }
+
+        // Chosen UI often still shows "Please choose" — click/search/pick.
+        await this.pickChosenNearSelect(
+          page,
+          select,
+          needles.find((n) => /russia/i.test(n)) ?? needles[0] ?? 'Russia',
+        ).catch(() => undefined);
+      }
+    }
+
+    // Assert — log leftover Please-choose nationalities for debugging.
+    const stillEmpty = await page.evaluate(() => {
+      return [...document.querySelectorAll('select[name="fm.countryId"]')].map(
+        (el, i) => {
+          const sel = el as HTMLSelectElement;
+          const text = (
+            sel.options[sel.selectedIndex]?.text || ''
+          )
+            .replace(/\s+/g, ' ')
+            .trim();
+          return { i, text, value: sel.value };
+        },
+      );
+    });
+    for (const row of stillEmpty) {
+      if (!row.value || /please|choose/i.test(row.text)) {
+        this.logger.warn(
+          `fm.countryId[${row.i}] still empty after force ("${row.text}")`,
+        );
+      }
+    }
+  }
+
+  private async pickChosenNearSelect(
+    page: Page,
+    select: Locator,
+    searchText: string,
+  ): Promise<void> {
+    const chosen = select.locator(
+      'xpath=following-sibling::div[contains(@class,"chosen-container")][1]',
+    );
+    if ((await chosen.count()) === 0) {
+      return;
+    }
+    const current = await chosen.locator('.chosen-single span').innerText().catch(() => '');
+    if (current && !/please|choose/i.test(current)) {
+      return;
+    }
+    await chosen.locator('.chosen-single').click({ force: true });
+    await page.waitForTimeout(200);
+    const search = chosen.locator('.chosen-search input').first();
+    if ((await search.count()) > 0) {
+      await search.fill(searchText.split(/\s+/)[0] || searchText);
+      await page.waitForTimeout(300);
+    }
+    const result = chosen
+      .locator('.chosen-results li.active-result')
+      .filter({ hasText: new RegExp(searchText.split(/\s+/)[0] || 'Russia', 'i') })
+      .first();
+    if ((await result.count()) > 0) {
+      await result.click({ force: true });
+    } else {
+      await chosen.locator('.chosen-results li.active-result').first().click({ force: true }).catch(() => undefined);
+    }
   }
 
   private normalizeFamilyRelationship(raw: string): string {
