@@ -240,6 +240,9 @@ export class FormFiller {
         if (fileFields.length > 0) {
           await this.fileAttacher.attachFiles(page, profile, fileFields);
         }
+        if (step === 6 && this.is17gzPortal(university)) {
+          await this.fileAttacher.assertRequiredAttachmentsPresent(page);
+        }
       },
       {
         applicationId,

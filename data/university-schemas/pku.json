@@ -1056,6 +1056,7 @@
       "type": "file",
       "required": false,
       "wizardStep": 6,
+      "documentType": "criminal_record",
       "labelHint": "Non-criminal"
     },
     {

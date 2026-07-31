@@ -9,6 +9,20 @@ type FilePayload = {
   buffer: Buffer;
 };
 
+/** 17gz Step 6 rows that reject PDF (Accept: *.jpg, *.jpeg). */
+const JPG_ONLY_DOCUMENT_TYPES = new Set([
+  'passport',
+  'photo',
+  'diploma',
+  'transcript',
+  'criminal_record',
+  'recommendation',
+  'language_certificate',
+  'personal_statement',
+]);
+
+const FETCH_TIMEOUT_MS = 30_000;
+
 @Injectable()
 export class FileAttacher {
   private readonly logger = new Logger(FileAttacher.name);
@@ -23,8 +37,17 @@ export class FileAttacher {
     );
 
     if (fileFields.length === 0) {
+      this.logger.warn(
+        'Step 6: no file fields with documentType in schema — skipping attach',
+      );
       return;
     }
+
+    this.logger.log(
+      `Step 6: attaching ${fileFields.length} document(s): ${fileFields
+        .map((f) => f.documentType)
+        .join(', ')}`,
+    );
 
     // Step 6 AJAX: attach rows / Add Document appear after content swap.
     await page
@@ -40,28 +63,34 @@ export class FileAttacher {
       .catch(() => undefined);
 
     for (const field of fileFields) {
-      const fileUrl = profile.documents[field.documentType!];
+      const docType = field.documentType!;
+      const fileUrl = profile.documents[docType];
 
       if (!fileUrl) {
         if (field.required) {
-          throw new Error(`Missing required document: ${field.documentType}`);
+          throw new Error(`Missing required document: ${docType}`);
         }
+        this.logger.log(`Step 6: skip ${docType} (not in profile)`);
         continue;
       }
 
-      const response = await fetch(fileUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to download document ${field.documentType}`);
+      this.logger.log(`Step 6: fetch ${docType}…`);
+      const { contentType, buffer } = await this.fetchDocument(docType, fileUrl);
+      this.logger.log(
+        `Step 6: fetched ${docType} (${contentType}, ${buffer.length} bytes)`,
+      );
+
+      if (
+        JPG_ONLY_DOCUMENT_TYPES.has(docType) &&
+        /pdf/i.test(contentType)
+      ) {
+        throw new Error(
+          `Document "${docType}" is PDF but 17gz Step 6 accepts only *.jpg/*.jpeg for this row. ` +
+            `Re-upload as JPEG in the dashboard (label: ${field.labelHint ?? docType}).`,
+        );
       }
 
-      const contentType =
-        response.headers.get('content-type') ?? 'application/octet-stream';
-      const buffer = Buffer.from(await response.arrayBuffer());
-      const filePayload = this.toFilePayload(
-        field.documentType!,
-        contentType,
-        buffer,
-      );
+      const filePayload = this.toFilePayload(docType, contentType, buffer);
 
       const locator = await resolveFieldLocator(page, field);
       if (locator && (await locator.count()) > 0) {
@@ -69,9 +98,10 @@ export class FileAttacher {
         if (tag === 'INPUT') {
           await locator.setInputFiles(filePayload);
           this.logger.log(
-            `Attached ${field.documentType} via file input (${field.selector})`,
+            `Attached ${docType} via file input (${field.selector})`,
           );
           await this.dismissPostUploadDialogs(page);
+          await this.waitBrieflyForUploadSettle(page);
           continue;
         }
       }
@@ -82,13 +112,14 @@ export class FileAttacher {
         page,
         attachTypeId,
         filePayload,
-        field.labelHint || field.documentType,
+        field.labelHint || docType,
       );
       if (ok) {
         this.logger.log(
-          `Attached ${field.documentType} via Add Document` +
+          `Attached ${docType} via Add Document` +
             (attachTypeId ? ` (${attachTypeId})` : ''),
         );
+        await this.waitBrieflyForUploadSettle(page);
         continue;
       }
 
@@ -101,7 +132,141 @@ export class FileAttacher {
             ` | DOM: ${dump}`,
         );
       }
+
+      this.logger.warn(
+        `Step 6: could not attach optional ${docType} — Add Document not found`,
+      );
     }
+  }
+
+  /**
+   * Portal marks rows with * / [Required]. Empty ones block Save and Next —
+   * fail here with a clear list instead of agent limbo / BullMQ stall.
+   */
+  async assertRequiredAttachmentsPresent(page: Page): Promise<void> {
+    const missing = await page
+      .evaluate(() => {
+        const rows = [
+          ...document.querySelectorAll(
+            'tr:has([attachTypeId]), tr:has(input[value="Add Document"]), tr:has(input[value*="Add Document"])',
+          ),
+        ];
+        const out: string[] = [];
+
+        for (const row of rows) {
+          const labelCell =
+            row.querySelector('td, th, .label, label') || row;
+          const label = (labelCell.textContent || '')
+            .replace(/\s+/g, ' ')
+            .trim();
+          const isRequired =
+            /\*/.test(label) ||
+            /\[Required\]/i.test(label) ||
+            Boolean(row.querySelector('.red, .required, font[color="red"]'));
+
+          if (!isRequired) {
+            continue;
+          }
+          if (/Other Documents/i.test(label)) {
+            continue;
+          }
+
+          const hasUpload =
+            Boolean(
+              row.querySelector(
+                '.attach-item-list img, .attach-item-list a, img[src*="attach"], a[href*="downloadAttach"], a[href*="attach"]',
+              ),
+            ) ||
+            [...row.querySelectorAll('img')].some((img) => {
+              const src = img.getAttribute('src') || '';
+              return src.length > 20 && !/icon|blank|spacer/i.test(src);
+            });
+
+          if (!hasUpload) {
+            out.push(label.slice(0, 120));
+          }
+        }
+
+        return out;
+      })
+      .catch(() => [] as string[]);
+
+    if (missing.length === 0) {
+      this.logger.log('Step 6: all required attach rows have files');
+      return;
+    }
+
+    throw new Error(
+      `Step 6: required documents still empty after attach (${missing.length}): ` +
+        missing.join(' || '),
+    );
+  }
+
+  private async fetchDocument(
+    documentType: string,
+    fileUrl: string,
+  ): Promise<{ contentType: string; buffer: Buffer }> {
+    let response: Response;
+    try {
+      response = await fetch(fileUrl, {
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      });
+    } catch (error) {
+      const reason =
+        error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `Failed to download document ${documentType} within ${FETCH_TIMEOUT_MS}ms: ${reason}`,
+      );
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to download document ${documentType} (HTTP ${response.status})`,
+      );
+    }
+
+    const contentType =
+      response.headers.get('content-type') ?? 'application/octet-stream';
+    const buffer = Buffer.from(await response.arrayBuffer());
+    return { contentType, buffer };
+  }
+
+  private async waitBrieflyForUploadSettle(page: Page): Promise<void> {
+    await page.waitForTimeout(500);
+    await this.dismissPostUploadDialogs(page);
+    // Cap wait — never block for minutes on a stuck "It's processing".
+    const deadline = Date.now() + 20_000;
+    while (Date.now() < deadline) {
+      const busy = await page
+        .evaluate(() => {
+          const wins = [
+            ...document.querySelectorAll(
+              '.messager-window, .panel.window, .window-mask',
+            ),
+          ];
+          return wins.some((win) => {
+            const style = getComputedStyle(win as HTMLElement);
+            if (style.display === 'none' || style.visibility === 'hidden') {
+              return false;
+            }
+            const rect = (win as HTMLElement).getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) {
+              return false;
+            }
+            return /It'?s processing|please wait|请求正在处理/i.test(
+              win.textContent || '',
+            );
+          });
+        })
+        .catch(() => false);
+      if (!busy) {
+        return;
+      }
+      await page.waitForTimeout(500);
+    }
+    this.logger.warn(
+      'Step 6: upload processing dialog still visible after 20s — continuing',
+    );
   }
 
   private extractAttachTypeId(selector?: string): string | undefined {
@@ -130,8 +295,6 @@ export class FileAttacher {
       return { name: `${documentType}.png`, mimeType: 'image/png', buffer };
     }
     if (/pdf/i.test(contentType) && documentType === 'passport') {
-      // Keep bytes but present as jpg name — some portals sniff MIME from chooser.
-      // Prefer real image in profile; log if PDF slipped through.
       this.logger.warn(
         'Passport document is PDF; 17gz expects *.jpg/*.jpeg — upload may be rejected',
       );
@@ -159,6 +322,12 @@ export class FileAttacher {
       page,
       attachTypeId,
       labelHint,
+    );
+
+    this.logger.log(
+      `Step 6: Add Document candidates=${addButtons.length}` +
+        (attachTypeId ? ` attachTypeId=${attachTypeId}` : '') +
+        (labelHint ? ` hint="${labelHint}"` : ''),
     );
 
     for (const btn of addButtons) {
@@ -236,12 +405,25 @@ export class FileAttacher {
         : undefined,
       attachTypeId?.includes('score') ? 'Transcript' : undefined,
       attachTypeId?.includes('checkBody') ? 'Physical Examination' : undefined,
+      /criminal|115623117/i.test(attachTypeId ?? '')
+        ? 'Non-criminal'
+        : undefined,
+      /Learning|Employment|8135227092/i.test(
+        `${labelHint ?? ''}${attachTypeId ?? ''}`,
+      )
+        ? 'Learning to prove'
+        : undefined,
     ].filter(Boolean) as string[];
 
     for (const hint of hints) {
       const row = page
         .locator('tr')
-        .filter({ hasText: new RegExp(hint.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') })
+        .filter({
+          hasText: new RegExp(
+            hint.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+            'i',
+          ),
+        })
         .first();
       if ((await row.count()) === 0) {
         continue;

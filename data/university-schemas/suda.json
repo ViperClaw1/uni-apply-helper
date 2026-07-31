@@ -26,8 +26,10 @@
   "requiredDocuments": [
     "photo",
     "passport",
+    "diploma",
     "transcript",
-    "medical"
+    "medical",
+    "criminal_record"
   ],
   "fields": [
     {
@@ -1026,15 +1028,16 @@
       "selector": "[attachTypeId=\"ATTACH_TYPE_8135227092\"]",
       "mapsTo": null,
       "type": "file",
-      "required": false,
+      "required": true,
       "wizardStep": 6,
-      "labelHint": "China Scholastic"
+      "documentType": "recommendation",
+      "labelHint": "Learning to prove/Employment"
     },
     {
       "selector": "[attachTypeId=\"ATTACH_TYPE_HighstEducationImage\"]",
       "mapsTo": null,
       "type": "file",
-      "required": false,
+      "required": true,
       "wizardStep": 6,
       "documentType": "diploma",
       "labelHint": "Diploma"
@@ -1043,7 +1046,7 @@
       "selector": "[attachTypeId=\"ATTACH_TYPE_scoreImage\"]",
       "mapsTo": null,
       "type": "file",
-      "required": false,
+      "required": true,
       "wizardStep": 6,
       "documentType": "transcript",
       "labelHint": "Transcript"
@@ -1070,7 +1073,7 @@
       "selector": "[attachTypeId=\"ATTACH_TYPE_checkBodyreport\"]",
       "mapsTo": null,
       "type": "file",
-      "required": false,
+      "required": true,
       "wizardStep": 6,
       "documentType": "medical",
       "labelHint": "Physical Examination"
@@ -1079,8 +1082,9 @@
       "selector": "[attachTypeId=\"ATTACH_TYPE_115623117\"]",
       "mapsTo": null,
       "type": "file",
-      "required": false,
+      "required": true,
       "wizardStep": 6,
+      "documentType": "criminal_record",
       "labelHint": "Non-criminal"
     },
     {
