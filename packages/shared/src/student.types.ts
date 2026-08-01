@@ -74,7 +74,8 @@ export interface StudentProfile {
     phone?: string;
     email?: string;
   };
-  documents: Record<string, string>;
+  /** One URL or ordered list (multi-page diploma / transcript / recommendations). */
+  documents: Record<string, string | string[]>;
   applicationTargets: Array<{
     id?: string;
     universityRaw: string;

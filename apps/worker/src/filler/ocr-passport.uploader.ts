@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type { StudentProfile } from '@uni-apply/shared';
+import { getDocumentUrls, type StudentProfile } from '@uni-apply/shared';
 import type { Page } from 'playwright';
 
 const PHOTO_INPUT =
@@ -55,7 +55,10 @@ export class OcrPassportUploader {
    */
   async upload(page: Page, profile: StudentProfile): Promise<void> {
     this.logger.log('OCR step 1/4: upload passport via Upload Image + filechooser');
-    await this.uploadPassportViaButton(page, profile.documents.passport);
+    await this.uploadPassportViaButton(
+      page,
+      getDocumentUrls(profile.documents, 'passport')[0],
+    );
 
     this.logger.log('OCR step 2/4: wait Recognized Information filled');
     await this.waitForOcrReady(page);
@@ -68,7 +71,10 @@ export class OcrPassportUploader {
     await this.waitForApplySync(page);
     await this.dismissInfoDialogs(page);
     await this.closeDatePickers(page);
-    await this.uploadPhoto(page, profile.documents.photo);
+    await this.uploadPhoto(
+      page,
+      getDocumentUrls(profile.documents, 'photo')[0],
+    );
     await this.dismissInfoDialogs(page);
   }
 

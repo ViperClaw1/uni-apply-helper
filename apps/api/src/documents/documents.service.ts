@@ -5,7 +5,11 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  DeleteObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { Prisma } from '@uni-apply/database';
 import { QUEUES } from '@uni-apply/shared';
 import { randomUUID } from 'node:crypto';
@@ -15,6 +19,7 @@ import { QueueService } from '../queue/queue.service.js';
 import type {
   CreateDocumentInput,
   DocumentParseJobData,
+  ReorderDocumentsInput,
   StudentDocumentResponse,
   UpdateDocumentInput,
   UploadedDocumentFile,
@@ -27,6 +32,7 @@ type StudentDocumentRecord = {
   fileUrl: string;
   parsedData: unknown;
   parseStatus: string;
+  sortOrder: number;
   uploadedAt: Date;
 };
 
@@ -69,7 +75,7 @@ export class DocumentsService {
 
     const documents = await this.prisma.studentDocument.findMany({
       where: { studentId },
-      orderBy: { uploadedAt: 'desc' },
+      orderBy: [{ type: 'asc' }, { sortOrder: 'asc' }, { uploadedAt: 'asc' }],
     });
 
     return documents.map((document) => this.toResponse(document));
@@ -100,6 +106,16 @@ export class DocumentsService {
       input.parseStatus,
     );
 
+    const maxOrder = await this.prisma.studentDocument.aggregate({
+      where: { studentId, type: documentType },
+      _max: { sortOrder: true },
+    });
+    const sortOrder =
+      input.sortOrder ??
+      (maxOrder._max.sortOrder === null || maxOrder._max.sortOrder === undefined
+        ? 0
+        : maxOrder._max.sortOrder + 1);
+
     const document = await this.prisma.studentDocument.create({
       data: {
         studentId,
@@ -107,6 +123,7 @@ export class DocumentsService {
         fileUrl: input.fileUrl.trim(),
         parsedData: this.toJsonInput(input.parsedData),
         parseStatus,
+        sortOrder,
       },
     });
 
@@ -172,6 +189,10 @@ export class DocumentsService {
       data.parseStatus = input.parseStatus;
     }
 
+    if (input.sortOrder !== undefined) {
+      data.sortOrder = input.sortOrder;
+    }
+
     const document = await this.prisma.studentDocument.update({
       where: { id },
       data,
@@ -180,14 +201,99 @@ export class DocumentsService {
     return this.toResponse(document);
   }
 
+  async reorder(
+    studentId: string,
+    input: ReorderDocumentsInput,
+  ): Promise<StudentDocumentResponse[]> {
+    await this.ensureStudentExists(studentId);
+
+    const type = input.type?.trim();
+    const orderedIds = input.orderedIds ?? [];
+
+    if (!type) {
+      throw new BadRequestException('Document type is required.');
+    }
+
+    if (orderedIds.length === 0) {
+      throw new BadRequestException('orderedIds cannot be empty.');
+    }
+
+    const existing = await this.prisma.studentDocument.findMany({
+      where: { studentId, type },
+      select: { id: true },
+    });
+    const existingIds = new Set(existing.map((doc) => doc.id));
+
+    if (existingIds.size !== orderedIds.length) {
+      throw new BadRequestException(
+        'orderedIds must include every document of this type exactly once.',
+      );
+    }
+
+    for (const id of orderedIds) {
+      if (!existingIds.has(id)) {
+        throw new BadRequestException(
+          `Document "${id}" does not belong to type "${type}".`,
+        );
+      }
+    }
+
+    await this.prisma.$transaction(
+      orderedIds.map((id, index) =>
+        this.prisma.studentDocument.update({
+          where: { id },
+          data: { sortOrder: index },
+        }),
+      ),
+    );
+
+    return this.findByStudent(studentId).then((docs) =>
+      docs.filter((doc) => doc.type === type),
+    );
+  }
+
   async remove(id: string): Promise<StudentDocumentResponse> {
-    await this.findOne(id);
+    const existing = await this.prisma.studentDocument.findUnique({
+      where: { id },
+    });
+
+    if (!existing) {
+      throw new NotFoundException(`Document "${id}" was not found.`);
+    }
+
+    await this.deleteFromStorage(existing.fileUrl);
 
     const document = await this.prisma.studentDocument.delete({
       where: { id },
     });
 
+    await this.normalizeSortOrder(document.studentId, document.type);
+
     return this.toResponse(document);
+  }
+
+  private async normalizeSortOrder(
+    studentId: string,
+    type: string,
+  ): Promise<void> {
+    const remaining = await this.prisma.studentDocument.findMany({
+      where: { studentId, type },
+      orderBy: [{ sortOrder: 'asc' }, { uploadedAt: 'asc' }],
+      select: { id: true },
+    });
+
+    if (remaining.length === 0) {
+      return;
+    }
+
+    await this.prisma.$transaction(
+      remaining.map((doc, index) =>
+        this.prisma.studentDocument.update({
+          where: { id: doc.id },
+          data: { sortOrder: index },
+        }),
+      ),
+    );
   }
 
   private async ensureStudentExists(studentId: string): Promise<void> {
@@ -240,6 +346,41 @@ export class DocumentsService {
     return `${this.publicUrl.replace(/\/$/, '')}/${key}`;
   }
 
+  private async deleteFromStorage(fileUrl: string): Promise<void> {
+    if (!this.s3 || !this.bucket || !this.publicUrl) {
+      return;
+    }
+
+    const key = this.keyFromPublicUrl(fileUrl);
+    if (!key) {
+      return;
+    }
+
+    try {
+      await this.s3.send(
+        new DeleteObjectCommand({
+          Bucket: this.bucket,
+          Key: key,
+        }),
+      );
+    } catch {
+      // DB row must still be removed even if object is already gone.
+    }
+  }
+
+  private keyFromPublicUrl(fileUrl: string): string | null {
+    if (!this.publicUrl) {
+      return null;
+    }
+
+    const base = this.publicUrl.replace(/\/$/, '');
+    if (!fileUrl.startsWith(base + '/') && fileUrl !== base) {
+      return null;
+    }
+
+    return fileUrl.slice(base.length + 1);
+  }
+
   private async enqueueParse(documentId: string): Promise<void> {
     const data: DocumentParseJobData = { documentId };
 
@@ -277,6 +418,7 @@ export class DocumentsService {
       fileUrl: document.fileUrl,
       parsedData: document.parsedData ?? undefined,
       parseStatus: document.parseStatus,
+      sortOrder: document.sortOrder,
       uploadedAt: document.uploadedAt.toISOString(),
     };
   }

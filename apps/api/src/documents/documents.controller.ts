@@ -14,7 +14,9 @@ import { DocumentsService } from './documents.service.js';
 import { ParserService } from './parser.service.js';
 import type {
   CreateDocumentInput,
+  ReorderDocumentsInput,
   UpdateDocumentInput,
+  UploadedDocumentFile,
 } from './types/document-api.types.js';
 
 @Controller()
@@ -42,7 +44,7 @@ export class DocumentsController {
   upload(
     @Param('studentId') studentId: string,
     @Body('type') type: string | undefined,
-    @UploadedFile() file: Express.Multer.File | undefined,
+    @UploadedFile() file: UploadedDocumentFile | undefined,
   ) {
     return this.documentsService.upload(studentId, type, file);
   }
@@ -60,6 +62,14 @@ export class DocumentsController {
   @Post('documents/:id/parse')
   parse(@Param('id') id: string) {
     return this.parserService.parseDocument(id);
+  }
+
+  @Patch('students/:studentId/documents/reorder')
+  reorder(
+    @Param('studentId') studentId: string,
+    @Body() body: ReorderDocumentsInput,
+  ) {
+    return this.documentsService.reorder(studentId, body);
   }
 
   @Delete('documents/:id')

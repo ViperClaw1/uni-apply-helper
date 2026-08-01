@@ -119,8 +119,9 @@ export function StudentProfilePage() {
     for (const [type, documentsForType] of groupedDocuments) {
       documentsForType.sort(
         (left, right) =>
-          new Date(right.uploadedAt).getTime() -
-          new Date(left.uploadedAt).getTime(),
+          (left.sortOrder ?? 0) - (right.sortOrder ?? 0) ||
+          new Date(left.uploadedAt).getTime() -
+            new Date(right.uploadedAt).getTime(),
       );
       groupedDocuments.set(type, documentsForType);
     }

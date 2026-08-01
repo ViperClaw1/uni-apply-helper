@@ -1,4 +1,4 @@
-import type { FieldConfig, StudentProfile } from '@uni-apply/shared';
+import { getDocumentUrls, type FieldConfig, type StudentProfile } from '@uni-apply/shared';
 import type { FieldFillResult } from '../shared/messages';
 import type { RuntimeResponse } from '../shared/messages';
 import { findFieldElement, humanDelay } from './form-detector';
@@ -25,7 +25,7 @@ export async function attachFiles(
       continue;
     }
 
-    const fileUrl = profile.documents[field.documentType];
+    const fileUrl = getDocumentUrls(profile.documents, field.documentType)[0];
 
     if (!fileUrl) {
       results.push({

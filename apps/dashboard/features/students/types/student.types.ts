@@ -39,6 +39,6 @@ export type StudentProfile = {
   };
   guarantor?: ContactInfo;
   emergencyContact?: ContactInfo;
-  documents: Record<string, string>;
+  documents: Record<string, string | string[]>;
   applicationTargets: ApplicationTarget[];
 };

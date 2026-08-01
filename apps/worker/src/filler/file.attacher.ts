@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import type { FieldConfig, StudentProfile } from '@uni-apply/shared';
+import { getDocumentUrls } from '@uni-apply/shared';
 import type { Locator, Page } from 'playwright';
 import { resolveFieldLocator } from './field.locator.js';
 
@@ -65,102 +66,141 @@ export class FileAttacher {
 
     for (const field of fileFields) {
       const docType = field.documentType!;
-      const fileUrl = profile.documents[docType];
+      const fileUrls = getDocumentUrls(profile.documents, docType);
       const attachTypeId = this.extractAttachTypeId(field.selector);
       const labelHint = field.labelHint || docType;
 
+      if (fileUrls.length === 0) {
+        if (field.required) {
+          throw new Error('Missing required document: ' + docType);
+        }
+        this.logger.log('Attach: skip ' + docType + ' (not in profile)');
+        continue;
+      }
+
       if (
-        await this.rowAlreadyHasAttachment(page, attachTypeId, labelHint)
+        fileUrls.length === 1 &&
+        (await this.rowAlreadyHasAttachment(page, attachTypeId, labelHint))
       ) {
         this.logger.log(
-          `Step 6: skip ${docType} — already attached on page` +
-            (attachTypeId ? ` (${attachTypeId})` : ''),
+          'Attach: skip ' +
+            docType +
+            ' — already attached on page' +
+            (attachTypeId ? ' (' + attachTypeId + ')' : ''),
         );
         continue;
       }
 
-      if (!fileUrl) {
-        if (field.required) {
-          throw new Error(`Missing required document: ${docType}`);
-        }
-        this.logger.log(`Step 6: skip ${docType} (not in profile)`);
-        continue;
-      }
-
-      this.logger.log(`Step 6: fetch ${docType}…`);
-      const { contentType, buffer } = await this.fetchDocument(docType, fileUrl);
-      this.logger.log(
-        `Step 6: fetched ${docType} (${contentType}, ${buffer.length} bytes)`,
-      );
-
-      if (
-        JPG_ONLY_DOCUMENT_TYPES.has(docType) &&
-        /pdf/i.test(contentType)
-      ) {
-        throw new Error(
-          `Document "${docType}" is PDF but 17gz Step 6 accepts only *.jpg/*.jpeg for this row. ` +
-            `Re-upload as JPEG in the dashboard (label: ${field.labelHint ?? docType}).`,
-        );
-      }
-
-      const filePayload = this.toFilePayload(docType, contentType, buffer);
-
-      const locator = await resolveFieldLocator(page, field);
-      if (locator && (await locator.count()) > 0) {
-        const tag = await locator.evaluate((el) => el.tagName).catch(() => '');
-        if (tag === 'INPUT') {
-          await locator.setInputFiles(filePayload);
-          this.logger.log(
-            `Attached ${docType} via file input (${field.selector})`,
-          );
-          await this.dismissPostUploadDialogs(page);
-          await this.waitBrieflyForUploadSettle(page);
-          continue;
-        }
-      }
-
-      // PKU/17gz Step 6: no input[type=file] until "Add Document" → filechooser.
       const resolvedId =
         (await this.resolveLiveAttachTypeId(page, attachTypeId, labelHint)) ??
         attachTypeId;
-      const ok = await this.attachViaAddDocument(
-        page,
-        resolvedId,
-        filePayload,
-        labelHint,
-      );
-      if (ok) {
+
+      for (let index = 0; index < fileUrls.length; index += 1) {
+        const fileUrl = fileUrls[index]!;
         this.logger.log(
-          `Attached ${docType} via Add Document` +
-            (resolvedId ? ` (${resolvedId})` : ''),
+          'Attach: fetch ' +
+            docType +
+            ' [' +
+            (index + 1) +
+            '/' +
+            fileUrls.length +
+            ']…',
         );
-        await this.waitBrieflyForUploadSettle(page);
-        continue;
-      }
-
-      // Portal may refuse a second passport upload with a messager instead of filechooser.
-      if (
-        await this.rowAlreadyHasAttachment(page, resolvedId, labelHint)
-      ) {
+        const { contentType, buffer } = await this.fetchDocument(
+          docType,
+          fileUrl,
+        );
         this.logger.log(
-          `Step 6: treat ${docType} as done after attach attempt (row has file)`,
+          'Attach: fetched ' +
+            docType +
+            ' (' +
+            contentType +
+            ', ' +
+            buffer.length +
+            ' bytes)',
         );
-        continue;
-      }
 
-      if (field.required) {
-        const dump = await this.dumpAttachDebug(page);
-        throw new Error(
-          `File input not found: ${field.selector}` +
-            `${field.labelHint ? ` / "${field.labelHint}"` : ''}` +
-            (resolvedId ? ` [attachTypeId=${resolvedId}]` : '') +
-            ` | DOM: ${dump}`,
+        if (
+          JPG_ONLY_DOCUMENT_TYPES.has(docType) &&
+          /pdf/i.test(contentType)
+        ) {
+          throw new Error(
+            'Document "' +
+              docType +
+              '" is PDF but 17gz Step 6 accepts only *.jpg/*.jpeg for this row. ' +
+              'Re-upload as JPEG in the dashboard (label: ' +
+              (field.labelHint ?? docType) +
+              ').',
+          );
+        }
+
+        const filePayload = this.toFilePayload(docType, contentType, buffer);
+
+        const locator = await resolveFieldLocator(page, field);
+        if (locator && (await locator.count()) > 0) {
+          const tag = await locator
+            .evaluate((el) => el.tagName)
+            .catch(() => '');
+          if (tag === 'INPUT' && fileUrls.length === 1) {
+            await locator.setInputFiles(filePayload);
+            this.logger.log(
+              'Attached ' + docType + ' via file input (' + field.selector + ')',
+            );
+            await this.dismissPostUploadDialogs(page);
+            await this.waitBrieflyForUploadSettle(page);
+            break;
+          }
+        }
+
+        const ok = await this.attachViaAddDocument(
+          page,
+          resolvedId,
+          filePayload,
+          labelHint,
         );
-      }
+        if (ok) {
+          this.logger.log(
+            'Attached ' +
+              docType +
+              ' [' +
+              (index + 1) +
+              '/' +
+              fileUrls.length +
+              '] via Add Document' +
+              (resolvedId ? ' (' + resolvedId + ')' : ''),
+          );
+          await this.waitBrieflyForUploadSettle(page);
+          continue;
+        }
 
-      this.logger.warn(
-        `Step 6: could not attach optional ${docType} — Add Document not found`,
-      );
+        if (await this.rowAlreadyHasAttachment(page, resolvedId, labelHint)) {
+          this.logger.log(
+            'Attach: treat ' + docType + '[' + index + '] as done (row has file)',
+          );
+          continue;
+        }
+
+        if (field.required) {
+          const dump = await this.dumpAttachDebug(page);
+          throw new Error(
+            'File input not found: ' +
+              field.selector +
+              (field.labelHint ? ' / "' + field.labelHint + '"' : '') +
+              (resolvedId ? ' [attachTypeId=' + resolvedId + ']' : '') +
+              ' | DOM: ' +
+              dump,
+          );
+        }
+
+        this.logger.warn(
+          'Attach: could not attach optional ' +
+            docType +
+            '[' +
+            index +
+            '] — Add Document not found',
+        );
+        break;
+      }
     }
   }
 

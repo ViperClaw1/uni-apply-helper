@@ -4,7 +4,7 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
-import { QUEUES } from '@uni-apply/shared';
+import { QUEUES, groupDocumentUrls } from '@uni-apply/shared';
 import type {
   FieldConfig,
   StudentProfile,
@@ -549,13 +549,7 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
   }
 
   private toStudentProfile(student: any): StudentProfile {
-    const documents = student.documents.reduce(
-      (acc: Record<string, string>, document: any) => {
-        acc[document.type] = document.fileUrl;
-        return acc;
-      },
-      {},
-    );
+    const documents = groupDocumentUrls(student.documents ?? []);
 
     return {
       id: student.id,

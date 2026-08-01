@@ -13,6 +13,7 @@ export type StudentDocument = {
   fileUrl: string;
   parsedData?: unknown;
   parseStatus: DocumentParseStatus;
+  sortOrder: number;
   uploadedAt: string;
 };
 

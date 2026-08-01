@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   fieldsForStep,
+  getDocumentUrls,
   getFieldValue,
   type AgentAction,
   type AgentContext,
@@ -228,22 +229,27 @@ export class FormAgent {
 
     for (const field of fields) {
       if (field.type === 'file' && field.documentType) {
-        const url = profile.documents?.[field.documentType];
-        if (!url) {
+        const urls = getDocumentUrls(
+          profile.documents,
+          field.documentType,
+        );
+        if (urls.length === 0) {
           continue;
         }
-        hints.push({
-          mapsTo: field.mapsTo,
-          label:
-            field.labelHint ??
-            field.documentType ??
-            field.selector,
-          type: 'file',
-          value: url,
-          required: field.required,
-          selector: field.selector,
-          labelHint: field.labelHint,
-        });
+        for (const url of urls) {
+          hints.push({
+            mapsTo: field.mapsTo,
+            label:
+              field.labelHint ??
+              field.documentType ??
+              field.selector,
+            type: 'file',
+            value: url,
+            required: field.required,
+            selector: field.selector,
+            labelHint: field.labelHint,
+          });
+        }
         continue;
       }
 
@@ -402,8 +408,8 @@ export class FormAgent {
       push('Motivation / Personal Statement', 'essay', motivationLetterContent, false);
     }
 
-    for (const [docType, url] of Object.entries(profile.documents ?? {})) {
-      if (url) {
+    for (const [docType] of Object.entries(profile.documents ?? {})) {
+      for (const url of getDocumentUrls(profile.documents, docType)) {
         push(`Upload ${docType}`, 'file', url, false);
       }
     }

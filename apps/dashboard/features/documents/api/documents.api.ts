@@ -26,6 +26,27 @@ export async function uploadStudentDocument(
   return response.data;
 }
 
+export async function deleteStudentDocument(documentId: string) {
+  const response = await apiClient.delete<StudentDocument>(
+    `/documents/${documentId}`,
+  );
+
+  return response.data;
+}
+
+export async function reorderStudentDocuments(
+  studentId: string,
+  type: string,
+  orderedIds: string[],
+) {
+  const response = await apiClient.patch<StudentDocument[]>(
+    `/students/${studentId}/documents/reorder`,
+    { type, orderedIds },
+  );
+
+  return response.data;
+}
+
 export async function retryDocumentParse(documentId: string) {
   const response = await apiClient.post<StudentDocument>(
     `/documents/${documentId}/parse`,

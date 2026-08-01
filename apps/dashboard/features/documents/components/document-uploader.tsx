@@ -1,9 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { DragEvent } from "react";
 import { useDropzone } from "react-dropzone";
 import { toTitleCase } from "@/lib/format";
-import { uploadStudentDocument, retryDocumentParse } from "../api/documents.api";
+import {
+  deleteStudentDocument,
+  reorderStudentDocuments,
+  retryDocumentParse,
+  uploadStudentDocument,
+} from "../api/documents.api";
 import type { StudentDocument } from "../types/document.types";
 
 type UploadStatus = "idle" | "uploading" | "done" | "error";
@@ -31,8 +37,24 @@ export function DocumentUploader({
 }: DocumentUploaderProps) {
   const [status, setStatus] = useState<UploadStatus>("idle");
   const [isRetryingParse, setIsRetryingParse] = useState(false);
-  const existingDocument = existingDocuments[0];
-  const hasDocuments = existingDocuments.length > 0;
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [orderedDocs, setOrderedDocs] = useState(existingDocuments);
+  const orderedDocsRef = useRef(orderedDocs);
+  orderedDocsRef.current = orderedDocs;
+  const existingDocument = orderedDocs[0];
+  const hasDocuments = orderedDocs.length > 0;
+
+  useEffect(() => {
+    setOrderedDocs(
+      [...existingDocuments].sort(
+        (left, right) =>
+          (left.sortOrder ?? 0) - (right.sortOrder ?? 0) ||
+          new Date(left.uploadedAt).getTime() -
+            new Date(right.uploadedAt).getTime(),
+      ),
+    );
+  }, [existingDocuments]);
 
   const onDrop = useCallback(
     async (files: File[]) => {
@@ -46,7 +68,9 @@ export function DocumentUploader({
 
       try {
         await Promise.all(
-          filesToUpload.map((file) => uploadStudentDocument(studentId, type, file)),
+          filesToUpload.map((file) =>
+            uploadStudentDocument(studentId, type, file),
+          ),
         );
         await onUploaded();
         setStatus("done");
@@ -62,6 +86,7 @@ export function DocumentUploader({
     maxFiles: multiple ? 0 : 1,
     multiple,
     onDrop,
+    noDragEventsBubbling: true,
   });
 
   useEffect(() => {
@@ -95,6 +120,142 @@ export function DocumentUploader({
     }
   }
 
+  async function handleDelete(documentId: string) {
+    setDeletingId(documentId);
+    try {
+      await deleteStudentDocument(documentId);
+      await onUploaded();
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  async function commitOrder(next: StudentDocument[]) {
+    setOrderedDocs(next);
+    try {
+      await reorderStudentDocuments(
+        studentId,
+        type,
+        next.map((document) => document.id),
+      );
+      await onUploaded();
+    } catch {
+      setOrderedDocs(existingDocuments);
+    }
+  }
+
+  function onDragStart(documentId: string) {
+    setDragId(documentId);
+  }
+
+  function onDragOver(event: DragEvent, overId: string) {
+    event.preventDefault();
+    if (!dragId || dragId === overId) {
+      return;
+    }
+
+    setOrderedDocs((current) => {
+      const from = current.findIndex((document) => document.id === dragId);
+      const to = current.findIndex((document) => document.id === overId);
+      if (from < 0 || to < 0 || from === to) {
+        return current;
+      }
+      const next = [...current];
+      const [moved] = next.splice(from, 1);
+      if (!moved) {
+        return current;
+      }
+      next.splice(to, 0, moved);
+      return next;
+    });
+  }
+
+  async function onDragEnd() {
+    if (!dragId) {
+      return;
+    }
+    setDragId(null);
+    await commitOrder(orderedDocsRef.current);
+  }
+
+  if (hasDocuments && multiple) {
+    return (
+      <div className="rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.08)] ring-1 ring-black/5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-slate-950">{label}</div>
+            <div className="mt-1 text-xs font-medium text-emerald-700">
+              {status === "uploading"
+                ? "Добавляем файлы..."
+                : `Загружено файлов: ${orderedDocs.length}`}
+            </div>
+            {status === "error" ? (
+              <div className="mt-1 text-xs font-medium text-rose-700">
+                Ошибка загрузки
+              </div>
+            ) : null}
+            <div className="mt-3 grid gap-2">
+              {orderedDocs.map((document, index) => (
+                <div
+                  key={document.id}
+                  draggable
+                  onDragStart={() => onDragStart(document.id)}
+                  onDragOver={(event) => onDragOver(event, document.id)}
+                  onDragEnd={() => {
+                    void onDragEnd();
+                  }}
+                  className={[
+                    "flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 ring-1 ring-slate-200",
+                    dragId === document.id ? "opacity-60 ring-sky-300" : "",
+                  ].join(" ")}
+                >
+                  <span
+                    className="cursor-grab select-none text-slate-400 active:cursor-grabbing"
+                    title="Перетащите для изменения порядка"
+                    aria-hidden
+                  >
+                    ⋮⋮
+                  </span>
+                  <a
+                    href={document.fileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="min-w-0 flex-1 truncate text-xs font-medium text-sky-700 transition-colors hover:text-sky-800"
+                  >
+                    Файл {index + 1}
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => void handleDelete(document.id)}
+                    disabled={deletingId === document.id}
+                    className="cursor-pointer shrink-0 rounded-lg px-2 py-1 text-xs font-semibold text-rose-700 ring-1 ring-rose-200 transition-colors hover:bg-rose-50 disabled:opacity-60"
+                  >
+                    {deletingId === document.id ? "…" : "Удалить"}
+                  </button>
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 text-[11px] text-slate-400">
+              Перетащите файлы для порядка · первый уйдёт в портал первым
+            </p>
+          </div>
+          <div
+            {...getRootProps()}
+            className={[
+              "inline-flex h-10 shrink-0 cursor-pointer items-center justify-center rounded-xl px-3 text-xs font-semibold ring-1 transition-colors",
+              status === "uploading"
+                ? "pointer-events-none bg-slate-50 text-slate-400 ring-slate-200"
+                : "text-slate-700 ring-slate-200 hover:bg-slate-50",
+            ].join(" ")}
+          >
+            <input {...getInputProps()} />
+            {status === "uploading" ? "Загрузка..." : "Добавить ещё"}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (hasDocuments) {
     return (
       <div className="rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.08)] ring-1 ring-black/5">
@@ -109,14 +270,8 @@ export function DocumentUploader({
                 ].join(" ")}
               >
                 {status === "uploading"
-                  ? multiple
-                    ? "Добавляем файлы..."
-                    : "Загружаем новую версию..."
-                  : getUploadedStatusText(
-                      existingDocument,
-                      parse,
-                      existingDocuments.length,
-                    )}
+                  ? "Загружаем новую версию..."
+                  : getUploadedStatusText(existingDocument, parse, 1)}
               </div>
             ) : null}
             {status === "error" ? (
@@ -134,7 +289,7 @@ export function DocumentUploader({
                 type="button"
                 onClick={handleRetryParse}
                 disabled={isRetryingParse}
-                className="mt-2 inline-flex h-8 items-center rounded-lg px-3 text-xs font-semibold text-rose-700 ring-1 ring-rose-200 transition-colors hover:bg-rose-100 disabled:opacity-60"
+                className="mt-2 inline-flex h-8 cursor-pointer items-center rounded-lg px-3 text-xs font-semibold text-rose-700 ring-1 ring-rose-200 transition-colors hover:bg-rose-100 disabled:opacity-60"
               >
                 {isRetryingParse ? "Повторяем..." : "Повторить парсинг"}
               </button>
@@ -144,24 +299,9 @@ export function DocumentUploader({
                 {formatParsedPreview(type, existingDocument.parsedData)}
               </div>
             ) : null}
-            {multiple ? (
-              <div className="mt-3 grid gap-2">
-                {existingDocuments.map((document, index) => (
-                  <a
-                    key={document.id}
-                    href={document.fileUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="truncate rounded-xl bg-slate-50 px-3 py-2 text-xs font-medium text-sky-700 ring-1 ring-slate-200 transition-colors hover:bg-sky-50"
-                  >
-                    Файл {existingDocuments.length - index}
-                  </a>
-                ))}
-              </div>
-            ) : null}
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            {existingDocument && !multiple ? (
+            {existingDocument ? (
               <a
                 href={existingDocument.fileUrl}
                 target="_blank"
@@ -170,6 +310,16 @@ export function DocumentUploader({
               >
                 Открыть
               </a>
+            ) : null}
+            {existingDocument ? (
+              <button
+                type="button"
+                onClick={() => void handleDelete(existingDocument.id)}
+                disabled={deletingId === existingDocument.id}
+                className="inline-flex h-10 cursor-pointer items-center justify-center rounded-xl px-3 text-xs font-semibold text-rose-700 ring-1 ring-rose-200 transition-colors hover:bg-rose-50 disabled:opacity-60"
+              >
+                {deletingId === existingDocument.id ? "…" : "Удалить"}
+              </button>
             ) : null}
             <div
               {...getRootProps()}
@@ -181,11 +331,7 @@ export function DocumentUploader({
               ].join(" ")}
             >
               <input {...getInputProps()} />
-              {status === "uploading"
-                ? "Загрузка..."
-                : multiple
-                  ? "Добавить ещё"
-                  : "Загрузить заново"}
+              {status === "uploading" ? "Загрузка..." : "Загрузить заново"}
             </div>
           </div>
         </div>
@@ -230,7 +376,9 @@ function getUploadedStatusText(
   documentCount: number,
 ) {
   if (!parse) {
-    return documentCount > 1 ? `Загружено файлов: ${documentCount}` : "Загружен";
+    return documentCount > 1
+      ? `Загружено файлов: ${documentCount}`
+      : "Загружен";
   }
 
   return `Загружен · Парсинг: ${formatParseStatus(document.parseStatus)}`;

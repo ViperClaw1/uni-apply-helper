@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { StudentProfile } from '@uni-apply/shared';
+import { StudentProfile, groupDocumentUrls } from '@uni-apply/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { UniversitiesService } from '../universities/universities.service.js';
 
@@ -151,13 +151,7 @@ export class StudentsService {
       },
     });
 
-    const documents = student.documents.reduce<Record<string, string>>(
-      (acc, document) => {
-        acc[document.type] = document.fileUrl;
-        return acc;
-      },
-      {},
-    );
+    const documents = groupDocumentUrls(student.documents);
 
     const universities = await this.universitiesService.findAll();
     const formUrlByUniversityId = new Map(

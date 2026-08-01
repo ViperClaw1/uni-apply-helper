@@ -22,6 +22,7 @@ export const DEFAULT_DOCUMENT_TYPES: DocumentTypeOption[] = [
       "application/pdf": [".pdf"],
     },
     parse: false,
+    multiple: true,
   },
   {
     key: "medical",
@@ -73,6 +74,7 @@ export const DEFAULT_DOCUMENT_TYPES: DocumentTypeOption[] = [
       "application/pdf": [".pdf"],
     },
     parse: false,
+    multiple: true,
   },
   {
     key: "recommendation_letter",

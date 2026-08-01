@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@uni-apply/database';
-import { QUEUES, type StudentProfile } from '@uni-apply/shared';
+import { QUEUES, hasDocument, type StudentProfile } from '@uni-apply/shared';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { QueueService } from '../queue/queue.service.js';
@@ -480,7 +480,7 @@ export class ApplicationsService {
 
       const university = resolved.university;
       const missingDocuments = university.requiredDocuments.filter(
-        (documentType) => !profile.documents[documentType],
+        (documentType) => !hasDocument(profile.documents, documentType),
       );
       const approvedLetter = university.requiresEssay
         ? await this.findApprovedLetter(profile.id, university.id)
