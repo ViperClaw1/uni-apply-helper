@@ -11,6 +11,7 @@ import {
   uploadStudentDocument,
 } from "../api/documents.api";
 import type { StudentDocument } from "../types/document.types";
+import { DocumentFileCard } from "./document-file-card";
 
 type UploadStatus = "idle" | "uploading" | "done" | "error";
 
@@ -194,50 +195,6 @@ export function DocumentUploader({
                 Ошибка загрузки
               </div>
             ) : null}
-            <div className="mt-3 grid gap-2">
-              {orderedDocs.map((document, index) => (
-                <div
-                  key={document.id}
-                  draggable
-                  onDragStart={() => onDragStart(document.id)}
-                  onDragOver={(event) => onDragOver(event, document.id)}
-                  onDragEnd={() => {
-                    void onDragEnd();
-                  }}
-                  className={[
-                    "flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 ring-1 ring-slate-200",
-                    dragId === document.id ? "opacity-60 ring-sky-300" : "",
-                  ].join(" ")}
-                >
-                  <span
-                    className="cursor-grab select-none text-slate-400 active:cursor-grabbing"
-                    title="Перетащите для изменения порядка"
-                    aria-hidden
-                  >
-                    ⋮⋮
-                  </span>
-                  <a
-                    href={document.fileUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="min-w-0 flex-1 truncate text-xs font-medium text-sky-700 transition-colors hover:text-sky-800"
-                  >
-                    Файл {index + 1}
-                  </a>
-                  <button
-                    type="button"
-                    onClick={() => void handleDelete(document.id)}
-                    disabled={deletingId === document.id}
-                    className="cursor-pointer shrink-0 rounded-lg px-2 py-1 text-xs font-semibold text-rose-700 ring-1 ring-rose-200 transition-colors hover:bg-rose-50 disabled:opacity-60"
-                  >
-                    {deletingId === document.id ? "…" : "Удалить"}
-                  </button>
-                </div>
-              ))}
-            </div>
-            <p className="mt-2 text-[11px] text-slate-400">
-              Перетащите файлы для порядка · первый уйдёт в портал первым
-            </p>
           </div>
           <div
             {...getRootProps()}
@@ -252,6 +209,28 @@ export function DocumentUploader({
             {status === "uploading" ? "Загрузка..." : "Добавить ещё"}
           </div>
         </div>
+
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {orderedDocs.map((document, index) => (
+            <DocumentFileCard
+              key={document.id}
+              document={document}
+              index={index}
+              isDragging={dragId === document.id}
+              isDeleting={deletingId === document.id}
+              onDelete={() => void handleDelete(document.id)}
+              onDragStart={() => onDragStart(document.id)}
+              onDragOver={(event) => onDragOver(event, document.id)}
+              onDragEnd={() => {
+                void onDragEnd();
+              }}
+            />
+          ))}
+        </div>
+
+        <p className="mt-3 text-[11px] text-slate-400">
+          Перетащите карточки для порядка · первый слева уйдёт в портал первым
+        </p>
       </div>
     );
   }
