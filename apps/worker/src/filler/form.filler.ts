@@ -120,7 +120,14 @@ export class FormFiller {
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      // Step 6 attach failures need schema/label fixes — agent filechooser loops
+      // historically crashed the worker (uncaught timeout) → BullMQ stall.
+      const skipAgentFallback =
+        /Failed to attach|Missing required document|File input not found/i.test(
+          message,
+        );
       const canFallback =
+        !skipAgentFallback &&
         isAgentFallbackEnabled(this.configService, university) &&
         this.formAgent.isAvailable();
 

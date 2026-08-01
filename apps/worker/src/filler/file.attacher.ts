@@ -24,6 +24,49 @@ const JPG_ONLY_DOCUMENT_TYPES = new Set([
 
 const FETCH_TIMEOUT_MS = 30_000;
 
+/** Portal row label fragments when attachTypeIds drift between skins. */
+function labelHintsForDocument(
+  documentType: string | undefined,
+  attachTypeId: string | undefined,
+): string[] {
+  const id = attachTypeId ?? '';
+  switch (documentType) {
+    case 'passport':
+      return ['Passport'];
+    case 'diploma':
+      return [
+        'High school education',
+        'Highest Education',
+        'Diploma',
+        'Certificate of Highest',
+      ];
+    case 'transcript':
+      return ['Transcript', 'Certified Copy', 'score'];
+    case 'medical':
+      return ['Physical Examination', 'checkBody'];
+    case 'criminal_record':
+      return ['Non-Criminal', 'Non-criminal', 'nonCriminal'];
+    case 'financial':
+      return ['Economic guarantee', 'deposit certificate', 'financial'];
+    case 'recommendation':
+    case 'language_certificate':
+      return ['HSK', 'Chinese language', 'Learning to prove', 'Employment'];
+    default:
+      break;
+  }
+
+  if (/passport/i.test(id)) return ['Passport'];
+  if (/score/i.test(id)) return ['Transcript'];
+  if (/checkBody/i.test(id)) return ['Physical Examination'];
+  if (/nonCriminal|criminal/i.test(id)) return ['Non-Criminal'];
+  if (/8268823123|HighstEducation|HighestEducation/i.test(id)) {
+    return ['High school education', 'Diploma'];
+  }
+  if (/8268819058/i.test(id)) return ['HSK', 'Chinese language'];
+  if (/8268819131/i.test(id)) return ['Economic guarantee'];
+  return [];
+}
+
 @Injectable()
 export class FileAttacher {
   private readonly logger = new Logger(FileAttacher.name);
@@ -162,6 +205,7 @@ export class FileAttacher {
           resolvedId,
           filePayload,
           labelHint,
+          docType,
         );
         await this.waitBrieflyForUploadSettle(page);
         const countAfter = await this.countRowAttachments(
@@ -382,17 +426,20 @@ export class FileAttacher {
     attachTypeId: string | undefined,
     filePayload: FilePayload,
     labelHint?: string,
+    documentType?: string,
   ): Promise<boolean> {
     const addButtons = await this.resolveAddDocumentButtons(
       page,
       attachTypeId,
       labelHint,
+      documentType,
     );
 
     this.logger.log(
       `Step 6: Add Document candidates=${addButtons.length}` +
         (attachTypeId ? ` attachTypeId=${attachTypeId}` : '') +
-        (labelHint ? ` hint="${labelHint}"` : ''),
+        (labelHint ? ` hint="${labelHint}"` : '') +
+        (documentType ? ` type=${documentType}` : ''),
     );
 
     for (const btn of addButtons) {
@@ -416,6 +463,7 @@ export class FileAttacher {
     page: Page,
     attachTypeId: string | undefined,
     labelHint?: string,
+    documentType?: string,
   ): Promise<Locator[]> {
     const buttons: Locator[] = [];
     const seen = new Set<string>();
@@ -480,25 +528,10 @@ export class FileAttacher {
       }
     }
 
-    // Label match — primary fallback when attachTypeIds differ per university.
+    // Label synonyms — SUDA Pre-university wording ≠ PKU Diploma labels.
     const hints = [
       labelHint,
-      attachTypeId?.includes('passport') ? 'Passport' : undefined,
-      /HighstEducation|HighestEducation|152223612/i.test(attachTypeId ?? '')
-        ? 'Diploma'
-        : undefined,
-      /score|152223620/i.test(attachTypeId ?? '') ? 'Transcript' : undefined,
-      attachTypeId?.includes('checkBody')
-        ? 'Physical Examination'
-        : undefined,
-      /criminal|2251456278|115623117/i.test(attachTypeId ?? '')
-        ? 'Non-Criminal'
-        : undefined,
-      /Learning|Employment|152223633|8135227092/i.test(
-        `${labelHint ?? ''}${attachTypeId ?? ''}`,
-      )
-        ? 'Learning to prove'
-        : undefined,
+      ...labelHintsForDocument(documentType, attachTypeId),
     ].filter(Boolean) as string[];
 
     for (const hint of hints) {

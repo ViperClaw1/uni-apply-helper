@@ -1025,31 +1025,31 @@
       "labelHint": "Passport"
     },
     {
-      "selector": "[attachTypeId=\"ATTACH_TYPE_152223612\"]",
+      "selector": "[attachTypeId=\"ATTACH_TYPE_8268823123\"]",
       "mapsTo": null,
       "type": "file",
       "required": true,
       "wizardStep": 6,
       "documentType": "diploma",
-      "labelHint": "Diploma"
+      "labelHint": "High school education"
     },
     {
-      "selector": "[attachTypeId=\"ATTACH_TYPE_152223633\"]",
-      "mapsTo": null,
-      "type": "file",
-      "required": true,
-      "wizardStep": 6,
-      "documentType": "recommendation",
-      "labelHint": "Learning to prove"
-    },
-    {
-      "selector": "[attachTypeId=\"ATTACH_TYPE_152223620\"]",
+      "selector": "[attachTypeId=\"ATTACH_TYPE_scoreImage\"]",
       "mapsTo": null,
       "type": "file",
       "required": true,
       "wizardStep": 6,
       "documentType": "transcript",
-      "labelHint": "Transcript"
+      "labelHint": "High School Transcript"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_8268819058\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6,
+      "documentType": "recommendation",
+      "labelHint": "HSK"
     },
     {
       "selector": "[attachTypeId=\"ATTACH_TYPE_checkBodyreport\"]",
@@ -1061,13 +1061,22 @@
       "labelHint": "Physical Examination"
     },
     {
-      "selector": "[attachTypeId=\"ATTACH_TYPE_2251456278\"]",
+      "selector": "[attachTypeId=\"ATTACH_TYPE_nonCriminalRecord\"]",
       "mapsTo": null,
       "type": "file",
       "required": true,
       "wizardStep": 6,
       "documentType": "criminal_record",
       "labelHint": "Non-Criminal"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_8268819131\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": false,
+      "wizardStep": 6,
+      "documentType": "financial",
+      "labelHint": "Economic guarantee"
     },
     {
       "selector": "[attachTypeId=\"ATTACH_TYPE_appendFile\"]",
@@ -1091,6 +1100,6 @@
     "goal": "Complete and submit the Soochow University online application form"
   },
   "requiresEssay": false,
-  "notes": "17gz twin of CSU/PKU. Pre-wizard: Notes → Program (Self-sponsored) → Student type (Pre-university) → Study Plan Apply. Step 6 attachTypeIds are SUDA-specific: passportImage, 152223612 diploma/HS cert, 152223633 learning/employment, 152223620 transcript, checkBodyreport medical, 2251456278 non-criminal, appendFile. Medical/criminal accept pdf+jpg; multi-file via repeated Add Document on the same row (≤1.5M each).",
+  "notes": "17gz Pre-university Step 6 attachTypeIds (live 2026-08): passportImage, 8268823123 HS certificate/diploma, scoreImage transcripts, 8268819058 HSK, checkBodyreport medical, nonCriminalRecord, 8268819131 economic guarantee, appendFile. Multi-file = repeated Add Document on same row (≤1.5M).",
   "defaultProgram": "foundation program Eng"
 }

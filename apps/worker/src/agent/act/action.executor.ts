@@ -176,19 +176,19 @@ export class ActionExecutor {
     }
 
     // PKU/17gz-style: click trigger → filechooser
-    const chooserPromise = page.waitForEvent('filechooser', {
-      timeout: 15_000,
-    });
-    if (action.target) {
-      await this.resolveLocator(page, action.target).click({ force: true });
-    } else {
-      // Never click the first Add Document — that re-uploads passport.
+    // Promise.all so a failed click doesn't leave an unhandled filechooser rejection
+    // (that previously crashed the Nest worker → BullMQ stall).
+    if (!action.target) {
       throw new Error(
         'upload: target required (do not click first Add Document on Step 6)',
       );
     }
+
     try {
-      const chooser = await chooserPromise;
+      const [chooser] = await Promise.all([
+        page.waitForEvent('filechooser', { timeout: 15_000 }),
+        this.resolveLocator(page, action.target).click({ force: true }),
+      ]);
       await chooser.setFiles(payload);
     } catch (error) {
       const already = await page
