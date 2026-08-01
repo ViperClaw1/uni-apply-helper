@@ -159,18 +159,50 @@ export class ActionExecutor {
     if (action.target) {
       await this.resolveLocator(page, action.target).click({ force: true });
     } else {
-      const addDoc = page
-        .locator(
-          'input[value="Add Document"], a:has-text("Add Document"), button:has-text("Upload")',
-        )
-        .first();
-      if ((await addDoc.count()) === 0) {
-        throw new Error('upload: no target and no Add Document trigger');
-      }
-      await addDoc.click({ force: true });
+      // Never click the first Add Document — that re-uploads passport.
+      throw new Error(
+        'upload: target required (do not click first Add Document on Step 6)',
+      );
     }
-    const chooser = await chooserPromise;
-    await chooser.setFiles(payload);
+    try {
+      const chooser = await chooserPromise;
+      await chooser.setFiles(payload);
+    } catch (error) {
+      const already = await page
+        .evaluate(() => {
+          for (const win of document.querySelectorAll(
+            '.messager-body, .messager-window',
+          )) {
+            const t = (win.textContent || '').replace(/\s+/g, ' ');
+            if (/already uploaded|Click Save and Next/i.test(t)) {
+              return t.slice(0, 200);
+            }
+          }
+          return null;
+        })
+        .catch(() => null);
+      if (already) {
+        this.logger.log(`upload skipped — already uploaded: ${already}`);
+        await page.evaluate(() => {
+          for (const win of document.querySelectorAll(
+            '.messager-window, .panel.window',
+          )) {
+            const ok = [
+              ...win.querySelectorAll(
+                'input.okButton, input[value="Ok"], input[value="OK"], button, a',
+              ),
+            ].find((el) =>
+              /^(Ok|OK|确定)$/i.test(
+                ((el as HTMLInputElement).value || el.textContent || '').trim(),
+              ),
+            ) as HTMLElement | undefined;
+            ok?.click();
+          }
+        });
+        return;
+      }
+      throw error;
+    }
     const label = typeof payload === 'string' ? payload : payload.name;
     this.logger.log(`upload via filechooser: ${label}`);
   }

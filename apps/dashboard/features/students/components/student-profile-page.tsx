@@ -16,6 +16,7 @@ import { DEFAULT_DOCUMENT_TYPES } from "@/features/documents/constants/document-
 import { DocumentUploader } from "@/features/documents/components/document-uploader";
 import { getStudentDocuments } from "@/features/documents/api/documents.api";
 import type { StudentDocument } from "@/features/documents/types/document.types";
+import { toTitleCase } from "@/lib/format";
 import { getStudentProfile } from "../api/students.api";
 import type {
   ApplicationTarget,
@@ -351,7 +352,10 @@ export function StudentProfilePage() {
 }
 
 function formatStudentName(student: { givenName?: string; surname?: string }) {
-  const name = [student.givenName, student.surname].filter(Boolean).join(" ");
+  const name = [student.givenName, student.surname]
+    .filter((part): part is string => Boolean(part))
+    .map(toTitleCase)
+    .join(" ");
 
   return name || "Имя не указано";
 }

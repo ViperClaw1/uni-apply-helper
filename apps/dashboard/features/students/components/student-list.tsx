@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { toTitleCase } from "@/lib/format";
 import { getStudents } from "../api/students.api";
 import type { StudentListItem } from "../types/student.types";
 
@@ -95,7 +96,10 @@ export function StudentList() {
 }
 
 function formatStudentName(student: Pick<StudentListItem, "givenName" | "surname">) {
-  const name = [student.givenName, student.surname].filter(Boolean).join(" ");
+  const name = [student.givenName, student.surname]
+    .filter((part): part is string => Boolean(part))
+    .map(toTitleCase)
+    .join(" ");
 
   return name || "Имя не указано";
 }

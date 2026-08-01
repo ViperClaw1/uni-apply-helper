@@ -1025,16 +1025,7 @@
       "labelHint": "Passport"
     },
     {
-      "selector": "[attachTypeId=\"ATTACH_TYPE_8135227092\"]",
-      "mapsTo": null,
-      "type": "file",
-      "required": true,
-      "wizardStep": 6,
-      "documentType": "recommendation",
-      "labelHint": "Learning to prove/Employment"
-    },
-    {
-      "selector": "[attachTypeId=\"ATTACH_TYPE_HighstEducationImage\"]",
+      "selector": "[attachTypeId=\"ATTACH_TYPE_152223612\"]",
       "mapsTo": null,
       "type": "file",
       "required": true,
@@ -1043,31 +1034,22 @@
       "labelHint": "Diploma"
     },
     {
-      "selector": "[attachTypeId=\"ATTACH_TYPE_scoreImage\"]",
+      "selector": "[attachTypeId=\"ATTACH_TYPE_152223633\"]",
+      "mapsTo": null,
+      "type": "file",
+      "required": true,
+      "wizardStep": 6,
+      "documentType": "recommendation",
+      "labelHint": "Learning to prove"
+    },
+    {
+      "selector": "[attachTypeId=\"ATTACH_TYPE_152223620\"]",
       "mapsTo": null,
       "type": "file",
       "required": true,
       "wizardStep": 6,
       "documentType": "transcript",
       "labelHint": "Transcript"
-    },
-    {
-      "selector": "[attachTypeId=\"ATTACH_TYPE_152170289\"]",
-      "mapsTo": null,
-      "type": "file",
-      "required": false,
-      "wizardStep": 6,
-      "documentType": "personal_statement",
-      "labelHint": "Personal Statement"
-    },
-    {
-      "selector": "[attachTypeId=\"ATTACH_TYPE_158931292\"]",
-      "mapsTo": null,
-      "type": "file",
-      "required": false,
-      "wizardStep": 6,
-      "documentType": "language_certificate",
-      "labelHint": "English Language"
     },
     {
       "selector": "[attachTypeId=\"ATTACH_TYPE_checkBodyreport\"]",
@@ -1079,28 +1061,13 @@
       "labelHint": "Physical Examination"
     },
     {
-      "selector": "[attachTypeId=\"ATTACH_TYPE_115623117\"]",
+      "selector": "[attachTypeId=\"ATTACH_TYPE_2251456278\"]",
       "mapsTo": null,
       "type": "file",
       "required": true,
       "wizardStep": 6,
       "documentType": "criminal_record",
       "labelHint": "Non-criminal"
-    },
-    {
-      "selector": "[attachTypeId=\"ATTACH_TYPE_115623116\"]",
-      "mapsTo": null,
-      "type": "file",
-      "required": false,
-      "wizardStep": 6,
-      "labelHint": "Guardian"
-    },
-    {
-      "selector": "[attachTypeId=\"ATTACH_TYPE_158951430\"]",
-      "mapsTo": null,
-      "type": "file",
-      "required": false,
-      "wizardStep": 6
     },
     {
       "selector": "[attachTypeId=\"ATTACH_TYPE_appendFile\"]",
@@ -1124,6 +1091,6 @@
     "goal": "Complete and submit the Soochow University online application form"
   },
   "requiresEssay": false,
-  "notes": "17gz twin of CSU/PKU. Pre-wizard: Notes → Program (Self-sponsored) → Student type (Pre-university) → Study Plan Apply. Wizard fields reuse 17gz names; verify attachTypeIds after first live capture. Default study plan hint = English foundation (MBBS).",
+  "notes": "17gz twin of CSU/PKU. Pre-wizard: Notes → Program (Self-sponsored) → Student type (Pre-university) → Study Plan Apply. Step 6 attachTypeIds are SUDA-specific (not PKU): passportImage, 152223612 diploma, 152223633 learning/employment, 152223620 transcript, checkBodyreport medical, 2251456278 non-criminal, appendFile. All required Step 6 rows accept *.jpg/*.jpeg only (≤1.5M).",
   "defaultProgram": "foundation program Eng"
 }

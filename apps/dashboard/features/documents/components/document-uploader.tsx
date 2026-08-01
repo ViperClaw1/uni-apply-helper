@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useDropzone } from "react-dropzone";
+import { toTitleCase } from "@/lib/format";
 import { uploadStudentDocument, retryDocumentParse } from "../api/documents.api";
 import type { StudentDocument } from "../types/document.types";
 
@@ -277,6 +278,8 @@ const PASSPORT_FIELD_LABELS: Record<string, string> = {
   cityOfBirth: "Город рождения",
 };
 
+const PASSPORT_TITLE_CASE_FIELDS = new Set(["nationality", "cityOfBirth"]);
+
 function formatParsedPreview(documentType: string, parsedData: unknown) {
   if (!parsedData || typeof parsedData !== "object") {
     return "Данные извлечены.";
@@ -293,7 +296,13 @@ function formatParsedPreview(documentType: string, parsedData: unknown) {
           return null;
         }
 
-        return `${label}: ${formatPreviewValue(value)}`;
+        const formatted = formatPreviewValue(value);
+        const display =
+          PASSPORT_TITLE_CASE_FIELDS.has(key) && typeof value === "string"
+            ? toTitleCase(value)
+            : formatted;
+
+        return `${label}: ${display}`;
       })
       .filter((line): line is string => line !== null);
 

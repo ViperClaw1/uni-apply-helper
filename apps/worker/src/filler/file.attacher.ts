@@ -19,6 +19,7 @@ const JPG_ONLY_DOCUMENT_TYPES = new Set([
   'recommendation',
   'language_certificate',
   'personal_statement',
+  'medical',
 ]);
 
 const FETCH_TIMEOUT_MS = 30_000;
@@ -65,6 +66,18 @@ export class FileAttacher {
     for (const field of fileFields) {
       const docType = field.documentType!;
       const fileUrl = profile.documents[docType];
+      const attachTypeId = this.extractAttachTypeId(field.selector);
+      const labelHint = field.labelHint || docType;
+
+      if (
+        await this.rowAlreadyHasAttachment(page, attachTypeId, labelHint)
+      ) {
+        this.logger.log(
+          `Step 6: skip ${docType} — already attached on page` +
+            (attachTypeId ? ` (${attachTypeId})` : ''),
+        );
+        continue;
+      }
 
       if (!fileUrl) {
         if (field.required) {
@@ -107,19 +120,31 @@ export class FileAttacher {
       }
 
       // PKU/17gz Step 6: no input[type=file] until "Add Document" → filechooser.
-      const attachTypeId = this.extractAttachTypeId(field.selector);
+      const resolvedId =
+        (await this.resolveLiveAttachTypeId(page, attachTypeId, labelHint)) ??
+        attachTypeId;
       const ok = await this.attachViaAddDocument(
         page,
-        attachTypeId,
+        resolvedId,
         filePayload,
-        field.labelHint || docType,
+        labelHint,
       );
       if (ok) {
         this.logger.log(
           `Attached ${docType} via Add Document` +
-            (attachTypeId ? ` (${attachTypeId})` : ''),
+            (resolvedId ? ` (${resolvedId})` : ''),
         );
         await this.waitBrieflyForUploadSettle(page);
+        continue;
+      }
+
+      // Portal may refuse a second passport upload with a messager instead of filechooser.
+      if (
+        await this.rowAlreadyHasAttachment(page, resolvedId, labelHint)
+      ) {
+        this.logger.log(
+          `Step 6: treat ${docType} as done after attach attempt (row has file)`,
+        );
         continue;
       }
 
@@ -128,7 +153,7 @@ export class FileAttacher {
         throw new Error(
           `File input not found: ${field.selector}` +
             `${field.labelHint ? ` / "${field.labelHint}"` : ''}` +
-            (attachTypeId ? ` [attachTypeId=${attachTypeId}]` : '') +
+            (resolvedId ? ` [attachTypeId=${resolvedId}]` : '') +
             ` | DOM: ${dump}`,
         );
       }
@@ -343,6 +368,9 @@ export class FileAttacher {
   /**
    * Add Document often lives in the same <tr> as .attach-item-list, not inside
    * the [attachTypeId] node itself.
+   *
+   * Never fall back to the first Add Document on the page — that re-uploads
+   * passport when schema attachTypeIds don't match this university skin.
    */
   private async resolveAddDocumentButtons(
     page: Page,
@@ -350,6 +378,7 @@ export class FileAttacher {
     labelHint?: string,
   ): Promise<Locator[]> {
     const buttons: Locator[] = [];
+    const seen = new Set<string>();
     const addSelector = [
       'input[value="Add Document"]',
       'input[value*="Add Document"]',
@@ -362,53 +391,70 @@ export class FileAttacher {
       'span:has-text("Add Document")',
     ].join(', ');
 
-    if (attachTypeId) {
-      const scopes: Locator[] = [
-        page.locator(`tr:has([attachTypeId="${attachTypeId}"])`).first(),
-        page.locator(`[attachTypeId="${attachTypeId}"]`).first(),
-        page
-          .locator(`.attach-item-list[attachTypeId="${attachTypeId}"]`)
-          .first(),
-        page
-          .locator(
-            `[attachtypeid="${attachTypeId}"], [data-attach-type-id="${attachTypeId}"]`,
-          )
-          .first(),
-      ];
+    const pushUnique = async (btn: Locator) => {
+      if ((await btn.count()) === 0) {
+        return;
+      }
+      const key = await btn
+        .evaluate((el) => {
+          const tr = el.closest('tr');
+          const id =
+            tr?.querySelector('[attachTypeId]')?.getAttribute('attachTypeId') ||
+            '';
+          return `${id}|${(el as HTMLInputElement).value || el.textContent || ''}`;
+        })
+        .catch(() => Math.random().toString());
+      if (seen.has(key)) {
+        return;
+      }
+      seen.add(key);
+      buttons.push(btn);
+    };
 
-      for (const scope of scopes) {
-        if ((await scope.count()) === 0) {
-          continue;
-        }
-        const inScope = scope.locator(addSelector).first();
-        if ((await inScope.count()) > 0) {
-          buttons.push(inScope);
-        }
-        // Parent tr of the attach node
-        const parentTr = scope.locator('xpath=ancestor-or-self::tr[1]');
-        if ((await parentTr.count()) > 0) {
-          const inTr = parentTr.locator(addSelector).first();
-          if ((await inTr.count()) > 0) {
-            buttons.push(inTr);
+    if (attachTypeId) {
+      const idPresent = await page
+        .locator(`[attachTypeId="${attachTypeId}"]`)
+        .count()
+        .then((n) => n > 0)
+        .catch(() => false);
+
+      if (idPresent) {
+        const scopes: Locator[] = [
+          page.locator(`tr:has([attachTypeId="${attachTypeId}"])`).first(),
+          page.locator(`[attachTypeId="${attachTypeId}"]`).first(),
+          page
+            .locator(`.attach-item-list[attachTypeId="${attachTypeId}"]`)
+            .first(),
+        ];
+
+        for (const scope of scopes) {
+          if ((await scope.count()) === 0) {
+            continue;
+          }
+          await pushUnique(scope.locator(addSelector).first());
+          const parentTr = scope.locator('xpath=ancestor-or-self::tr[1]');
+          if ((await parentTr.count()) > 0) {
+            await pushUnique(parentTr.locator(addSelector).first());
           }
         }
       }
     }
 
-    // Label fallback: Passport / Physical Examination / …
+    // Label match — primary fallback when attachTypeIds differ per university.
     const hints = [
       labelHint,
       attachTypeId?.includes('passport') ? 'Passport' : undefined,
-      attachTypeId?.includes('HighstEducation') ||
-      attachTypeId?.includes('HighestEducation')
+      /HighstEducation|HighestEducation|152223612/i.test(attachTypeId ?? '')
         ? 'Diploma'
         : undefined,
-      attachTypeId?.includes('score') ? 'Transcript' : undefined,
-      attachTypeId?.includes('checkBody') ? 'Physical Examination' : undefined,
-      /criminal|115623117/i.test(attachTypeId ?? '')
+      /score|152223620/i.test(attachTypeId ?? '') ? 'Transcript' : undefined,
+      attachTypeId?.includes('checkBody')
+        ? 'Physical Examination'
+        : undefined,
+      /criminal|2251456278|115623117/i.test(attachTypeId ?? '')
         ? 'Non-criminal'
         : undefined,
-      /Learning|Employment|8135227092/i.test(
+      /Learning|Employment|152223633|8135227092/i.test(
         `${labelHint ?? ''}${attachTypeId ?? ''}`,
       )
         ? 'Learning to prove'
@@ -424,25 +470,112 @@ export class FileAttacher {
             'i',
           ),
         })
+        .filter({ has: page.locator(addSelector) })
         .first();
       if ((await row.count()) === 0) {
         continue;
       }
-      const btn = row.locator(addSelector).first();
-      if ((await btn.count()) > 0) {
-        buttons.push(btn);
-      }
-    }
-
-    // Last resort: first visible Add Document on the page (only if single attach)
-    if (buttons.length === 0) {
-      const global = page.locator(addSelector).first();
-      if ((await global.count()) > 0) {
-        buttons.push(global);
-      }
+      await pushUnique(row.locator(addSelector).first());
     }
 
     return buttons;
+  }
+
+  /** Skip re-upload when the row already shows a thumbnail / attachment. */
+  private async rowAlreadyHasAttachment(
+    page: Page,
+    attachTypeId: string | undefined,
+    labelHint?: string,
+  ): Promise<boolean> {
+    return page
+      .evaluate(
+        ({ id, hint }) => {
+          const rows = [
+            ...document.querySelectorAll(
+              'tr:has([attachTypeId]), tr:has(input[value="Add Document"]), tr:has(input[value*="Add Document"])',
+            ),
+          ];
+
+          const match = rows.find((row) => {
+            if (
+              id &&
+              row.querySelector(`[attachTypeId="${id}"]`)
+            ) {
+              return true;
+            }
+            if (!hint) {
+              return false;
+            }
+            const label = (row.textContent || '').replace(/\s+/g, ' ');
+            return new RegExp(
+              hint.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+              'i',
+            ).test(label);
+          });
+
+          if (!match) {
+            return false;
+          }
+
+          return (
+            Boolean(
+              match.querySelector(
+                '.attach-item-list img, .attach-item-list a, img[src*="attach"], a[href*="downloadAttach"], a[href*="attach"]',
+              ),
+            ) ||
+            [...match.querySelectorAll('img')].some((img) => {
+              const src = img.getAttribute('src') || '';
+              return src.length > 20 && !/icon|blank|spacer/i.test(src);
+            })
+          );
+        },
+        { id: attachTypeId ?? '', hint: labelHint ?? '' },
+      )
+      .catch(() => false);
+  }
+
+  /** If schema id missing on page, pick live attachTypeId from the labeled row. */
+  private async resolveLiveAttachTypeId(
+    page: Page,
+    attachTypeId: string | undefined,
+    labelHint?: string,
+  ): Promise<string | undefined> {
+    if (attachTypeId) {
+      const present = await page
+        .locator(`[attachTypeId="${attachTypeId}"]`)
+        .count()
+        .then((n) => n > 0)
+        .catch(() => false);
+      if (present) {
+        return attachTypeId;
+      }
+    }
+
+    if (!labelHint) {
+      return attachTypeId;
+    }
+
+    return page
+      .evaluate((hint) => {
+        const re = new RegExp(
+          hint.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+          'i',
+        );
+        for (const row of document.querySelectorAll('tr')) {
+          if (!re.test((row.textContent || '').replace(/\s+/g, ' '))) {
+            continue;
+          }
+          const id = row
+            .querySelector('[attachTypeId]')
+            ?.getAttribute('attachTypeId');
+          if (id) {
+            return id;
+          }
+        }
+        return null;
+      }, labelHint)
+      .then((id) => id ?? attachTypeId)
+      .catch(() => attachTypeId);
   }
 
   private async clickAddDocumentAndSetFiles(
@@ -462,6 +595,14 @@ export class FileAttacher {
       this.logger.warn(
         `filechooser path failed: ${error instanceof Error ? error.message : 'unknown'} — trying injected input`,
       );
+
+      const already = await this.peekAlreadyUploadedDialog(page);
+      if (already) {
+        this.logger.log(`Step 6: portal says already uploaded — ${already}`);
+        await this.dismissPostUploadDialogs(page);
+        return true;
+      }
+
       // Dialog may inject a temporary <input type=file>
       const injected = page
         .locator('input[type="file"]:not([name="photo"])')
@@ -477,8 +618,32 @@ export class FileAttacher {
     }
 
     await page.waitForTimeout(800);
+    const alreadyAfter = await this.peekAlreadyUploadedDialog(page);
+    if (alreadyAfter) {
+      this.logger.log(`Step 6: portal says already uploaded — ${alreadyAfter}`);
+    }
     await this.dismissPostUploadDialogs(page);
     return true;
+  }
+
+  private async peekAlreadyUploadedDialog(page: Page): Promise<string | null> {
+    return page
+      .evaluate(() => {
+        for (const win of document.querySelectorAll(
+          '.messager-body, .messager-window .panel-body, .messager-window',
+        )) {
+          const style = getComputedStyle(win as HTMLElement);
+          if (style.display === 'none' || style.visibility === 'hidden') {
+            continue;
+          }
+          const t = (win.textContent || '').replace(/\s+/g, ' ').trim();
+          if (/already uploaded|Click Save and Next/i.test(t)) {
+            return t.slice(0, 200);
+          }
+        }
+        return null;
+      })
+      .catch(() => null);
   }
 
   private async dismissPostUploadDialogs(page: Page): Promise<void> {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { isMissingApprovedMotivationLetter } from "@/features/letters/lib/letter-utils";
 import {
   formatErrorMessage,
@@ -16,7 +16,10 @@ import {
   getBatchStatusLabel,
   getStatusClassName,
 } from "../lib/status";
-import type { ApplicationBatch } from "../types/application.types";
+import type {
+  ApplicationBatch,
+  ApplicationItem,
+} from "../types/application.types";
 
 type BatchPanelProps = {
   batch?: ApplicationBatch;
@@ -34,12 +37,42 @@ export function BatchPanel({
   );
   const [openError, setOpenError] = useState<string | null>(null);
 
+  const { submitted, pending } = useMemo(() => {
+    const applications = batch?.applications ?? [];
+
+    return {
+      submitted: applications.filter((app) => app.status === "submitted"),
+      pending: applications.filter((app) => app.status !== "submitted"),
+    };
+  }, [batch?.applications]);
+
   if (!batch) {
     return (
       <div className="rounded-2xl bg-white p-5 text-sm text-slate-500 shadow-[0_1px_2px_rgba(15,23,42,0.08)] ring-1 ring-black/5">
         Заявки ещё не отправлялись. Нажмите кнопку ниже, когда будете готовы.
       </div>
     );
+  }
+
+  async function handleOpenForm(application: ApplicationItem) {
+    if (openingApplicationId === application.id) {
+      return;
+    }
+
+    setOpeningApplicationId(application.id);
+    setOpenError(null);
+
+    try {
+      await prepareAndOpenUniversityForm({
+        studentId,
+        application,
+      });
+      await onApplicationsChange?.();
+    } catch {
+      setOpenError("Не удалось открыть форму. Попробуйте ещё раз.");
+    } finally {
+      setOpeningApplicationId(null);
+    }
   }
 
   return (
@@ -66,96 +99,148 @@ export function BatchPanel({
         <Counter label="Ошибок" value={batch.failed} tone="rose" />
       </div>
 
-      {batch.applications.length > 0 ? (
-        <div className="mt-5 divide-y divide-slate-100">
-          {batch.applications.map((application) => (
-            <div key={application.id} className="min-w-0 py-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1 overflow-hidden">
-                  <div className="truncate text-sm font-medium text-slate-900">
-                    {application.universityDisplayName ?? application.universityId}
-                  </div>
-                  {application.blockedReason ? (
-                    <div className="mt-1 text-xs text-amber-700">
-                      {application.blockedReason}
-                      {isMissingApprovedMotivationLetter(application.blockedReason) ? (
-                        <a
-                          href={`#motivation-letter-${application.universityId}`}
-                          className="mt-1 block font-semibold text-sky-700 underline-offset-2 hover:underline"
-                        >
-                          Перейти к мотивационному письму →
-                        </a>
-                      ) : null}
-                    </div>
-                  ) : null}
-                  {application.errorMessage ? (
-                    <ErrorBadge message={application.errorMessage} />
-                  ) : null}
-                  {application.formUrl && canOpenUniversityForm(application) ? (
-                    <button
-                      type="button"
-                      title="Откроет форму вуза. Данные заполнятся автоматически — проверьте и отправьте."
-                      disabled={openingApplicationId === application.id}
-                      onClick={async () => {
-                        if (openingApplicationId === application.id) {
-                          return;
-                        }
-
-                        setOpeningApplicationId(application.id);
-                        setOpenError(null);
-
-                        try {
-                          await prepareAndOpenUniversityForm({
-                            studentId,
-                            application,
-                          });
-                          await onApplicationsChange?.();
-                        } catch {
-                          setOpenError(
-                            "Не удалось открыть форму. Попробуйте ещё раз.",
-                          );
-                        } finally {
-                          setOpeningApplicationId(null);
-                        }
-                      }}
-                      className="mt-2 inline-flex h-8 cursor-pointer items-center rounded-lg bg-violet-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-violet-700 disabled:pointer-events-none disabled:opacity-60"
-                    >
-                      {openingApplicationId === application.id
-                        ? "Открываем..."
-                        : "Открыть форму →"}
-                    </button>
-                  ) : null}
-                </div>
-                <StatusBadge
-                  label={getApplicationStatusLabel(application.status)}
-                  status={application.status}
+      {submitted.length > 0 || pending.length > 0 ? (
+        <div className="mt-5 grid gap-5">
+          {submitted.length > 0 ? (
+            <ApplicationGroup
+              title="Успешно отправлены"
+              count={submitted.length}
+              tone="success"
+            >
+              {submitted.map((application) => (
+                <ApplicationRow
+                  key={application.id}
+                  application={application}
+                  openingApplicationId={openingApplicationId}
+                  onOpenForm={handleOpenForm}
                 />
-              </div>
+              ))}
+            </ApplicationGroup>
+          ) : null}
 
-              {application.steps.length > 0 ? (
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {application.steps.map((step) => (
-                    <span
-                      key={step.id}
-                      className={`rounded-lg px-2 py-1 text-[11px] font-medium ring-1 ${
-                        step.status === "failed"
-                          ? "bg-rose-50 text-rose-700 ring-rose-200"
-                          : step.status === "completed"
-                            ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
-                            : "bg-slate-100 text-slate-600 ring-slate-200/60"
-                      }`}
-                    >
-                      {getStepLabel(step.stepName)}: {getStepStatusLabel(step.status)}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ))}
+          {pending.length > 0 ? (
+            <ApplicationGroup
+              title="На отправку"
+              count={pending.length}
+              tone="pending"
+            >
+              {pending.map((application) => (
+                <ApplicationRow
+                  key={application.id}
+                  application={application}
+                  openingApplicationId={openingApplicationId}
+                  onOpenForm={handleOpenForm}
+                />
+              ))}
+            </ApplicationGroup>
+          ) : null}
         </div>
       ) : null}
 
       {openError ? <ErrorBadge message={openError} className="mt-4" /> : null}
+    </div>
+  );
+}
+
+function ApplicationGroup({
+  title,
+  count,
+  tone,
+  children,
+}: {
+  title: string;
+  count: number;
+  tone: "success" | "pending";
+  children: ReactNode;
+}) {
+  const titleClassName =
+    tone === "success" ? "text-emerald-800" : "text-slate-700";
+
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <h3 className={`text-xs font-semibold uppercase tracking-wide ${titleClassName}`}>
+          {title}
+        </h3>
+        <span className="text-[11px] font-medium tabular-nums text-slate-400">
+          {count}
+        </span>
+      </div>
+      <div className="divide-y divide-slate-100">{children}</div>
+    </div>
+  );
+}
+
+function ApplicationRow({
+  application,
+  openingApplicationId,
+  onOpenForm,
+}: {
+  application: ApplicationItem;
+  openingApplicationId: string | null;
+  onOpenForm: (application: ApplicationItem) => void | Promise<void>;
+}) {
+  return (
+    <div className="min-w-0 py-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1 overflow-hidden">
+          <div className="truncate text-sm font-medium text-slate-900">
+            {application.universityDisplayName ?? application.universityId}
+          </div>
+          {application.blockedReason ? (
+            <div className="mt-1 text-xs text-amber-700">
+              {application.blockedReason}
+              {isMissingApprovedMotivationLetter(application.blockedReason) ? (
+                <a
+                  href={`#motivation-letter-${application.universityId}`}
+                  className="mt-1 block font-semibold text-sky-700 underline-offset-2 hover:underline"
+                >
+                  Перейти к мотивационному письму →
+                </a>
+              ) : null}
+            </div>
+          ) : null}
+          {application.errorMessage ? (
+            <ErrorBadge message={application.errorMessage} />
+          ) : null}
+          {application.formUrl && canOpenUniversityForm(application) ? (
+            <button
+              type="button"
+              title="Откроет форму вуза. Данные заполнятся автоматически — проверьте и отправьте."
+              disabled={openingApplicationId === application.id}
+              onClick={() => onOpenForm(application)}
+              className="mt-2 inline-flex h-8 cursor-pointer items-center rounded-lg bg-violet-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-violet-700 disabled:pointer-events-none disabled:opacity-60"
+            >
+              {openingApplicationId === application.id
+                ? "Открываем..."
+                : "Открыть форму →"}
+            </button>
+          ) : null}
+        </div>
+        <StatusBadge
+          label={getApplicationStatusLabel(application.status)}
+          status={application.status}
+        />
+      </div>
+
+      {application.steps.length > 0 ? (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {application.steps.map((step) => (
+            <span
+              key={step.id}
+              className={`rounded-lg px-2 py-1 text-[11px] font-medium ring-1 ${
+                step.status === "failed"
+                  ? "bg-rose-50 text-rose-700 ring-rose-200"
+                  : step.status === "completed"
+                    ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
+                    : "bg-slate-100 text-slate-600 ring-slate-200/60"
+              }`}
+            >
+              {getStepLabel(step.stepName)}: {getStepStatusLabel(step.status)}
+            </span>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

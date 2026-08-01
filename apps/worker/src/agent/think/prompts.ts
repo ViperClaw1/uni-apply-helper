@@ -43,6 +43,8 @@ export function buildPlannerPrompt(
     '- For "Whether in Chinese mainland now?" ALWAYS choose No unless Visa Type/No/Expiry are already filled.',
     '- If mainland/visa conditionals appear, use pending defaults: No Visa / N/A / passport expiry.',
     '- For file/document fields use type=upload with value/filePath set to the pending field URL.',
+    '- On Step 6 Upload Documents: target the specific row (selector with attachTypeId or label like Diploma / Non-criminal). NEVER click the first Add Document — that re-uploads Passport.',
+    '- If a dialog says "already uploaded" / "requires 1 document", Ok it; skip rows that already have thumbnails; upload only empty required rows.',
     '- Use type=done when the goal is reached (confirmation/submitted/summary page).',
     '- Use type=fail only if the page is blocked and cannot continue.',
     '- For wizard forms, click "Save and Next" after filling visible fields on the step.',
