@@ -1,25 +1,9 @@
-const STEP_LABELS: Record<string, string> = {
-  validate_requirements: "Проверка документов",
-  open_form: "Открытие формы",
-  fill_wizard: "Заполнение формы",
-  submit: "Отправка",
-};
+import {
+  getStepLabel,
+  getStepStatusLabel,
+} from "./step-labels";
 
-export function getStepLabel(stepName: string) {
-  return STEP_LABELS[stepName] ?? stepName;
-}
-
-export function getStepStatusLabel(status: string) {
-  const labels: Record<string, string> = {
-    queued: "в очереди",
-    processing: "в работе",
-    completed: "готово",
-    failed: "ошибка",
-    skipped: "пропущено",
-  };
-
-  return labels[status] ?? status;
-}
+export { getStepLabel, getStepStatusLabel };
 
 /** Pull a short human message out of raw API/JSON error blobs. */
 export function formatErrorMessage(raw: string): string {

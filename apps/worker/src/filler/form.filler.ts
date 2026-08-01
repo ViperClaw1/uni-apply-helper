@@ -512,6 +512,30 @@ export class FormFiller {
   }
 
   private async closeDatePickers(page: Page): Promise<void> {
+    // Prefer Ok/确定 on visible My97 — force-hide alone leaves validation weird.
+    await page.evaluate(() => {
+      const roots = [
+        ...document.querySelectorAll(
+          '.WdateDiv, #_my97DP, div[id*="dp"], .datebox-calendar-panel',
+        ),
+      ];
+      for (const root of roots) {
+        const style = getComputedStyle(root as HTMLElement);
+        if (style.display === 'none' || style.visibility === 'hidden') {
+          continue;
+        }
+        const ok = [
+          ...root.querySelectorAll(
+            '#dpOkInput, input[value="OK"], input[value="Ok"], input[value="确定"], button',
+          ),
+        ].find((el) =>
+          /^(OK|Ok|确定)$/i.test(
+            ((el as HTMLInputElement).value || el.textContent || '').trim(),
+          ),
+        ) as HTMLElement | undefined;
+        ok?.click();
+      }
+    });
     await page.keyboard.press('Escape').catch(() => undefined);
     await page.evaluate(() => {
       for (const el of document.querySelectorAll(
@@ -3261,6 +3285,9 @@ export class FormFiller {
         });
     }
 
+    // 17gz validates hidden temp_studyDuration — start/end alone are not enough.
+    await this.syncStudyDurationMirror(page, profile);
+
     const nationality =
       profile.guarantor?.nationality ||
       profile.personal.nationality ||
@@ -3290,6 +3317,118 @@ export class FormFiller {
     await this.dismissFormOverlays(page);
   }
 
+  /**
+   * 17gz Step 2: validation uses name=temp_studyDuration ("Duration of Study is required")
+   * even when studyStartDate/studyEndDate look filled.
+   */
+  private async syncStudyDurationMirror(
+    page: Page,
+    profile: StudentProfile,
+  ): Promise<void> {
+    const fromProfile =
+      profile.applicationTargets?.[0]?.duration?.trim() || '';
+    const result = await page.evaluate((preferred) => {
+      const start = (
+        document.querySelector(
+          'input[name="apply.studyStartDate"]',
+        ) as HTMLInputElement | null
+      )?.value?.trim();
+      const end = (
+        document.querySelector(
+          'input[name="apply.studyEndDate"]',
+        ) as HTMLInputElement | null
+      )?.value?.trim();
+
+      let years = preferred;
+      if (!years && start && end) {
+        const a = Date.parse(start);
+        const b = Date.parse(end);
+        if (Number.isFinite(a) && Number.isFinite(b) && b >= a) {
+          const y = Math.max(
+            1,
+            Math.round((b - a) / (365.25 * 24 * 3600 * 1000)),
+          );
+          years = String(y);
+        }
+      }
+      if (!years) {
+        years = '1';
+      }
+
+      const candidates = [
+        ...document.querySelectorAll(
+          'input[name="temp_studyDuration"], select[name="temp_studyDuration"], #temp_studyDuration, input[name="apply.studyDuration"], select[name="apply.studyDuration"]',
+        ),
+      ] as Array<HTMLInputElement | HTMLSelectElement>;
+
+      if (candidates.length === 0) {
+        return { filled: false, years, reason: 'no-temp-field' };
+      }
+
+      const jq = (
+        window as unknown as {
+          jQuery?: (el: Element) => {
+            val: (v?: string) => { trigger: (e: string) => unknown };
+          };
+        }
+      ).jQuery;
+
+      for (const el of candidates) {
+        if (el.tagName === 'SELECT') {
+          const select = el as HTMLSelectElement;
+          const match =
+            [...select.options].find((opt) => {
+              const t = (opt.textContent || '').trim().toLowerCase();
+              const v = (opt.value || '').trim();
+              return (
+                v === years ||
+                t === years.toLowerCase() ||
+                t.includes(`${years} year`) ||
+                t === `${years} years` ||
+                (years === '1' && /one year|^1\b/.test(t))
+              );
+            }) ||
+            [...select.options].find((opt) => {
+              const t = (opt.textContent || '').trim().toLowerCase();
+              return t && !/please|choose|^-$/.test(t);
+            });
+          if (match?.value) {
+            select.value = match.value;
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            if (typeof jq === 'function') {
+              try {
+                jq(select).val(match.value).trigger('change');
+                jq(select).val(match.value).trigger('chosen:updated');
+              } catch {
+                // ignore
+              }
+            }
+          }
+        } else {
+          const input = el as HTMLInputElement;
+          input.value = years;
+          input.setAttribute('value', years);
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+          input.dispatchEvent(new Event('blur', { bubbles: true }));
+          if (typeof jq === 'function') {
+            try {
+              jq(input).val(years).trigger('change');
+            } catch {
+              // ignore
+            }
+          }
+        }
+      }
+
+      return { filled: true, years, reason: 'ok' };
+    }, fromProfile);
+
+    this.logger.log(
+      `Step2 study duration mirror: ${result.reason} years=${result.years} filled=${result.filled}`,
+    );
+  }
+
   /** Hard-fail before Next if present Rec#2 / cert date fields still empty. */
   private async assertPkuStep2CriticalFilled(
     page: Page,
@@ -3309,13 +3448,15 @@ export class FormFiller {
       'apply.guarSecWork',
       'apply.guarSecPhone',
       'apply.guarSecEmail',
+      'temp_studyDuration',
+      'apply.studyDuration',
     ];
 
     const empty = await page.evaluate((names) => {
       return names.filter((name) => {
         const el = document.querySelector(
-          `input[name="${name}"]`,
-        ) as HTMLInputElement | null;
+          `input[name="${name}"], select[name="${name}"]`,
+        ) as HTMLInputElement | HTMLSelectElement | null;
         if (!el) {
           return false;
         }
@@ -3327,7 +3468,14 @@ export class FormFiller {
         ) {
           return false;
         }
-        return !el.value?.trim();
+        if (el.tagName === 'SELECT') {
+          const select = el as HTMLSelectElement;
+          const t = (select.options[select.selectedIndex]?.text || '')
+            .trim()
+            .toLowerCase();
+          return !select.value || /please|choose|^-$/.test(t);
+        }
+        return !(el as HTMLInputElement).value?.trim();
       });
     }, critical);
 
@@ -3344,8 +3492,8 @@ export class FormFiller {
       return {
         empty: names.filter((name) => {
           const el = document.querySelector(
-            `input[name="${name}"]`,
-          ) as HTMLInputElement | null;
+            `input[name="${name}"], select[name="${name}"]`,
+          ) as HTMLInputElement | HTMLSelectElement | null;
           if (!el) {
             return false;
           }
@@ -3357,7 +3505,14 @@ export class FormFiller {
           ) {
             return false;
           }
-          return !el.value?.trim();
+          if (el.tagName === 'SELECT') {
+            const select = el as HTMLSelectElement;
+            const t = (select.options[select.selectedIndex]?.text || '')
+              .trim()
+              .toLowerCase();
+            return !select.value || /please|choose|^-$/.test(t);
+          }
+          return !(el as HTMLInputElement).value?.trim();
         }),
         presentGuar: present.slice(0, 40),
       };

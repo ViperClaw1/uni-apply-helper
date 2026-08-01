@@ -50,6 +50,7 @@ export function buildPlannerPrompt(
     '- For wizard forms, click "Save and Next" after filling visible fields on the step.',
     '- NEVER click earlier wizard tabs/links (Step 1, Basic Info, Previous) — stay on the current step from Goal.',
     '- Prefer a single CSS selector string; never concatenate multiple selectors with commas inside one string.',
+    '- My97 date picker open: click #dpOkInput / OK / 确定, or Escape — do not emit comma-joined selectors.',
     '- Keep "reason" under 120 characters so the JSON response is not truncated.',
     '- Do not invent values — only use pending field values provided below.',
     '- If a previous action is marked FAILED, try a different target/strategy.',

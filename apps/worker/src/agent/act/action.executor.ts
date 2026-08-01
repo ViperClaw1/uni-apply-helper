@@ -112,6 +112,29 @@ export class ActionExecutor {
   }
 
   private async closeDatePickers(page: Page): Promise<void> {
+    await page.evaluate(() => {
+      const roots = [
+        ...document.querySelectorAll(
+          '.WdateDiv, #_my97DP, div[id*="dp"], .datebox-calendar-panel',
+        ),
+      ];
+      for (const root of roots) {
+        const style = getComputedStyle(root as HTMLElement);
+        if (style.display === 'none' || style.visibility === 'hidden') {
+          continue;
+        }
+        const ok = [
+          ...root.querySelectorAll(
+            '#dpOkInput, input[value="OK"], input[value="Ok"], input[value="确定"], button',
+          ),
+        ].find((el) =>
+          /^(OK|Ok|确定)$/i.test(
+            ((el as HTMLInputElement).value || el.textContent || '').trim(),
+          ),
+        ) as HTMLElement | undefined;
+        ok?.click();
+      }
+    });
     await page.keyboard.press('Escape').catch(() => undefined);
     await page.evaluate(() => {
       for (const el of document.querySelectorAll(
@@ -239,7 +262,13 @@ export class ActionExecutor {
     }
 
     if (target.selector) {
-      return page.locator(target.selector).first();
+      // Gemini often emits comma-joined alternatives — Playwright treats that
+      // as one invalid selector. Prefer the first fragment.
+      const first = target.selector
+        .split(',')
+        .map((part) => part.trim())
+        .find((part) => part.length > 0);
+      return page.locator(first || target.selector).first();
     }
 
     if (target.label) {

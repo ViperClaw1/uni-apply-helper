@@ -39,13 +39,13 @@ export class FileAttacher {
 
     if (fileFields.length === 0) {
       this.logger.warn(
-        'Step 6: no file fields with documentType in schema — skipping attach',
+        'Attach: no file fields with documentType in schema — skipping',
       );
       return;
     }
 
     this.logger.log(
-      `Step 6: attaching ${fileFields.length} document(s): ${fileFields
+      `Attach: ${fileFields.length} document(s): ${fileFields
         .map((f) => f.documentType)
         .join(', ')}`,
     );

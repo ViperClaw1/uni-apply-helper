@@ -267,7 +267,13 @@ export function parseJsonResponse<T>(raw: string): T {
   let lastError: unknown;
 
   for (const candidate of candidates) {
-    for (const variant of [candidate, repairGeminiJson(candidate)]) {
+    for (const variant of [
+      candidate,
+      // Truncation-only repair first — full repair must not touch colons inside
+      // quoted selectors like button:has-text('OK').
+      closeTruncatedJson(candidate),
+      repairGeminiJson(candidate),
+    ]) {
       try {
         return JSON.parse(variant) as T;
       } catch (error) {
@@ -300,36 +306,90 @@ function collectJsonCandidates(raw: string): string[] {
  * - bare ISO datetimes
  * - unquoted string values that contain commas (school names)
  * - truncated responses (missing closing braces)
+ *
+ * IMPORTANT: never rewrite colons inside already-quoted strings
+ * (Playwright selectors: `button:has-text('OK')`).
  */
 function repairGeminiJson(raw: string): string {
-  let s = raw
-    .replace(/^\uFEFF/, '')
-    .replace(/,\s*([}\]])/g, '$1')
-    .replace(
-      /:\s*(\d{4}-\d{2}-\d{2}T[0-9:.+-Z]+)(?=\s*[,}\]])/g,
-      ': "$1"',
-    )
-    .replace(/:\s*(\d{4}-\d{2}-\d{2})(?=\s*[,}\]])/g, ': "$1"');
-
-  // Quote bare identifier / prose values: `"key": School Name, City` → quoted
-  s = s.replace(
-    /:\s*(?!["{\[\d]|true\b|false\b|null\b)([^,\n}\]]+(?:,[^,\n}\]]+)*)/g,
-    (match, value: string) => {
-      const trimmed = value.trim();
-      if (!trimmed || /^["{\[\d]|^(true|false|null)$/i.test(trimmed)) {
-        return match;
-      }
-      if (/^-?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(trimmed)) {
-        return match;
-      }
-      const escaped = trimmed
-        .replace(/\\/g, '\\\\')
-        .replace(/"/g, '\\"');
-      return `: "${escaped}"`;
-    },
+  let s = raw.replace(/^\uFEFF/, '');
+  s = replaceOutsideStrings(s, (chunk) =>
+    chunk
+      .replace(/,\s*([}\]])/g, '$1')
+      .replace(
+        /:\s*(\d{4}-\d{2}-\d{2}T[0-9:.+-Z]+)(?=\s*[,}\]])/g,
+        ': "$1"',
+      )
+      .replace(/:\s*(\d{4}-\d{2}-\d{2})(?=\s*[,}\]])/g, ': "$1"'),
   );
-
+  s = quoteBareValuesOutsideStrings(s);
   return closeTruncatedJson(s);
+}
+
+/** Apply a transform only to JSON structural regions (outside "…"). */
+function replaceOutsideStrings(
+  raw: string,
+  transform: (outside: string) => string,
+): string {
+  let out = '';
+  let buf = '';
+  let inString = false;
+  let escaped = false;
+
+  const flush = () => {
+    if (buf) {
+      out += transform(buf);
+      buf = '';
+    }
+  };
+
+  for (let i = 0; i < raw.length; i += 1) {
+    const ch = raw[i];
+    if (inString) {
+      out += ch;
+      if (escaped) {
+        escaped = false;
+      } else if (ch === '\\') {
+        escaped = true;
+      } else if (ch === '"') {
+        inString = false;
+      }
+      continue;
+    }
+    if (ch === '"') {
+      flush();
+      inString = true;
+      out += ch;
+      continue;
+    }
+    buf += ch;
+  }
+  flush();
+  return out;
+}
+
+function quoteBareValuesOutsideStrings(raw: string): string {
+  return replaceOutsideStrings(raw, (chunk) =>
+    chunk.replace(
+      /:\s*(?!["{\[\d]|true\b|false\b|null\b)([^,\n}\]]+(?:,[^,\n}\]]+)*)/g,
+      (match, value: string) => {
+        const trimmed = value.trim();
+        if (!trimmed || /^["{\[\d]|^(true|false|null)$/i.test(trimmed)) {
+          return match;
+        }
+        if (/^-?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(trimmed)) {
+          return match;
+        }
+        // Skip CSS-ish fragments (Playwright :has-text) if somehow outside quotes.
+        if (/^has-text\(|^text=|^nth=/i.test(trimmed)) {
+          return match;
+        }
+        const escaped = trimmed
+          .replace(/\\/g, '\\\\')
+          .replace(/"/g, '\\"');
+        return `: "${escaped}"`;
+      },
+    ),
+  );
 }
 
 /** Close cut-off Gemini JSON: unclosed strings / braces / brackets. */

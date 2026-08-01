@@ -7,6 +7,7 @@ import {
   getStepLabel,
   getStepStatusLabel,
 } from "../lib/format-error";
+import { sortStepsByPipeline } from "../lib/step-labels";
 import {
   canOpenUniversityForm,
   prepareAndOpenUniversityForm,
@@ -224,16 +225,18 @@ function ApplicationRow({
       </div>
 
       {application.steps.length > 0 ? (
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {application.steps.map((step) => (
+        <div className="mt-2 flex flex-col gap-1.5">
+          {sortStepsByPipeline(application.steps).map((step) => (
             <span
               key={step.id}
-              className={`rounded-lg px-2 py-1 text-[11px] font-medium ring-1 ${
+              className={`w-fit rounded-lg px-2 py-1 text-[11px] font-medium ring-1 ${
                 step.status === "failed"
                   ? "bg-rose-50 text-rose-700 ring-rose-200"
                   : step.status === "completed"
                     ? "bg-emerald-50 text-emerald-700 ring-emerald-100"
-                    : "bg-slate-100 text-slate-600 ring-slate-200/60"
+                    : step.status === "processing"
+                      ? "bg-sky-50 text-sky-700 ring-sky-200"
+                      : "bg-slate-100 text-slate-600 ring-slate-200/60"
               }`}
             >
               {getStepLabel(step.stepName)}: {getStepStatusLabel(step.status)}

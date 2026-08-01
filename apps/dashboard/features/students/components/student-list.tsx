@@ -1,16 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toTitleCase } from "@/lib/format";
 import { deleteStudent, getStudents } from "../api/students.api";
 import type { StudentListItem } from "../types/student.types";
+import { ConfirmDialog } from "./confirm-dialog";
 
 export function StudentList() {
   const [students, setStudents] = useState<StudentListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [studentToDelete, setStudentToDelete] = useState<StudentListItem | null>(
+    null,
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -38,27 +42,37 @@ export function StudentList() {
     };
   }, []);
 
-  async function handleDelete(student: StudentListItem) {
-    const name = formatStudentName(student);
-    const confirmed = window.confirm(
-      `Удалить профиль «${name}»? Это действие нельзя отменить.`,
-    );
-
-    if (!confirmed || deletingId) {
+  const closeDeleteDialog = useCallback(() => {
+    if (deletingId) {
       return;
     }
 
-    setDeletingId(student.id);
+    setStudentToDelete(null);
+  }, [deletingId]);
+
+  async function confirmDelete() {
+    if (!studentToDelete || deletingId) {
+      return;
+    }
+
+    setDeletingId(studentToDelete.id);
 
     try {
-      await deleteStudent(student.id);
-      setStudents((current) => current.filter((item) => item.id !== student.id));
+      await deleteStudent(studentToDelete.id);
+      setStudents((current) =>
+        current.filter((item) => item.id !== studentToDelete.id),
+      );
+      setStudentToDelete(null);
     } catch {
       setError("Не удалось удалить студента.");
     } finally {
       setDeletingId(null);
     }
   }
+
+  const deleteName = studentToDelete
+    ? formatStudentName(studentToDelete)
+    : "";
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-6 py-8">
@@ -145,7 +159,7 @@ export function StudentList() {
                     title="Удалить студента"
                     aria-label="Удалить студента"
                     disabled={deletingId === student.id}
-                    onClick={() => handleDelete(student)}
+                    onClick={() => setStudentToDelete(student)}
                     className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 disabled:pointer-events-none disabled:opacity-50"
                   >
                     <TrashIcon />
@@ -156,6 +170,16 @@ export function StudentList() {
           })}
         </div>
       )}
+
+      <ConfirmDialog
+        open={studentToDelete !== null}
+        title="Удалить студента?"
+        description={`Профиль «${deleteName}» будет удалён вместе с документами и заявками. Это действие нельзя отменить.`}
+        confirmLabel="Удалить"
+        isPending={deletingId !== null}
+        onConfirm={confirmDelete}
+        onCancel={closeDeleteDialog}
+      />
     </div>
   );
 }
