@@ -33,6 +33,7 @@ export const DEFAULT_DOCUMENT_TYPES: DocumentTypeOption[] = [
       "application/pdf": [".pdf"],
     },
     parse: false,
+    multiple: true,
   },
   {
     key: "financial",
@@ -53,6 +54,7 @@ export const DEFAULT_DOCUMENT_TYPES: DocumentTypeOption[] = [
       "application/pdf": [".pdf"],
     },
     parse: false,
+    multiple: true,
   },
   {
     key: "recommendation",

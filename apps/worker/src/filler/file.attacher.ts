@@ -10,18 +10,17 @@ type FilePayload = {
   buffer: Buffer;
 };
 
-/** 17gz Step 6 rows that reject PDF (Accept: *.jpg, *.jpeg). */
+/** 17gz Step 6 rows that historically rejected PDF (jpg-only). */
 const JPG_ONLY_DOCUMENT_TYPES = new Set([
   'passport',
   'photo',
   'diploma',
   'transcript',
-  'criminal_record',
   'recommendation',
   'language_certificate',
   'personal_statement',
-  'medical',
 ]);
+// medical + criminal_record on current SUDA skin accept *.pdf,*.jpg,*.jpeg
 
 const FETCH_TIMEOUT_MS = 30_000;
 
@@ -78,46 +77,42 @@ export class FileAttacher {
         continue;
       }
 
-      if (
-        fileUrls.length === 1 &&
-        (await this.rowAlreadyHasAttachment(page, attachTypeId, labelHint))
-      ) {
-        this.logger.log(
-          'Attach: skip ' +
-            docType +
-            ' — already attached on page' +
-            (attachTypeId ? ' (' + attachTypeId + ')' : ''),
-        );
-        continue;
-      }
-
       const resolvedId =
         (await this.resolveLiveAttachTypeId(page, attachTypeId, labelHint)) ??
         attachTypeId;
 
-      for (let index = 0; index < fileUrls.length; index += 1) {
+      const alreadyCount = await this.countRowAttachments(
+        page,
+        resolvedId,
+        labelHint,
+      );
+
+      // Resume: portal already has N of M files from a prior attempt.
+      if (alreadyCount >= fileUrls.length) {
+        this.logger.log(
+          `Attach: skip ${docType} — row already has ${alreadyCount}/${fileUrls.length} file(s)`,
+        );
+        continue;
+      }
+
+      const startIndex = Math.min(alreadyCount, fileUrls.length);
+      if (startIndex > 0) {
+        this.logger.log(
+          `Attach: resume ${docType} from [${startIndex + 1}/${fileUrls.length}] (portal has ${alreadyCount})`,
+        );
+      }
+
+      for (let index = startIndex; index < fileUrls.length; index += 1) {
         const fileUrl = fileUrls[index]!;
         this.logger.log(
-          'Attach: fetch ' +
-            docType +
-            ' [' +
-            (index + 1) +
-            '/' +
-            fileUrls.length +
-            ']…',
+          `Attach: fetch ${docType} [${index + 1}/${fileUrls.length}]…`,
         );
         const { contentType, buffer } = await this.fetchDocument(
           docType,
           fileUrl,
         );
         this.logger.log(
-          'Attach: fetched ' +
-            docType +
-            ' (' +
-            contentType +
-            ', ' +
-            buffer.length +
-            ' bytes)',
+          `Attach: fetched ${docType} (${contentType}, ${buffer.length} bytes)`,
         );
 
         if (
@@ -125,26 +120,35 @@ export class FileAttacher {
           /pdf/i.test(contentType)
         ) {
           throw new Error(
-            'Document "' +
-              docType +
-              '" is PDF but 17gz Step 6 accepts only *.jpg/*.jpeg for this row. ' +
-              'Re-upload as JPEG in the dashboard (label: ' +
-              (field.labelHint ?? docType) +
-              ').',
+            `Document "${docType}" is PDF but 17gz Step 6 accepts only *.jpg/*.jpeg for this row. ` +
+              `Re-upload as JPEG in the dashboard (label: ${field.labelHint ?? docType}).`,
+          );
+        }
+
+        // Soft cap: portal warns ≤1.5M
+        if (buffer.length > 1.5 * 1024 * 1024) {
+          this.logger.warn(
+            `Attach: ${docType}[${index}] is ${(buffer.length / 1024 / 1024).toFixed(2)}MB (>1.5M portal limit)`,
           );
         }
 
         const filePayload = this.toFilePayload(docType, contentType, buffer);
+        const countBefore = await this.countRowAttachments(
+          page,
+          resolvedId,
+          labelHint,
+        );
 
         const locator = await resolveFieldLocator(page, field);
         if (locator && (await locator.count()) > 0) {
           const tag = await locator
             .evaluate((el) => el.tagName)
             .catch(() => '');
+          // Native <input type=file> usually replaces, not appends — only for single.
           if (tag === 'INPUT' && fileUrls.length === 1) {
             await locator.setInputFiles(filePayload);
             this.logger.log(
-              'Attached ' + docType + ' via file input (' + field.selector + ')',
+              `Attached ${docType} via file input (${field.selector})`,
             );
             await this.dismissPostUploadDialogs(page);
             await this.waitBrieflyForUploadSettle(page);
@@ -152,30 +156,32 @@ export class FileAttacher {
           }
         }
 
+        // Always Add Document on the SAME row (resolvedId / labelHint) for multi.
         const ok = await this.attachViaAddDocument(
           page,
           resolvedId,
           filePayload,
           labelHint,
         );
-        if (ok) {
+        await this.waitBrieflyForUploadSettle(page);
+        const countAfter = await this.countRowAttachments(
+          page,
+          resolvedId,
+          labelHint,
+        );
+
+        if (ok && countAfter > countBefore) {
           this.logger.log(
-            'Attached ' +
-              docType +
-              ' [' +
-              (index + 1) +
-              '/' +
-              fileUrls.length +
-              '] via Add Document' +
-              (resolvedId ? ' (' + resolvedId + ')' : ''),
+            `Attached ${docType} [${index + 1}/${fileUrls.length}] via Add Document` +
+              (resolvedId ? ` (${resolvedId})` : '') +
+              ` rowCount=${countAfter}`,
           );
-          await this.waitBrieflyForUploadSettle(page);
           continue;
         }
 
-        if (await this.rowAlreadyHasAttachment(page, resolvedId, labelHint)) {
+        if (countAfter > countBefore) {
           this.logger.log(
-            'Attach: treat ' + docType + '[' + index + '] as done (row has file)',
+            `Attach: ${docType}[${index}] count grew ${countBefore}→${countAfter} despite chooser warn`,
           );
           continue;
         }
@@ -183,21 +189,15 @@ export class FileAttacher {
         if (field.required) {
           const dump = await this.dumpAttachDebug(page);
           throw new Error(
-            'File input not found: ' +
-              field.selector +
-              (field.labelHint ? ' / "' + field.labelHint + '"' : '') +
-              (resolvedId ? ' [attachTypeId=' + resolvedId + ']' : '') +
-              ' | DOM: ' +
-              dump,
+            `Failed to attach ${docType} file ${index + 1}/${fileUrls.length}` +
+              `${field.labelHint ? ` / "${field.labelHint}"` : ''}` +
+              (resolvedId ? ` [attachTypeId=${resolvedId}]` : '') +
+              ` (row still has ${countAfter}) | DOM: ${dump}`,
           );
         }
 
         this.logger.warn(
-          'Attach: could not attach optional ' +
-            docType +
-            '[' +
-            index +
-            '] — Add Document not found',
+          `Attach: could not attach optional ${docType}[${index}] — stopping`,
         );
         break;
       }
@@ -492,7 +492,7 @@ export class FileAttacher {
         ? 'Physical Examination'
         : undefined,
       /criminal|2251456278|115623117/i.test(attachTypeId ?? '')
-        ? 'Non-criminal'
+        ? 'Non-Criminal'
         : undefined,
       /Learning|Employment|152223633|8135227092/i.test(
         `${labelHint ?? ''}${attachTypeId ?? ''}`,
@@ -521,12 +521,12 @@ export class FileAttacher {
     return buttons;
   }
 
-  /** Skip re-upload when the row already shows a thumbnail / attachment. */
-  private async rowAlreadyHasAttachment(
+  /** How many uploaded thumbnails / links are in this attach row. */
+  private async countRowAttachments(
     page: Page,
     attachTypeId: string | undefined,
     labelHint?: string,
-  ): Promise<boolean> {
+  ): Promise<number> {
     return page
       .evaluate(
         ({ id, hint }) => {
@@ -537,10 +537,7 @@ export class FileAttacher {
           ];
 
           const match = rows.find((row) => {
-            if (
-              id &&
-              row.querySelector(`[attachTypeId="${id}"]`)
-            ) {
+            if (id && row.querySelector(`[attachTypeId="${id}"]`)) {
               return true;
             }
             if (!hint) {
@@ -554,24 +551,44 @@ export class FileAttacher {
           });
 
           if (!match) {
-            return false;
+            return 0;
           }
 
-          return (
-            Boolean(
-              match.querySelector(
-                '.attach-item-list img, .attach-item-list a, img[src*="attach"], a[href*="downloadAttach"], a[href*="attach"]',
-              ),
-            ) ||
-            [...match.querySelectorAll('img')].some((img) => {
-              const src = img.getAttribute('src') || '';
+          const thumbs = [
+            ...match.querySelectorAll(
+              '.attach-item-list img, .attach-item-list a[href], img[src*="attach"], a[href*="downloadAttach"], a[href*="attach"]',
+            ),
+          ];
+          const fromQuery = thumbs.filter((el) => {
+            if (el.tagName === 'IMG') {
+              const src = el.getAttribute('src') || '';
               return src.length > 20 && !/icon|blank|spacer/i.test(src);
-            })
-          );
+            }
+            return true;
+          }).length;
+
+          if (fromQuery > 0) {
+            return fromQuery;
+          }
+
+          // Fallback: any non-decorative img in the row (passport-style thumbs).
+          return [...match.querySelectorAll('img')].filter((img) => {
+            const src = img.getAttribute('src') || '';
+            return src.length > 20 && !/icon|blank|spacer/i.test(src);
+          }).length;
         },
         { id: attachTypeId ?? '', hint: labelHint ?? '' },
       )
-      .catch(() => false);
+      .catch(() => 0);
+  }
+
+  /** Skip re-upload when the row already shows a thumbnail / attachment. */
+  private async rowAlreadyHasAttachment(
+    page: Page,
+    attachTypeId: string | undefined,
+    labelHint?: string,
+  ): Promise<boolean> {
+    return (await this.countRowAttachments(page, attachTypeId, labelHint)) > 0;
   }
 
   /** If schema id missing on page, pick live attachTypeId from the labeled row. */

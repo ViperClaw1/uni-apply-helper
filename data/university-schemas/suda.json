@@ -1067,7 +1067,7 @@
       "required": true,
       "wizardStep": 6,
       "documentType": "criminal_record",
-      "labelHint": "Non-criminal"
+      "labelHint": "Non-Criminal"
     },
     {
       "selector": "[attachTypeId=\"ATTACH_TYPE_appendFile\"]",
@@ -1091,6 +1091,6 @@
     "goal": "Complete and submit the Soochow University online application form"
   },
   "requiresEssay": false,
-  "notes": "17gz twin of CSU/PKU. Pre-wizard: Notes → Program (Self-sponsored) → Student type (Pre-university) → Study Plan Apply. Step 6 attachTypeIds are SUDA-specific (not PKU): passportImage, 152223612 diploma, 152223633 learning/employment, 152223620 transcript, checkBodyreport medical, 2251456278 non-criminal, appendFile. All required Step 6 rows accept *.jpg/*.jpeg only (≤1.5M).",
+  "notes": "17gz twin of CSU/PKU. Pre-wizard: Notes → Program (Self-sponsored) → Student type (Pre-university) → Study Plan Apply. Step 6 attachTypeIds are SUDA-specific: passportImage, 152223612 diploma/HS cert, 152223633 learning/employment, 152223620 transcript, checkBodyreport medical, 2251456278 non-criminal, appendFile. Medical/criminal accept pdf+jpg; multi-file via repeated Add Document on the same row (≤1.5M each).",
   "defaultProgram": "foundation program Eng"
 }
