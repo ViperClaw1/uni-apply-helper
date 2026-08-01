@@ -1,8 +1,9 @@
 import {
-  BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   Param,
   Put,
   Post,
@@ -21,6 +22,12 @@ export class StudentsController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.studentsService.findOne(id);
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  remove(@Param('id') id: string) {
+    return this.studentsService.remove(id);
   }
 
   @Get(':id/profile')

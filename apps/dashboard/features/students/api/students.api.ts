@@ -18,6 +18,10 @@ export async function getStudentProfile(studentId: string) {
   return response.data;
 }
 
+export async function deleteStudent(studentId: string) {
+  await apiClient.delete(`/students/${studentId}`);
+}
+
 export async function setStudentApplicationTargets(
   studentId: string,
   formUrls: string[],

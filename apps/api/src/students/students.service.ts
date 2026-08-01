@@ -274,6 +274,48 @@ export class StudentsService {
     return this.prisma.student.findUniqueOrThrow({ where: { id } });
   }
 
+  async remove(id: string) {
+    await this.findOne(id);
+
+    await this.prisma.$transaction(async (tx) => {
+      const batches = await tx.applicationBatch.findMany({
+        where: { studentId: id },
+        select: { id: true },
+      });
+      const batchIds = batches.map((batch) => batch.id);
+
+      if (batchIds.length > 0) {
+        const applications = await tx.application.findMany({
+          where: { batchId: { in: batchIds } },
+          select: { id: true },
+        });
+        const applicationIds = applications.map((application) => application.id);
+
+        if (applicationIds.length > 0) {
+          await tx.applicationStep.deleteMany({
+            where: { applicationId: { in: applicationIds } },
+          });
+        }
+
+        await tx.application.deleteMany({
+          where: { batchId: { in: batchIds } },
+        });
+        await tx.applicationBatch.deleteMany({ where: { studentId: id } });
+      }
+
+      await tx.generatedDocument.deleteMany({ where: { studentId: id } });
+      await tx.studentDocument.deleteMany({ where: { studentId: id } });
+      await tx.applicationTarget.deleteMany({ where: { studentId: id } });
+      await tx.education.deleteMany({ where: { studentId: id } });
+      await tx.workExperience.deleteMany({ where: { studentId: id } });
+      await tx.languageSkill.deleteMany({ where: { studentId: id } });
+      await tx.familyMember.deleteMany({ where: { studentId: id } });
+      await tx.guarantor.deleteMany({ where: { studentId: id } });
+      await tx.emergencyContact.deleteMany({ where: { studentId: id } });
+      await tx.student.delete({ where: { id } });
+    });
+  }
+
   async setApplicationTargetsByFormUrls(
     studentId: string,
     input: { formUrls?: string[] },
