@@ -16,38 +16,62 @@ export const DEFAULT_DOCUMENT_TYPES: DocumentTypeOption[] = [
   {
     key: "transcript",
     label: "Аттестат с оценками + перевод",
-    accept: { "application/pdf": [".pdf"] },
+    accept: {
+      "image/jpeg": [".jpg", ".jpeg"],
+      "image/png": [".png"],
+      "application/pdf": [".pdf"],
+    },
     parse: false,
   },
   {
     key: "medical",
     label: "Медицинская справка",
-    accept: { "application/pdf": [".pdf"] },
+    accept: {
+      "image/jpeg": [".jpg", ".jpeg"],
+      "image/png": [".png"],
+      "application/pdf": [".pdf"],
+    },
     parse: false,
   },
   {
     key: "financial",
     label: "Справка о финансовой состоятельности",
-    accept: { "application/pdf": [".pdf"] },
+    accept: {
+      "image/jpeg": [".jpg", ".jpeg"],
+      "image/png": [".png"],
+      "application/pdf": [".pdf"],
+    },
     parse: false,
   },
   {
     key: "criminal_record",
     label: "Справка о несудимости",
-    accept: { "application/pdf": [".pdf"] },
+    accept: {
+      "image/jpeg": [".jpg", ".jpeg"],
+      "image/png": [".png"],
+      "application/pdf": [".pdf"],
+    },
     parse: false,
   },
   {
     key: "recommendation",
     label: "Рекомендации / Портфолио / Языковые сертификаты",
-    accept: { "application/pdf": [".pdf"], "image/*": [] },
+    accept: {
+      "image/jpeg": [".jpg", ".jpeg"],
+      "image/png": [".png"],
+      "application/pdf": [".pdf"],
+    },
     parse: false,
     multiple: true,
   },
   {
     key: "diploma",
     label: "Диплом / Diploma",
-    accept: { "application/pdf": [".pdf"], "image/*": [] },
+    accept: {
+      "image/jpeg": [".jpg", ".jpeg"],
+      "image/png": [".png"],
+      "application/pdf": [".pdf"],
+    },
     parse: false,
   },
   {
