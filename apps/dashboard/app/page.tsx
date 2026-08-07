@@ -1,5 +1,5 @@
-import { StudentList } from "@/features/students/components/student-list";
+import { LandingPage } from "@/features/marketing/components/landing-page";
 
 export default function Home() {
-  return <StudentList />;
+  return <LandingPage />;
 }

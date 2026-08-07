@@ -1,5 +1,7 @@
 node_modules
+.claude
 .cursor
+antivibe
 .env
 **/.env
 **/.env.*

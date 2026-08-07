@@ -13,7 +13,7 @@ export default function NewStudentPage() {
           студентами, которые уже пришли из Google Form.
         </p>
         <Link
-          href="/"
+          href="/dashboard"
           className="mt-6 inline-flex h-11 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white transition-transform hover:bg-slate-800 active:scale-[0.96]"
         >
           Вернуться к списку

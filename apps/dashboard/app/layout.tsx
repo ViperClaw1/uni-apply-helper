@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Uni Apply Dashboard",
-  description: "Панель консультанта Uni Apply",
+  title: "LotsApply — Fill it once. Apply everywhere.",
+  description:
+    "Create one profile, upload your documents, and let LotsApply automatically fill university forms so you can apply to multiple universities with ease.",
 };
 
 export default function RootLayout({

@@ -201,7 +201,7 @@ export function StudentProfilePage() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-6 py-8">
       <Link
-        href="/"
+        href="/dashboard"
         className="mb-6 inline-flex h-10 w-fit items-center rounded-xl px-3 text-sm font-medium text-slate-600 transition-colors hover:bg-white hover:text-slate-950"
       >
         Назад к студентам
