@@ -21,6 +21,13 @@ import { generateToken, hashToken } from './token.util';
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
 
+// ponytail: verification gate postponed — no verified Resend sending domain
+// yet, so real users can't receive the email. The full verify-email flow
+// (token, link, endpoint) stays intact and still works for anyone who does
+// get the email; it's just not required for signup/login right now. Flip
+// this back to `true` once a domain is verified in Resend.
+const REQUIRE_EMAIL_VERIFICATION = false;
+
 type AgencyInput = {
   legalName?: string;
   country?: string;
@@ -78,26 +85,14 @@ export class AuthService {
       Date.now() + VERIFICATION_TTL_MS,
     );
 
-    try {
-      await this.prisma.account.create({
-        data: {
-          email,
-          passwordHash,
-          role: input.role,
-          verificationTokenHash,
-          verificationTokenExpiresAt,
-          ...(agencyData ? { agencyProfile: { create: agencyData } } : {}),
-        },
-      });
-    } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
-        throw new ConflictException('Email already registered.');
-      }
-      throw error;
-    }
+    const account = await this.createAccount({
+      email,
+      passwordHash,
+      role: input.role,
+      verificationTokenHash,
+      verificationTokenExpiresAt,
+      agencyData,
+    });
 
     const verifyUrl = `${verifyBaseUrl}?token=${verificationToken}`;
 
@@ -112,7 +107,16 @@ export class AuthService {
       this.logger.error(`Failed to send verification email to ${email}`, error);
     }
 
-    return { email };
+    if (!REQUIRE_EMAIL_VERIFICATION) {
+      const token = await this.createSession(account.id);
+      return {
+        email,
+        token,
+        account: this.toPublicAccount(account, agencyData),
+      };
+    }
+
+    return { email, token: undefined, account: undefined };
   }
 
   async login(input: LoginInput) {
@@ -132,7 +136,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password.');
     }
 
-    if (!account.emailVerifiedAt) {
+    if (REQUIRE_EMAIL_VERIFICATION && !account.emailVerifiedAt) {
       throw new ForbiddenException(
         'Please verify your email before logging in.',
       );
@@ -205,6 +209,34 @@ export class AuthService {
     }
 
     return this.toPublicAccount(session.account, session.account.agencyProfile);
+  }
+
+  private async createAccount(data: {
+    email: string;
+    passwordHash: string;
+    role: AccountRole;
+    verificationTokenHash: string;
+    verificationTokenExpiresAt: Date;
+    agencyData: { legalName: string; country: string; taxId: string } | null;
+  }) {
+    const { agencyData, ...accountData } = data;
+
+    try {
+      return await this.prisma.account.create({
+        data: {
+          ...accountData,
+          ...(agencyData ? { agencyProfile: { create: agencyData } } : {}),
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException('Email already registered.');
+      }
+      throw error;
+    }
   }
 
   private async createSession(accountId: string) {

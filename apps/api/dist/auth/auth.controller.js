@@ -25,12 +25,17 @@ let AuthController = class AuthController {
         this.authService = authService;
         this.configService = configService;
     }
-    signup(body) {
+    async signup(body, res) {
         const dashboardOrigin = (this.configService.get('DASHBOARD_ORIGIN') ??
             'http://localhost:3001')
             .split(',')[0]
             .replace(/\/$/, '');
-        return this.authService.signup(body, `${dashboardOrigin}/verify-email`);
+        const result = await this.authService.signup(body, `${dashboardOrigin}/verify-email`);
+        if (result.token) {
+            this.setSessionCookie(res, result.token);
+            return { account: result.account };
+        }
+        return { email: result.email };
     }
     async login(body, res) {
         const { token, account } = await this.authService.login(body);
@@ -70,9 +75,10 @@ exports.AuthController = AuthController;
 __decorate([
     (0, common_1.Post)('signup'),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Res)({ passthrough: true })),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
 ], AuthController.prototype, "signup", null);
 __decorate([
     (0, common_1.Post)('login'),

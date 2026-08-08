@@ -16,8 +16,22 @@ export declare class AuthController {
             country?: string;
             taxId?: string;
         };
-    }): Promise<{
+    }, res: Response): Promise<{
+        account: {
+            id: string;
+            email: string;
+            role: import("@uni-apply/database/dist/generated/prisma/client").$Enums.AccountRole;
+            emailVerifiedAt: Date | null;
+            agencyProfile: {
+                legalName: string;
+                country: string;
+                taxId: string;
+            } | undefined;
+        };
+        email?: undefined;
+    } | {
         email: string;
+        account?: undefined;
     }>;
     login(body: {
         email?: string;

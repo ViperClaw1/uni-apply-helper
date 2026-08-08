@@ -24,7 +24,7 @@ export class AuthController {
   ) {}
 
   @Post('signup')
-  signup(
+  async signup(
     @Body()
     body: {
       email?: string;
@@ -33,6 +33,7 @@ export class AuthController {
       role?: AccountRole;
       agency?: { legalName?: string; country?: string; taxId?: string };
     },
+    @Res({ passthrough: true }) res: Response,
   ) {
     const dashboardOrigin = (
       this.configService.get<string>('DASHBOARD_ORIGIN') ??
@@ -41,7 +42,17 @@ export class AuthController {
       .split(',')[0]
       .replace(/\/$/, '');
 
-    return this.authService.signup(body, `${dashboardOrigin}/verify-email`);
+    const result = await this.authService.signup(
+      body,
+      `${dashboardOrigin}/verify-email`,
+    );
+
+    if (result.token) {
+      this.setSessionCookie(res, result.token);
+      return { account: result.account };
+    }
+
+    return { email: result.email };
   }
 
   @Post('login')

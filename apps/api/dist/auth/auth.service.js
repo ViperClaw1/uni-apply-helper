@@ -19,6 +19,7 @@ const password_util_1 = require("./password.util");
 const token_util_1 = require("./token.util");
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
+const REQUIRE_EMAIL_VERIFICATION = false;
 let AuthService = AuthService_1 = class AuthService {
     prisma;
     mailService;
@@ -47,25 +48,14 @@ let AuthService = AuthService_1 = class AuthService {
         const verificationToken = (0, token_util_1.generateToken)();
         const verificationTokenHash = (0, token_util_1.hashToken)(verificationToken);
         const verificationTokenExpiresAt = new Date(Date.now() + VERIFICATION_TTL_MS);
-        try {
-            await this.prisma.account.create({
-                data: {
-                    email,
-                    passwordHash,
-                    role: input.role,
-                    verificationTokenHash,
-                    verificationTokenExpiresAt,
-                    ...(agencyData ? { agencyProfile: { create: agencyData } } : {}),
-                },
-            });
-        }
-        catch (error) {
-            if (error instanceof database_1.Prisma.PrismaClientKnownRequestError &&
-                error.code === 'P2002') {
-                throw new common_1.ConflictException('Email already registered.');
-            }
-            throw error;
-        }
+        const account = await this.createAccount({
+            email,
+            passwordHash,
+            role: input.role,
+            verificationTokenHash,
+            verificationTokenExpiresAt,
+            agencyData,
+        });
         const verifyUrl = `${verifyBaseUrl}?token=${verificationToken}`;
         try {
             await this.mailService.sendVerificationEmail(email, verifyUrl);
@@ -73,7 +63,15 @@ let AuthService = AuthService_1 = class AuthService {
         catch (error) {
             this.logger.error(`Failed to send verification email to ${email}`, error);
         }
-        return { email };
+        if (!REQUIRE_EMAIL_VERIFICATION) {
+            const token = await this.createSession(account.id);
+            return {
+                email,
+                token,
+                account: this.toPublicAccount(account, agencyData),
+            };
+        }
+        return { email, token: undefined, account: undefined };
     }
     async login(input) {
         const email = input.email?.trim().toLowerCase();
@@ -85,7 +83,7 @@ let AuthService = AuthService_1 = class AuthService {
         if (!account || !isValidPassword) {
             throw new common_1.UnauthorizedException('Invalid email or password.');
         }
-        if (!account.emailVerifiedAt) {
+        if (REQUIRE_EMAIL_VERIFICATION && !account.emailVerifiedAt) {
             throw new common_1.ForbiddenException('Please verify your email before logging in.');
         }
         const token = await this.createSession(account.id);
@@ -143,6 +141,24 @@ let AuthService = AuthService_1 = class AuthService {
             return null;
         }
         return this.toPublicAccount(session.account, session.account.agencyProfile);
+    }
+    async createAccount(data) {
+        const { agencyData, ...accountData } = data;
+        try {
+            return await this.prisma.account.create({
+                data: {
+                    ...accountData,
+                    ...(agencyData ? { agencyProfile: { create: agencyData } } : {}),
+                },
+            });
+        }
+        catch (error) {
+            if (error instanceof database_1.Prisma.PrismaClientKnownRequestError &&
+                error.code === 'P2002') {
+                throw new common_1.ConflictException('Email already registered.');
+            }
+            throw error;
+        }
     }
     async createSession(accountId) {
         const token = (0, token_util_1.generateToken)();

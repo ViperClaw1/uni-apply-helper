@@ -24,6 +24,22 @@ export declare class AuthService {
     constructor(prisma: PrismaService, mailService: MailService);
     signup(input: SignupInput, verifyBaseUrl: string): Promise<{
         email: string;
+        token: string;
+        account: {
+            id: string;
+            email: string;
+            role: import("@uni-apply/database/dist/generated/prisma/client").$Enums.AccountRole;
+            emailVerifiedAt: Date | null;
+            agencyProfile: {
+                legalName: string;
+                country: string;
+                taxId: string;
+            } | undefined;
+        };
+    } | {
+        email: string;
+        token: undefined;
+        account: undefined;
     }>;
     login(input: LoginInput): Promise<{
         token: string;
@@ -65,6 +81,7 @@ export declare class AuthService {
             taxId: string;
         } | undefined;
     } | null>;
+    private createAccount;
     private createSession;
     private validateAgencyInput;
     private toPublicAccount;

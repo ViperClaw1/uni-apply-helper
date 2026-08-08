@@ -26,7 +26,11 @@ export type SignupPayload = {
 };
 
 export async function signup(payload: SignupPayload) {
-  const response = await authClient.post<{ email: string }>(
+  // Email verification is temporarily not required (no verified Resend
+  // sending domain yet) — the API logs the caller in immediately and
+  // returns `account`. Once verification is required again, it'll return
+  // `email` only and the caller should show a "check your email" state.
+  const response = await authClient.post<{ email?: string; account?: Account }>(
     "/auth/signup",
     payload,
   );

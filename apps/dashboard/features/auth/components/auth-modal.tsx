@@ -158,7 +158,7 @@ export function AuthModal({ open, initialMode, initialRole, onClose }: AuthModal
     setError(null);
 
     try {
-      await signup({
+      const result = await signup({
         email: fields.email,
         password: fields.password,
         confirmPassword: fields.confirmPassword,
@@ -172,7 +172,15 @@ export function AuthModal({ open, initialMode, initialRole, onClose }: AuthModal
               }
             : undefined,
       });
-      setPhase("check-email");
+
+      // Verification is temporarily not required — `account` present means
+      // the API already logged us in. Once it's required again, the API
+      // stops returning `account` here and this falls back to "check email".
+      if (result.account) {
+        router.push("/dashboard");
+      } else {
+        setPhase("check-email");
+      }
     } catch (submitError) {
       setError(extractErrorMessage(submitError));
       setPhase("form");
