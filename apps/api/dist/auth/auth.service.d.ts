@@ -20,6 +20,7 @@ type LoginInput = {
 export declare class AuthService {
     private readonly prisma;
     private readonly mailService;
+    private readonly logger;
     constructor(prisma: PrismaService, mailService: MailService);
     signup(input: SignupInput, verifyBaseUrl: string): Promise<{
         email: string;

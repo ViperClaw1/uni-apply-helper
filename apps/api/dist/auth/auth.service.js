@@ -8,6 +8,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var AuthService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
@@ -18,9 +19,10 @@ const password_util_1 = require("./password.util");
 const token_util_1 = require("./token.util");
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
-let AuthService = class AuthService {
+let AuthService = AuthService_1 = class AuthService {
     prisma;
     mailService;
+    logger = new common_1.Logger(AuthService_1.name);
     constructor(prisma, mailService) {
         this.prisma = prisma;
         this.mailService = mailService;
@@ -65,7 +67,12 @@ let AuthService = class AuthService {
             throw error;
         }
         const verifyUrl = `${verifyBaseUrl}?token=${verificationToken}`;
-        await this.mailService.sendVerificationEmail(email, verifyUrl);
+        try {
+            await this.mailService.sendVerificationEmail(email, verifyUrl);
+        }
+        catch (error) {
+            this.logger.error(`Failed to send verification email to ${email}`, error);
+        }
         return { email };
     }
     async login(input) {
@@ -171,7 +178,7 @@ let AuthService = class AuthService {
     }
 };
 exports.AuthService = AuthService;
-exports.AuthService = AuthService = __decorate([
+exports.AuthService = AuthService = AuthService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         mail_service_1.MailService])

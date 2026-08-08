@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { AccountRole, Prisma } from '@uni-apply/database';
@@ -41,6 +42,8 @@ type LoginInput = {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
@@ -97,7 +100,17 @@ export class AuthService {
     }
 
     const verifyUrl = `${verifyBaseUrl}?token=${verificationToken}`;
-    await this.mailService.sendVerificationEmail(email, verifyUrl);
+
+    try {
+      await this.mailService.sendVerificationEmail(email, verifyUrl);
+    } catch (error) {
+      // The account already exists at this point — a delivery failure
+      // shouldn't surface as a signup failure (misleading, and retrying
+      // would just hit "email already registered"). It's an operational
+      // problem to fix (provider config, domain verification), not the
+      // caller's problem.
+      this.logger.error(`Failed to send verification email to ${email}`, error);
+    }
 
     return { email };
   }
