@@ -1,4 +1,5 @@
 import { SUPPORTED_UNIVERSITIES } from "../constants/universities";
+import { HowItWorksSection } from "./how-it-works-section";
 
 const NAV_LINKS = ["How it works", "Universities", "For students", "Resources", "Help"];
 
@@ -51,6 +52,7 @@ export function LandingPage() {
       <SiteHeader />
       <main className="flex-1">
         <HeroSection />
+        <HowItWorksSection />
         <SupportedUniversitiesSection />
       </main>
     </div>
@@ -69,15 +71,25 @@ function SiteHeader() {
         </div>
 
         <nav className="hidden items-center gap-8 md:flex">
-          {NAV_LINKS.map((label) => (
-            <span
-              key={label}
-              className="flex select-none items-center gap-1 text-sm font-medium text-slate-600"
-            >
-              {label}
-              {label === "Resources" ? <ChevronDownIcon /> : null}
-            </span>
-          ))}
+          {NAV_LINKS.map((label) =>
+            label === "How it works" ? (
+              <a
+                key={label}
+                href="#how-it-works"
+                className="text-sm font-medium text-slate-600 hover:text-slate-950"
+              >
+                {label}
+              </a>
+            ) : (
+              <span
+                key={label}
+                className="flex select-none items-center gap-1 text-sm font-medium text-slate-600"
+              >
+                {label}
+                {label === "Resources" ? <ChevronDownIcon /> : null}
+              </span>
+            ),
+          )}
         </nav>
 
         <div className="flex items-center gap-3">
