@@ -17,6 +17,17 @@ type LoginInput = {
     email?: string;
     password?: string;
 };
+export type PublicAccount = {
+    id: string;
+    email: string;
+    role: AccountRole;
+    emailVerifiedAt: Date | null;
+    agencyProfile?: {
+        legalName: string;
+        country: string;
+        taxId: string;
+    };
+};
 export declare class AuthService {
     private readonly prisma;
     private readonly mailService;
@@ -25,17 +36,7 @@ export declare class AuthService {
     signup(input: SignupInput, verifyBaseUrl: string): Promise<{
         email: string;
         token: string;
-        account: {
-            id: string;
-            email: string;
-            role: import("@uni-apply/database/dist/generated/prisma/client").$Enums.AccountRole;
-            emailVerifiedAt: Date | null;
-            agencyProfile: {
-                legalName: string;
-                country: string;
-                taxId: string;
-            } | undefined;
-        };
+        account: PublicAccount;
     } | {
         email: string;
         token: undefined;
@@ -43,44 +44,14 @@ export declare class AuthService {
     }>;
     login(input: LoginInput): Promise<{
         token: string;
-        account: {
-            id: string;
-            email: string;
-            role: import("@uni-apply/database/dist/generated/prisma/client").$Enums.AccountRole;
-            emailVerifiedAt: Date | null;
-            agencyProfile: {
-                legalName: string;
-                country: string;
-                taxId: string;
-            } | undefined;
-        };
+        account: PublicAccount;
     }>;
     verifyEmail(token: string | undefined): Promise<{
         token: string;
-        account: {
-            id: string;
-            email: string;
-            role: import("@uni-apply/database/dist/generated/prisma/client").$Enums.AccountRole;
-            emailVerifiedAt: Date | null;
-            agencyProfile: {
-                legalName: string;
-                country: string;
-                taxId: string;
-            } | undefined;
-        };
+        account: PublicAccount;
     }>;
     logout(sessionToken: string | undefined): Promise<void>;
-    getAccountBySessionToken(sessionToken: string | undefined): Promise<{
-        id: string;
-        email: string;
-        role: import("@uni-apply/database/dist/generated/prisma/client").$Enums.AccountRole;
-        emailVerifiedAt: Date | null;
-        agencyProfile: {
-            legalName: string;
-            country: string;
-            taxId: string;
-        } | undefined;
-    } | null>;
+    getAccountBySessionToken(sessionToken: string | undefined): Promise<PublicAccount | null>;
     private createAccount;
     private createSession;
     private validateAgencyInput;

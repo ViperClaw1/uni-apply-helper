@@ -1,8 +1,34 @@
 import { apiClient } from "@/lib/api-client";
+import { sessionApiClient } from "@/lib/session-api-client";
 import type {
   StudentListItem,
   StudentProfile,
 } from "../types/student.types";
+
+export type MyProfileInput = {
+  surname: string;
+  givenName: string;
+  email: string;
+  phone?: string;
+  nationality?: string;
+  dateOfBirth?: string;
+  passportNo?: string;
+};
+
+export async function getMyProfile() {
+  const response = await sessionApiClient.get<{
+    student: StudentProfile | null;
+  }>("/students/me");
+  return response.data.student;
+}
+
+export async function saveMyProfile(input: MyProfileInput) {
+  const response = await sessionApiClient.put<StudentProfile>(
+    "/students/me",
+    input,
+  );
+  return response.data;
+}
 
 export async function getStudents() {
   const response = await apiClient.get<StudentListItem[]>("/students");

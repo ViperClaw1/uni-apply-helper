@@ -17,17 +17,7 @@ export declare class AuthController {
             taxId?: string;
         };
     }, res: Response): Promise<{
-        account: {
-            id: string;
-            email: string;
-            role: import("@uni-apply/database/dist/generated/prisma/client").$Enums.AccountRole;
-            emailVerifiedAt: Date | null;
-            agencyProfile: {
-                legalName: string;
-                country: string;
-                taxId: string;
-            } | undefined;
-        };
+        account: import("./auth.service").PublicAccount;
         email?: undefined;
     } | {
         email: string;
@@ -37,48 +27,18 @@ export declare class AuthController {
         email?: string;
         password?: string;
     }, res: Response): Promise<{
-        account: {
-            id: string;
-            email: string;
-            role: import("@uni-apply/database/dist/generated/prisma/client").$Enums.AccountRole;
-            emailVerifiedAt: Date | null;
-            agencyProfile: {
-                legalName: string;
-                country: string;
-                taxId: string;
-            } | undefined;
-        };
+        account: import("./auth.service").PublicAccount;
     }>;
     verifyEmail(body: {
         token?: string;
     }, res: Response): Promise<{
-        account: {
-            id: string;
-            email: string;
-            role: import("@uni-apply/database/dist/generated/prisma/client").$Enums.AccountRole;
-            emailVerifiedAt: Date | null;
-            agencyProfile: {
-                legalName: string;
-                country: string;
-                taxId: string;
-            } | undefined;
-        };
+        account: import("./auth.service").PublicAccount;
     }>;
     logout(req: Request, res: Response): Promise<{
         ok: boolean;
     }>;
     me(req: Request): Promise<{
-        account: {
-            id: string;
-            email: string;
-            role: import("@uni-apply/database/dist/generated/prisma/client").$Enums.AccountRole;
-            emailVerifiedAt: Date | null;
-            agencyProfile: {
-                legalName: string;
-                country: string;
-                taxId: string;
-            } | undefined;
-        };
+        account: import("./auth.service").PublicAccount;
     }>;
     private setSessionCookie;
 }

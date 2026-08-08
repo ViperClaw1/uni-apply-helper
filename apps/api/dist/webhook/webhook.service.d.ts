@@ -9,6 +9,7 @@ export declare class WebhookService {
         id: string;
         email: string;
         createdAt: Date;
+        accountId: string | null;
         surname: string;
         givenName: string;
         sex: string | null;

@@ -12,14 +12,15 @@ const api_key_guard_js_1 = require("./api-key.guard.js");
 const auth_controller_js_1 = require("./auth.controller.js");
 const auth_service_js_1 = require("./auth.service.js");
 const mail_service_js_1 = require("./mail.service.js");
+const session_auth_guard_js_1 = require("./session-auth.guard.js");
 let AuthModule = class AuthModule {
 };
 exports.AuthModule = AuthModule;
 exports.AuthModule = AuthModule = __decorate([
     (0, common_1.Module)({
         controllers: [auth_controller_js_1.AuthController],
-        providers: [api_key_guard_js_1.ApiKeyGuard, auth_service_js_1.AuthService, mail_service_js_1.MailService],
-        exports: [api_key_guard_js_1.ApiKeyGuard],
+        providers: [api_key_guard_js_1.ApiKeyGuard, auth_service_js_1.AuthService, mail_service_js_1.MailService, session_auth_guard_js_1.SessionAuthGuard],
+        exports: [api_key_guard_js_1.ApiKeyGuard, session_auth_guard_js_1.SessionAuthGuard, auth_service_js_1.AuthService],
     })
 ], AuthModule);
 //# sourceMappingURL=auth.module.js.map

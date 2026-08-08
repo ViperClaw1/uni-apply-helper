@@ -14,11 +14,19 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.StudentsController = void 0;
 const common_1 = require("@nestjs/common");
+const session_auth_guard_js_1 = require("../auth/session-auth.guard.js");
 const students_service_1 = require("./students.service");
 let StudentsController = class StudentsController {
     studentsService;
     constructor(studentsService) {
         this.studentsService = studentsService;
+    }
+    async getMyProfile(req) {
+        const student = await this.studentsService.findByAccountId(req.account.id);
+        return { student };
+    }
+    saveMyProfile(req, body) {
+        return this.studentsService.upsertMyProfile(req.account.id, body);
     }
     findAll() {
         return this.studentsService.findAll();
@@ -40,6 +48,23 @@ let StudentsController = class StudentsController {
     }
 };
 exports.StudentsController = StudentsController;
+__decorate([
+    (0, common_1.Get)('me'),
+    (0, common_1.UseGuards)(session_auth_guard_js_1.SessionAuthGuard),
+    __param(0, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], StudentsController.prototype, "getMyProfile", null);
+__decorate([
+    (0, common_1.Put)('me'),
+    (0, common_1.UseGuards)(session_auth_guard_js_1.SessionAuthGuard),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", void 0)
+], StudentsController.prototype, "saveMyProfile", null);
 __decorate([
     (0, common_1.Get)(),
     __metadata("design:type", Function),

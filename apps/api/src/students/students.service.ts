@@ -268,6 +268,59 @@ export class StudentsService {
     return this.prisma.student.findUniqueOrThrow({ where: { id } });
   }
 
+  async findByAccountId(accountId: string): Promise<StudentProfile | null> {
+    const student = await this.prisma.student.findUnique({
+      where: { accountId },
+    });
+
+    if (!student) {
+      return null;
+    }
+
+    return this.getFullProfile(student.id);
+  }
+
+  async upsertMyProfile(
+    accountId: string,
+    input: {
+      surname?: string;
+      givenName?: string;
+      email?: string;
+      phone?: string;
+      nationality?: string;
+      dateOfBirth?: string;
+      passportNo?: string;
+    },
+  ): Promise<StudentProfile> {
+    const surname = input.surname?.trim();
+    const givenName = input.givenName?.trim();
+    const email = input.email?.trim();
+
+    if (!surname || !givenName || !email) {
+      throw new BadRequestException(
+        'surname, givenName and email are required.',
+      );
+    }
+
+    const data = {
+      surname,
+      givenName,
+      email,
+      phone: input.phone?.trim() || null,
+      nationality: input.nationality?.trim() || null,
+      dateOfBirth: this.toDate(input.dateOfBirth),
+      passportNo: input.passportNo?.trim() || null,
+    };
+
+    const student = await this.prisma.student.upsert({
+      where: { accountId },
+      create: { ...data, accountId },
+      update: data,
+    });
+
+    return this.getFullProfile(student.id);
+  }
+
   async remove(id: string) {
     await this.findOne(id);
 

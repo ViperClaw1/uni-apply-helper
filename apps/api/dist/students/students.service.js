@@ -220,6 +220,38 @@ let StudentsService = class StudentsService {
     async findOne(id) {
         return this.prisma.student.findUniqueOrThrow({ where: { id } });
     }
+    async findByAccountId(accountId) {
+        const student = await this.prisma.student.findUnique({
+            where: { accountId },
+        });
+        if (!student) {
+            return null;
+        }
+        return this.getFullProfile(student.id);
+    }
+    async upsertMyProfile(accountId, input) {
+        const surname = input.surname?.trim();
+        const givenName = input.givenName?.trim();
+        const email = input.email?.trim();
+        if (!surname || !givenName || !email) {
+            throw new common_1.BadRequestException('surname, givenName and email are required.');
+        }
+        const data = {
+            surname,
+            givenName,
+            email,
+            phone: input.phone?.trim() || null,
+            nationality: input.nationality?.trim() || null,
+            dateOfBirth: this.toDate(input.dateOfBirth),
+            passportNo: input.passportNo?.trim() || null,
+        };
+        const student = await this.prisma.student.upsert({
+            where: { accountId },
+            create: { ...data, accountId },
+            update: data,
+        });
+        return this.getFullProfile(student.id);
+    }
     async remove(id) {
         await this.findOne(id);
         await this.prisma.$transaction(async (tx) => {

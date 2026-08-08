@@ -9,6 +9,7 @@ export declare class StudentsService {
         id: string;
         email: string;
         createdAt: Date;
+        accountId: string | null;
         surname: string;
         givenName: string;
         sex: string | null;
@@ -46,6 +47,7 @@ export declare class StudentsService {
         id: string;
         email: string;
         createdAt: Date;
+        accountId: string | null;
         surname: string;
         givenName: string;
         sex: string | null;
@@ -71,6 +73,7 @@ export declare class StudentsService {
         id: string;
         email: string;
         createdAt: Date;
+        accountId: string | null;
         surname: string;
         givenName: string;
         sex: string | null;
@@ -92,6 +95,16 @@ export declare class StudentsService {
         studiedInChina: boolean;
         desiredField: string | null;
     }>;
+    findByAccountId(accountId: string): Promise<StudentProfile | null>;
+    upsertMyProfile(accountId: string, input: {
+        surname?: string;
+        givenName?: string;
+        email?: string;
+        phone?: string;
+        nationality?: string;
+        dateOfBirth?: string;
+        passportNo?: string;
+    }): Promise<StudentProfile>;
     remove(id: string): Promise<void>;
     setApplicationTargetsByFormUrls(studentId: string, input: {
         formUrls?: string[];

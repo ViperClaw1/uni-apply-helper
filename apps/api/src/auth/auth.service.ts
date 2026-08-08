@@ -47,6 +47,14 @@ type LoginInput = {
   password?: string;
 };
 
+export type PublicAccount = {
+  id: string;
+  email: string;
+  role: AccountRole;
+  emailVerifiedAt: Date | null;
+  agencyProfile?: { legalName: string; country: string; taxId: string };
+};
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -284,7 +292,7 @@ export class AuthService {
       country: string;
       taxId: string;
     } | null,
-  ) {
+  ): PublicAccount {
     return {
       id: account.id,
       email: account.email,

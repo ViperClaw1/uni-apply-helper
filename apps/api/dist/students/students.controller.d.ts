@@ -1,22 +1,33 @@
+import type { RequestWithAccount } from '../auth/session-auth.guard.js';
 import { StudentsService } from './students.service';
 export declare class StudentsController {
     private readonly studentsService;
     constructor(studentsService: StudentsService);
+    getMyProfile(req: RequestWithAccount): Promise<{
+        student: import("@uni-apply/shared").StudentProfile | null;
+    }>;
+    saveMyProfile(req: RequestWithAccount, body: {
+        surname?: string;
+        givenName?: string;
+        email?: string;
+        phone?: string;
+        nationality?: string;
+        dateOfBirth?: string;
+        passportNo?: string;
+    }): Promise<import("@uni-apply/shared").StudentProfile>;
     findAll(): Promise<({
         applicationTargets: {
             id: string;
-            universityId: string | null;
+            studentId: string;
             universityRaw: string;
+            universityId: string | null;
             degree: string | null;
             major: string | null;
             duration: string | null;
             fundingSource: string | null;
-            studentId: string;
         }[];
     } & {
         id: string;
-        email: string;
-        createdAt: Date;
         surname: string;
         givenName: string;
         sex: string | null;
@@ -29,6 +40,7 @@ export declare class StudentsController {
         passportExpiry: Date | null;
         consulate: string | null;
         maritalStatus: string | null;
+        email: string;
         phone: string | null;
         hobby: string | null;
         permanentAddress: string | null;
@@ -37,11 +49,11 @@ export declare class StudentsController {
         beenToChina: boolean;
         studiedInChina: boolean;
         desiredField: string | null;
+        createdAt: Date;
+        accountId: string | null;
     })[]>;
     findOne(id: string): Promise<{
         id: string;
-        email: string;
-        createdAt: Date;
         surname: string;
         givenName: string;
         sex: string | null;
@@ -54,6 +66,7 @@ export declare class StudentsController {
         passportExpiry: Date | null;
         consulate: string | null;
         maritalStatus: string | null;
+        email: string;
         phone: string | null;
         hobby: string | null;
         permanentAddress: string | null;
@@ -62,6 +75,8 @@ export declare class StudentsController {
         beenToChina: boolean;
         studiedInChina: boolean;
         desiredField: string | null;
+        createdAt: Date;
+        accountId: string | null;
     }>;
     remove(id: string): Promise<void>;
     getFullProfile(id: string): Promise<import("@uni-apply/shared").StudentProfile>;

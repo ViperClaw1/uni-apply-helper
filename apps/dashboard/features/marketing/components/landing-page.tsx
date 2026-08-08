@@ -122,7 +122,11 @@ export function LandingPage() {
       <main className="flex-1">
         {mode === "students" ? (
           <>
-            <HeroSection />
+            <HeroSection
+              onOpenAuth={(initialMode) =>
+                setAuthModal({ open: true, initialMode })
+              }
+            />
             <HowItWorksSection />
             <SupportedUniversitiesSection />
           </>
@@ -230,7 +234,11 @@ function SiteHeader({
   );
 }
 
-function HeroSection() {
+function HeroSection({
+  onOpenAuth,
+}: {
+  onOpenAuth: (mode: "login" | "signup") => void;
+}) {
   return (
     <section className="mx-auto grid w-full max-w-7xl gap-12 px-6 py-16 lg:grid-cols-2 lg:items-center lg:py-24">
       <div>
@@ -253,7 +261,8 @@ function HeroSection() {
         <div className="mt-8 flex flex-wrap items-center gap-3">
           <button
             type="button"
-            className="inline-flex h-12 items-center justify-center rounded-xl bg-blue-600 px-6 text-sm font-semibold text-white shadow-sm"
+            onClick={() => onOpenAuth("signup")}
+            className="inline-flex h-12 cursor-pointer items-center justify-center rounded-xl bg-blue-600 px-6 text-sm font-semibold text-white shadow-sm"
           >
             Create your profile
           </button>

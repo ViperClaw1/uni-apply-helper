@@ -1,11 +1,4 @@
-import axios from "axios";
-
-// Deliberately NOT the shared `apiClient` from "@/lib/api-client": that client
-// points straight at the Nest API in dev (bypassing the `/api` rewrite), which
-// would make session cookies cross-origin and fragile. Auth always goes
-// through the same-origin `/api` rewrite so the cookie set by the API lands
-// scoped to the dashboard's own origin, in both dev and prod.
-const authClient = axios.create({ baseURL: "/api" });
+import { sessionApiClient as authClient } from "@/lib/session-api-client";
 
 export type AccountRole = "student" | "agency";
 
