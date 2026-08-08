@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { isAxiosError } from "axios";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
 import {
   getMyProfile,
   saveMyProfile,
@@ -114,12 +116,14 @@ export default function ProfileFormPage() {
       >
         <Field
           label="Surname"
+          placeholder="Ivanova"
           value={fields.surname}
           onChange={(v) => updateField("surname", v)}
           required
         />
         <Field
           label="Given name"
+          placeholder="Anna"
           value={fields.givenName}
           onChange={(v) => updateField("givenName", v)}
           required
@@ -127,17 +131,25 @@ export default function ProfileFormPage() {
         <Field
           label="Email"
           type="email"
+          placeholder="you@example.com"
           value={fields.email}
           onChange={(v) => updateField("email", v)}
           required
         />
-        <Field
-          label="Phone"
-          value={fields.phone ?? ""}
-          onChange={(v) => updateField("phone", v)}
-        />
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-slate-600">Phone</label>
+          <PhoneInput
+            value={(fields.phone ?? "").replace(/^\+/, "")}
+            onChange={(value) => updateField("phone", `+${value}`)}
+            placeholder="Enter your phone number"
+            inputClass="!h-10 !w-full !rounded-lg !border !border-slate-200 !text-sm !text-slate-800"
+            buttonClass="!rounded-l-lg !border !border-slate-200"
+            containerClass="!w-full"
+          />
+        </div>
         <Field
           label="Nationality"
+          placeholder="Kazakhstan"
           value={fields.nationality ?? ""}
           onChange={(v) => updateField("nationality", v)}
         />
@@ -149,6 +161,7 @@ export default function ProfileFormPage() {
         />
         <Field
           label="Passport number"
+          placeholder="N01234567"
           value={fields.passportNo ?? ""}
           onChange={(v) => updateField("passportNo", v)}
         />
@@ -172,12 +185,14 @@ function Field({
   type = "text",
   value,
   onChange,
+  placeholder,
   required,
 }: {
   label: string;
   type?: string;
   value: string;
   onChange: (value: string) => void;
+  placeholder?: string;
   required?: boolean;
 }) {
   return (
@@ -186,9 +201,10 @@ function Field({
       <input
         type={type}
         value={value}
+        placeholder={placeholder}
         required={required}
         onChange={(event) => onChange(event.target.value)}
-        className="h-10 rounded-lg border border-slate-200 px-3 text-sm text-slate-800 outline-none focus:border-blue-400"
+        className="h-10 rounded-lg border border-slate-200 px-3 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-blue-400"
       />
     </div>
   );
