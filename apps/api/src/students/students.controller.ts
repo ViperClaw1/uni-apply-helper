@@ -43,9 +43,108 @@ export class StudentsController {
       nationality?: string;
       dateOfBirth?: string;
       passportNo?: string;
+      sex?: string;
+      cityOfBirth?: string;
+      chineseName?: string;
+      religion?: string;
+      passportExpiry?: string;
+      consulate?: string;
+      maritalStatus?: string;
+      hobby?: string;
+      permanentAddress?: string;
+      postCode?: string;
+      currentInstitution?: string;
+      beenToChina?: boolean;
+      studiedInChina?: boolean;
+      desiredField?: string;
     },
   ) {
     return this.studentsService.upsertMyProfile(req.account.id, body);
+  }
+
+  @Put('me/education')
+  @UseGuards(SessionAuthGuard)
+  saveMyEducation(
+    @Req() req: RequestWithAccount,
+    @Body()
+    body: {
+      school?: {
+        degree?: string;
+        institution?: string;
+        major?: string;
+        periodStartYear?: number;
+        periodEndYear?: number;
+      };
+      higher?: {
+        degree?: string;
+        institution?: string;
+        major?: string;
+        periodStartYear?: number;
+        periodEndYear?: number;
+      };
+      chineseLevel?: string;
+      englishLevel?: string;
+    },
+  ) {
+    return this.studentsService.upsertMyEducation(req.account.id, body);
+  }
+
+  @Put('me/guarantor')
+  @UseGuards(SessionAuthGuard)
+  saveMyGuarantor(
+    @Req() req: RequestWithAccount,
+    @Body()
+    body: {
+      name?: string;
+      relationship?: string;
+      phone?: string;
+      email?: string;
+      homeAddress?: string;
+    },
+  ) {
+    return this.studentsService.upsertMyGuarantor(req.account.id, body);
+  }
+
+  @Put('me/emergency-contact')
+  @UseGuards(SessionAuthGuard)
+  saveMyEmergencyContact(
+    @Req() req: RequestWithAccount,
+    @Body()
+    body: {
+      name?: string;
+      relationship?: string;
+      phone?: string;
+      email?: string;
+    },
+  ) {
+    return this.studentsService.upsertMyEmergencyContact(req.account.id, body);
+  }
+
+  @Put('me/family')
+  @UseGuards(SessionAuthGuard)
+  saveMyFamily(
+    @Req() req: RequestWithAccount,
+    @Body()
+    body: {
+      father?: {
+        fullName?: string;
+        nationality?: string;
+        phone?: string;
+        email?: string;
+        company?: string;
+        position?: string;
+      };
+      mother?: {
+        fullName?: string;
+        nationality?: string;
+        phone?: string;
+        email?: string;
+        company?: string;
+        position?: string;
+      };
+    },
+  ) {
+    return this.studentsService.upsertMyFamily(req.account.id, body);
   }
 
   @Get()

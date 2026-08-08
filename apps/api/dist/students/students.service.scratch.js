@@ -460,7 +460,8 @@ let StudentsService = class StudentsService {
         const shared = {
             degree: existingTargets.find((target) => target.degree)?.degree ?? undefined,
             major: existingTargets.find((target) => target.major)?.major ?? undefined,
-            duration: existingTargets.find((target) => target.duration)?.duration ?? undefined,
+            duration: existingTargets.find((target) => target.duration)?.duration ??
+                undefined,
             fundingSource: existingTargets.find((target) => target.fundingSource)?.fundingSource ??
                 undefined,
         };
@@ -673,4 +674,4 @@ exports.StudentsService = StudentsService = __decorate([
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
         universities_service_js_1.UniversitiesService])
 ], StudentsService);
-//# sourceMappingURL=students.service.js.map
+//# sourceMappingURL=students.service.scratch.js.map

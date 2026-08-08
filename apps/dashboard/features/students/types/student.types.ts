@@ -26,6 +26,33 @@ export type ContactInfo = {
   homeAddress?: string;
 };
 
+export type EducationEntry = {
+  level?: "school" | "higher";
+  degree?: string;
+  institution?: string;
+  major?: string;
+  periodStart?: string;
+  periodEnd?: string;
+};
+
+export type LanguageSkill = {
+  language: string;
+  certificate?: string;
+  score?: string;
+  level?: string;
+};
+
+export type FamilyMember = {
+  fullName: string;
+  relationship: string;
+  nationality?: string;
+  age?: number;
+  company?: string;
+  position?: string;
+  phone?: string;
+  email?: string;
+};
+
 export type StudentProfile = {
   id: string;
   personal: {
@@ -36,7 +63,24 @@ export type StudentProfile = {
     nationality?: string;
     dateOfBirth?: string;
     passportNo?: string;
+    sex?: string;
+    cityOfBirth?: string;
+    chineseName?: string;
+    religion?: string;
+    passportExpiry?: string;
+    consulate?: string;
+    maritalStatus?: string;
+    hobby?: string;
+    permanentAddress?: string;
+    postCode?: string;
+    currentInstitution?: string;
+    beenToChina?: boolean;
+    studiedInChina?: boolean;
+    desiredField?: string;
   };
+  education: EducationEntry[];
+  languages: LanguageSkill[];
+  familyMembers: FamilyMember[];
   guarantor?: ContactInfo;
   emergencyContact?: ContactInfo;
   documents: Record<string, string | string[]>;

@@ -28,6 +28,18 @@ let StudentsController = class StudentsController {
     saveMyProfile(req, body) {
         return this.studentsService.upsertMyProfile(req.account.id, body);
     }
+    saveMyEducation(req, body) {
+        return this.studentsService.upsertMyEducation(req.account.id, body);
+    }
+    saveMyGuarantor(req, body) {
+        return this.studentsService.upsertMyGuarantor(req.account.id, body);
+    }
+    saveMyEmergencyContact(req, body) {
+        return this.studentsService.upsertMyEmergencyContact(req.account.id, body);
+    }
+    saveMyFamily(req, body) {
+        return this.studentsService.upsertMyFamily(req.account.id, body);
+    }
     findAll() {
         return this.studentsService.findAll();
     }
@@ -65,6 +77,42 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", void 0)
 ], StudentsController.prototype, "saveMyProfile", null);
+__decorate([
+    (0, common_1.Put)('me/education'),
+    (0, common_1.UseGuards)(session_auth_guard_js_1.SessionAuthGuard),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", void 0)
+], StudentsController.prototype, "saveMyEducation", null);
+__decorate([
+    (0, common_1.Put)('me/guarantor'),
+    (0, common_1.UseGuards)(session_auth_guard_js_1.SessionAuthGuard),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", void 0)
+], StudentsController.prototype, "saveMyGuarantor", null);
+__decorate([
+    (0, common_1.Put)('me/emergency-contact'),
+    (0, common_1.UseGuards)(session_auth_guard_js_1.SessionAuthGuard),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", void 0)
+], StudentsController.prototype, "saveMyEmergencyContact", null);
+__decorate([
+    (0, common_1.Put)('me/family'),
+    (0, common_1.UseGuards)(session_auth_guard_js_1.SessionAuthGuard),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", void 0)
+], StudentsController.prototype, "saveMyFamily", null);
 __decorate([
     (0, common_1.Get)(),
     __metadata("design:type", Function),

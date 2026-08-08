@@ -24,9 +24,11 @@ import type {
   StudentProfile,
 } from "../types/student.types";
 
-export function StudentProfilePage() {
+export function StudentProfilePage({
+  studentId: studentIdProp,
+}: { studentId?: string } = {}) {
   const params = useParams<{ id: string }>();
-  const studentId = params.id;
+  const studentId = studentIdProp ?? params.id;
   const [student, setStudent] = useState<StudentProfile | null>(null);
   const [documents, setDocuments] = useState<StudentDocument[]>([]);
   const [batches, setBatches] = useState<ApplicationBatch[]>([]);

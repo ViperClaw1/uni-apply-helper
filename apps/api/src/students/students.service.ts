@@ -51,6 +51,14 @@ type FamilyRelativeInput = {
   email?: string;
 };
 
+type EducationLevelInput = {
+  degree?: string;
+  institution?: string;
+  major?: string;
+  periodStartYear?: number;
+  periodEndYear?: number;
+};
+
 @Injectable()
 export class StudentsService {
   constructor(
@@ -290,6 +298,20 @@ export class StudentsService {
       nationality?: string;
       dateOfBirth?: string;
       passportNo?: string;
+      sex?: string;
+      cityOfBirth?: string;
+      chineseName?: string;
+      religion?: string;
+      passportExpiry?: string;
+      consulate?: string;
+      maritalStatus?: string;
+      hobby?: string;
+      permanentAddress?: string;
+      postCode?: string;
+      currentInstitution?: string;
+      beenToChina?: boolean;
+      studiedInChina?: boolean;
+      desiredField?: string;
     },
   ): Promise<StudentProfile> {
     const surname = input.surname?.trim();
@@ -310,6 +332,20 @@ export class StudentsService {
       nationality: input.nationality?.trim() || null,
       dateOfBirth: this.toDate(input.dateOfBirth),
       passportNo: input.passportNo?.trim() || null,
+      sex: input.sex?.trim() || null,
+      cityOfBirth: input.cityOfBirth?.trim() || null,
+      chineseName: input.chineseName?.trim() || null,
+      religion: input.religion?.trim() || null,
+      passportExpiry: this.toDate(input.passportExpiry),
+      consulate: input.consulate?.trim() || null,
+      maritalStatus: input.maritalStatus?.trim() || null,
+      hobby: input.hobby?.trim() || null,
+      permanentAddress: input.permanentAddress?.trim() || null,
+      postCode: input.postCode?.trim() || null,
+      currentInstitution: input.currentInstitution?.trim() || null,
+      beenToChina: input.beenToChina ?? false,
+      studiedInChina: input.studiedInChina ?? false,
+      desiredField: input.desiredField?.trim() || null,
     };
 
     const student = await this.prisma.student.upsert({
@@ -319,6 +355,208 @@ export class StudentsService {
     });
 
     return this.getFullProfile(student.id);
+  }
+
+  async upsertMyEducation(
+    accountId: string,
+    input: {
+      school?: EducationLevelInput;
+      higher?: EducationLevelInput;
+      chineseLevel?: string;
+      englishLevel?: string;
+    },
+  ): Promise<StudentProfile> {
+    const student = await this.requireStudentByAccountId(accountId);
+
+    const educationCreates = [
+      input.school && this.hasEducationData(input.school)
+        ? { level: 'school', ...this.toEducationCreateData(input.school) }
+        : null,
+      input.higher && this.hasEducationData(input.higher)
+        ? { level: 'higher', ...this.toEducationCreateData(input.higher) }
+        : null,
+    ].filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+
+    const languageCreates = [
+      input.chineseLevel?.trim()
+        ? {
+            language: 'chinese',
+            certificate: 'HSK',
+            score: input.chineseLevel.trim(),
+          }
+        : null,
+      input.englishLevel?.trim()
+        ? { language: 'english', score: input.englishLevel.trim() }
+        : null,
+    ].filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+
+    await this.prisma.$transaction([
+      this.prisma.education.deleteMany({ where: { studentId: student.id } }),
+      this.prisma.languageSkill.deleteMany({
+        where: { studentId: student.id },
+      }),
+      this.prisma.education.createMany({
+        data: educationCreates.map((entry) => ({
+          ...entry,
+          studentId: student.id,
+        })),
+      }),
+      this.prisma.languageSkill.createMany({
+        data: languageCreates.map((entry) => ({
+          ...entry,
+          studentId: student.id,
+        })),
+      }),
+    ]);
+
+    return this.getFullProfile(student.id);
+  }
+
+  async upsertMyGuarantor(
+    accountId: string,
+    input: {
+      name?: string;
+      relationship?: string;
+      phone?: string;
+      email?: string;
+      homeAddress?: string;
+    },
+  ): Promise<StudentProfile> {
+    const student = await this.requireStudentByAccountId(accountId);
+    const name = input.name?.trim();
+
+    if (!name) {
+      throw new BadRequestException('name is required.');
+    }
+
+    const data = {
+      name,
+      relationship: input.relationship?.trim() || 'Not specified',
+      phone: input.phone?.trim() || null,
+      email: input.email?.trim() || null,
+      homeAddress: input.homeAddress?.trim() || null,
+    };
+
+    await this.prisma.guarantor.upsert({
+      where: { studentId: student.id },
+      create: { ...data, studentId: student.id },
+      update: data,
+    });
+
+    return this.getFullProfile(student.id);
+  }
+
+  async upsertMyEmergencyContact(
+    accountId: string,
+    input: {
+      name?: string;
+      relationship?: string;
+      phone?: string;
+      email?: string;
+    },
+  ): Promise<StudentProfile> {
+    const student = await this.requireStudentByAccountId(accountId);
+    const name = input.name?.trim();
+
+    if (!name) {
+      throw new BadRequestException('name is required.');
+    }
+
+    const data = {
+      name,
+      relationship: input.relationship?.trim() || 'Not specified',
+      phone: input.phone?.trim() || null,
+      email: input.email?.trim() || null,
+    };
+
+    await this.prisma.emergencyContact.upsert({
+      where: { studentId: student.id },
+      create: { ...data, studentId: student.id },
+      update: data,
+    });
+
+    return this.getFullProfile(student.id);
+  }
+
+  async upsertMyFamily(
+    accountId: string,
+    input: { father?: FamilyRelativeInput; mother?: FamilyRelativeInput },
+  ): Promise<StudentProfile> {
+    const student = await this.requireStudentByAccountId(accountId);
+
+    const familyCreates = [
+      input.father?.fullName?.trim()
+        ? {
+            relationship: 'father',
+            ...this.toFamilyMemberCreateData(input.father),
+          }
+        : null,
+      input.mother?.fullName?.trim()
+        ? {
+            relationship: 'mother',
+            ...this.toFamilyMemberCreateData(input.mother),
+          }
+        : null,
+    ].filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+
+    await this.prisma.$transaction([
+      this.prisma.familyMember.deleteMany({ where: { studentId: student.id } }),
+      this.prisma.familyMember.createMany({
+        data: familyCreates.map((entry) => ({
+          ...entry,
+          studentId: student.id,
+        })),
+      }),
+    ]);
+
+    return this.getFullProfile(student.id);
+  }
+
+  private async requireStudentByAccountId(accountId: string) {
+    const student = await this.prisma.student.findUnique({
+      where: { accountId },
+    });
+
+    if (!student) {
+      throw new BadRequestException('Complete your personal info first.');
+    }
+
+    return student;
+  }
+
+  private hasEducationData(entry: EducationLevelInput) {
+    return Boolean(
+      entry.degree?.trim() ||
+      entry.institution?.trim() ||
+      entry.major?.trim() ||
+      entry.periodStartYear ||
+      entry.periodEndYear,
+    );
+  }
+
+  private toEducationCreateData(entry: EducationLevelInput) {
+    return {
+      degree: entry.degree?.trim() || null,
+      institution: entry.institution?.trim() || null,
+      major: entry.major?.trim() || null,
+      periodStart: this.yearToDate(entry.periodStartYear),
+      periodEnd: this.yearToDate(entry.periodEndYear),
+    };
+  }
+
+  private toFamilyMemberCreateData(member: FamilyRelativeInput) {
+    return {
+      fullName: member.fullName!.trim(),
+      nationality: member.nationality?.trim() || null,
+      phone: member.phone?.trim() || null,
+      email: member.email?.trim() || null,
+      company: member.company?.trim() || null,
+      position: member.position?.trim() || null,
+    };
+  }
+
+  private yearToDate(year: number | undefined): Date | null {
+    return year ? new Date(`${year}-01-01`) : null;
   }
 
   async remove(id: string) {

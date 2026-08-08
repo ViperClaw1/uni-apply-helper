@@ -14,6 +14,69 @@ export declare class StudentsController {
         nationality?: string;
         dateOfBirth?: string;
         passportNo?: string;
+        sex?: string;
+        cityOfBirth?: string;
+        chineseName?: string;
+        religion?: string;
+        passportExpiry?: string;
+        consulate?: string;
+        maritalStatus?: string;
+        hobby?: string;
+        permanentAddress?: string;
+        postCode?: string;
+        currentInstitution?: string;
+        beenToChina?: boolean;
+        studiedInChina?: boolean;
+        desiredField?: string;
+    }): Promise<import("@uni-apply/shared").StudentProfile>;
+    saveMyEducation(req: RequestWithAccount, body: {
+        school?: {
+            degree?: string;
+            institution?: string;
+            major?: string;
+            periodStartYear?: number;
+            periodEndYear?: number;
+        };
+        higher?: {
+            degree?: string;
+            institution?: string;
+            major?: string;
+            periodStartYear?: number;
+            periodEndYear?: number;
+        };
+        chineseLevel?: string;
+        englishLevel?: string;
+    }): Promise<import("@uni-apply/shared").StudentProfile>;
+    saveMyGuarantor(req: RequestWithAccount, body: {
+        name?: string;
+        relationship?: string;
+        phone?: string;
+        email?: string;
+        homeAddress?: string;
+    }): Promise<import("@uni-apply/shared").StudentProfile>;
+    saveMyEmergencyContact(req: RequestWithAccount, body: {
+        name?: string;
+        relationship?: string;
+        phone?: string;
+        email?: string;
+    }): Promise<import("@uni-apply/shared").StudentProfile>;
+    saveMyFamily(req: RequestWithAccount, body: {
+        father?: {
+            fullName?: string;
+            nationality?: string;
+            phone?: string;
+            email?: string;
+            company?: string;
+            position?: string;
+        };
+        mother?: {
+            fullName?: string;
+            nationality?: string;
+            phone?: string;
+            email?: string;
+            company?: string;
+            position?: string;
+        };
     }): Promise<import("@uni-apply/shared").StudentProfile>;
     findAll(): Promise<({
         applicationTargets: {
