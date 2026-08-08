@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { AuthModal } from "@/features/auth/components/auth-modal";
 import { SUPPORTED_UNIVERSITIES } from "../constants/universities";
 import { HowItWorksSection } from "./how-it-works-section";
 
@@ -106,10 +107,18 @@ const AGENCY_STATS = [
 
 export function LandingPage() {
   const [mode, setMode] = useState<Mode>("students");
+  const [authModal, setAuthModal] = useState<{
+    open: boolean;
+    initialMode: "login" | "signup";
+  }>({ open: false, initialMode: "signup" });
 
   return (
     <div className="flex min-h-screen flex-col bg-white">
-      <SiteHeader mode={mode} onModeChange={setMode} />
+      <SiteHeader
+        mode={mode}
+        onModeChange={setMode}
+        onOpenAuth={(initialMode) => setAuthModal({ open: true, initialMode })}
+      />
       <main className="flex-1">
         {mode === "students" ? (
           <>
@@ -126,6 +135,12 @@ export function LandingPage() {
           </>
         )}
       </main>
+      <AuthModal
+        open={authModal.open}
+        initialMode={authModal.initialMode}
+        initialRole={mode === "students" ? "student" : "agency"}
+        onClose={() => setAuthModal((current) => ({ ...current, open: false }))}
+      />
     </div>
   );
 }
@@ -133,9 +148,11 @@ export function LandingPage() {
 function SiteHeader({
   mode,
   onModeChange,
+  onOpenAuth,
 }: {
   mode: Mode;
   onModeChange: (mode: Mode) => void;
+  onOpenAuth: (mode: "login" | "signup") => void;
 }) {
   return (
     <header className="border-b border-slate-100">
@@ -169,7 +186,7 @@ function SiteHeader({
                   key={label}
                   type="button"
                   onClick={() => onModeChange(linkMode)}
-                  className={`text-sm font-medium ${
+                  className={`cursor-pointer text-sm font-medium ${
                     mode === linkMode
                       ? "text-blue-600"
                       : "text-slate-600 hover:text-slate-950"
@@ -195,13 +212,15 @@ function SiteHeader({
         <div className="flex items-center gap-3">
           <button
             type="button"
-            className="hidden text-sm font-medium text-slate-600 sm:inline-flex"
+            onClick={() => onOpenAuth("login")}
+            className="hidden cursor-pointer text-sm font-medium text-slate-600 sm:inline-flex"
           >
             Log in
           </button>
           <button
             type="button"
-            className="inline-flex h-10 items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm"
+            onClick={() => onOpenAuth("signup")}
+            className="inline-flex h-10 cursor-pointer items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm"
           >
             {mode === "students" ? "Get started — it's free" : "Book a demo"}
           </button>

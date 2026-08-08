@@ -35,6 +35,12 @@ let UniversitiesController = class UniversitiesController {
         }
         return this.universitiesService.resolve(name);
     }
+    resolveByFormUrl(url) {
+        if (!url?.trim()) {
+            throw new common_1.BadRequestException('Query param "url" is required.');
+        }
+        return this.universitiesService.resolveByFormUrl(url);
+    }
     createAlias(body) {
         if (!body.alias?.trim()) {
             throw new common_1.BadRequestException('alias is required.');
@@ -74,6 +80,13 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], UniversitiesController.prototype, "resolve", null);
+__decorate([
+    (0, common_1.Get)('by-form-url'),
+    __param(0, (0, common_1.Query)('url')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], UniversitiesController.prototype, "resolveByFormUrl", null);
 __decorate([
     (0, common_1.Post)('aliases'),
     __param(0, (0, common_1.Body)()),

@@ -9,12 +9,16 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthModule = void 0;
 const common_1 = require("@nestjs/common");
 const api_key_guard_js_1 = require("./api-key.guard.js");
+const auth_controller_js_1 = require("./auth.controller.js");
+const auth_service_js_1 = require("./auth.service.js");
+const mail_service_js_1 = require("./mail.service.js");
 let AuthModule = class AuthModule {
 };
 exports.AuthModule = AuthModule;
 exports.AuthModule = AuthModule = __decorate([
     (0, common_1.Module)({
-        providers: [api_key_guard_js_1.ApiKeyGuard],
+        controllers: [auth_controller_js_1.AuthController],
+        providers: [api_key_guard_js_1.ApiKeyGuard, auth_service_js_1.AuthService, mail_service_js_1.MailService],
         exports: [api_key_guard_js_1.ApiKeyGuard],
     })
 ], AuthModule);

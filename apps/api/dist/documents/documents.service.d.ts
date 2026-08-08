@@ -1,7 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { QueueService } from '../queue/queue.service.js';
-import type { CreateDocumentInput, StudentDocumentResponse, UpdateDocumentInput, UploadedDocumentFile } from './types/document-api.types.js';
+import type { CreateDocumentInput, ReorderDocumentsInput, StudentDocumentResponse, UpdateDocumentInput, UploadedDocumentFile } from './types/document-api.types.js';
 export declare class DocumentsService {
     private readonly prisma;
     private readonly configService;
@@ -15,10 +15,14 @@ export declare class DocumentsService {
     create(studentId: string, input: CreateDocumentInput): Promise<StudentDocumentResponse>;
     upload(studentId: string, type: string | undefined, file: UploadedDocumentFile | undefined): Promise<StudentDocumentResponse>;
     update(id: string, input: UpdateDocumentInput): Promise<StudentDocumentResponse>;
+    reorder(studentId: string, input: ReorderDocumentsInput): Promise<StudentDocumentResponse[]>;
     remove(id: string): Promise<StudentDocumentResponse>;
+    private normalizeSortOrder;
     private ensureStudentExists;
     private assertDocumentInput;
     private uploadToStorage;
+    private deleteFromStorage;
+    private keyFromPublicUrl;
     private enqueueParse;
     private getInitialParseStatus;
     private toJsonInput;

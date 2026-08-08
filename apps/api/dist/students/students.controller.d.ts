@@ -14,8 +14,9 @@ export declare class StudentsController {
             studentId: string;
         }[];
     } & {
-        email: string;
         id: string;
+        email: string;
+        createdAt: Date;
         surname: string;
         givenName: string;
         sex: string | null;
@@ -35,11 +36,12 @@ export declare class StudentsController {
         currentInstitution: string | null;
         beenToChina: boolean;
         studiedInChina: boolean;
-        createdAt: Date;
+        desiredField: string | null;
     })[]>;
     findOne(id: string): Promise<{
-        email: string;
         id: string;
+        email: string;
+        createdAt: Date;
         surname: string;
         givenName: string;
         sex: string | null;
@@ -59,9 +61,13 @@ export declare class StudentsController {
         currentInstitution: string | null;
         beenToChina: boolean;
         studiedInChina: boolean;
-        createdAt: Date;
+        desiredField: string | null;
     }>;
+    remove(id: string): Promise<void>;
     getFullProfile(id: string): Promise<import("@uni-apply/shared").StudentProfile>;
+    setApplicationTargets(id: string, body: {
+        formUrls?: string[];
+    }): Promise<import("@uni-apply/shared").StudentProfile>;
     resolveApplicationTarget(id: string, body: {
         universityRaw: string;
         universityId: string;

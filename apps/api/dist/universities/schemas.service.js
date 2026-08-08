@@ -157,6 +157,12 @@ let SchemasService = class SchemasService {
             requiredDocuments: this.toStringArray(parsed.requiredDocuments),
             fields: parsed.fields.filter((field) => this.isFieldConfig(field)),
             wizard: this.parseWizard(parsed.wizard),
+            session: parsed.session,
+            agent: parsed.agent,
+            defaultProgram: typeof parsed.defaultProgram === 'string'
+                ? parsed.defaultProgram
+                : undefined,
+            navigationHints: this.parseNavigationHints(parsed.navigationHints),
             requiresEssay: parsed.requiresEssay ?? false,
             essayPrompt: parsed.essayPrompt,
             notes: parsed.notes,
@@ -172,6 +178,10 @@ let SchemasService = class SchemasService {
             requiredDocuments: schema.requiredDocuments,
             fields: schema.fields,
             wizard: schema.wizard,
+            session: schema.session,
+            agent: schema.agent,
+            defaultProgram: schema.defaultProgram,
+            navigationHints: schema.navigationHints,
             requiresEssay: schema.requiresEssay,
             essayPrompt: schema.essayPrompt,
             notes: schema.notes,
@@ -196,6 +206,25 @@ let SchemasService = class SchemasService {
             submitButtonSelector: wizard.submitButtonSelector,
         };
     }
+    parseNavigationHints(value) {
+        if (!value || typeof value !== 'object') {
+            return undefined;
+        }
+        const hints = value;
+        const programText = typeof hints.programText === 'string' ? hints.programText : undefined;
+        const studentType = typeof hints.studentType === 'string' ? hints.studentType : undefined;
+        const language = typeof hints.language === 'string' ? hints.language : undefined;
+        const ocrPassportUpload = typeof hints.ocrPassportUpload === 'boolean'
+            ? hints.ocrPassportUpload
+            : undefined;
+        if (!programText &&
+            !studentType &&
+            !language &&
+            ocrPassportUpload === undefined) {
+            return undefined;
+        }
+        return { programText, studentType, language, ocrPassportUpload };
+    }
     hashSchema(schema) {
         return (0, node_crypto_1.createHash)('sha256')
             .update(JSON.stringify(schema))
@@ -213,7 +242,10 @@ let SchemasService = class SchemasService {
         }
         const field = value;
         return (typeof field.selector === 'string' &&
-            (typeof field.mapsTo === 'string' || field.mapsTo === null) &&
+            (field.mapsTo === null ||
+                typeof field.mapsTo === 'string' ||
+                (Array.isArray(field.mapsTo) &&
+                    field.mapsTo.every((p) => typeof p === 'string'))) &&
             typeof field.type === 'string' &&
             typeof field.required === 'boolean');
     }

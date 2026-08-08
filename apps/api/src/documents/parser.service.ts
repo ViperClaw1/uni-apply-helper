@@ -18,6 +18,7 @@ type StudentDocumentRecord = {
   fileUrl: string;
   parsedData: unknown;
   parseStatus: string;
+  sortOrder: number;
   uploadedAt: Date;
 };
 
@@ -424,6 +425,7 @@ export class ParserService {
       studentId: document.studentId,
       type: document.type,
       fileUrl: document.fileUrl,
+      sortOrder: document.sortOrder,
       parsedData: document.parsedData ?? undefined,
       parseStatus: document.parseStatus,
       uploadedAt: document.uploadedAt.toISOString(),

@@ -26,8 +26,14 @@ let StudentsController = class StudentsController {
     findOne(id) {
         return this.studentsService.findOne(id);
     }
+    remove(id) {
+        return this.studentsService.remove(id);
+    }
     getFullProfile(id) {
         return this.studentsService.getFullProfile(id);
+    }
+    setApplicationTargets(id, body) {
+        return this.studentsService.setApplicationTargetsByFormUrls(id, body);
     }
     resolveApplicationTarget(id, body) {
         return this.studentsService.resolveApplicationTarget(id, body);
@@ -48,12 +54,28 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], StudentsController.prototype, "findOne", null);
 __decorate([
+    (0, common_1.Delete)(':id'),
+    (0, common_1.HttpCode)(204),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], StudentsController.prototype, "remove", null);
+__decorate([
     (0, common_1.Get)(':id/profile'),
     __param(0, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], StudentsController.prototype, "getFullProfile", null);
+__decorate([
+    (0, common_1.Put)(':id/application-targets'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], StudentsController.prototype, "setApplicationTargets", null);
 __decorate([
     (0, common_1.Post)(':id/application-targets/resolve'),
     __param(0, (0, common_1.Param)('id')),

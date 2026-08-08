@@ -6,8 +6,9 @@ export declare class WebhookService {
     private readonly logger;
     constructor(studentsService: StudentsService, notificationsService: NotificationsService);
     processFormSubmission(raw: unknown): Promise<{
-        email: string;
         id: string;
+        email: string;
+        createdAt: Date;
         surname: string;
         givenName: string;
         sex: string | null;
@@ -27,7 +28,7 @@ export declare class WebhookService {
         currentInstitution: string | null;
         beenToChina: boolean;
         studiedInChina: boolean;
-        createdAt: Date;
+        desiredField: string | null;
     }>;
     private extractPayload;
     private extractValues;
@@ -38,7 +39,11 @@ export declare class WebhookService {
     private toNormalizedPreview;
     private looksLikeTimestamp;
     private resolveFieldPath;
+    private resolveRelativePath;
     private normalizeKey;
+    private isStudyPeriodKey;
+    private isHigherEducationPeriodKey;
+    private isSchoolEducationPeriodKey;
     private hasAny;
     private isRecord;
     private isNonEmptyRecord;

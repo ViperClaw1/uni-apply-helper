@@ -35,16 +35,23 @@ const FIELD_MAP = {
     'Почтовый индекс / Post Code': 'personal.postCode',
     'Текущее место работы или учёбы / Current Employer or Institution Affiliated': 'personal.currentInstitution',
     'Бывали ли вы в Китае? / Have you ever been to China?': 'personal.beenToChina',
+    'Желаемое направление / Desired field of study': 'personal.desiredField',
     'Учились или работали ли вы в Китае? / Have you ever studied or worked in China?': 'personal.studiedInChina',
     'Высшее образование (степень) / Highest Degree': 'education.0.degree',
+    'Название вашей школы / Your school of graduation': 'education.0.institution',
     'Учебное заведение окончания / School of Graduation': 'education.0.institution',
+    'Название вашего высшего учебного заведения / Institution of higher education': 'education.1.institution',
     'Специальность / Major': 'education.0.major',
     'Уровень китайского языка (HSK, баллы) / Chinese language level': 'languages.chinese',
     'Уровень английского языка / English language level': 'languages.english',
-    'Учебное заведение, куда подаётся заявка / Application School': 'applicationTargets',
     'Специальность заявки / Application Major': 'applicationMajor',
     'Степень / Degree': 'applicationDegree',
-    'Срок обучения / Duration of Study': 'applicationDuration',
+    'Год начала (среднее образование) / Study Period Start (school education)': 'education.0.periodStart',
+    'Год окончания (среднее образование) / Study Period End (school education)': 'education.0.periodEnd',
+    'Год начала обучения / Study Period Start': 'education.0.periodStart',
+    'Год окончания / Study Period End': 'education.0.periodEnd',
+    "Год начала (высшее образование - при подаче в магистратуру и выше) / Study Period Start (higher education - when applying for a master's degree or higher)": 'education.1.periodStart',
+    "Год окончания (высшее образование - при подаче в магистратуру и выше) / Study Period End (higher education - when applying for a master's degree or higher)": 'education.1.periodEnd',
     'Источник финансирования / Financial resources for study': 'applicationFunding',
     'Имя гаранта / Guarantor Name': 'guarantor.name',
     'Телефон гаранта / Guarantor Phone': 'guarantor.phone',
@@ -55,13 +62,23 @@ const FIELD_MAP = {
     'Телефон контакта / Emergency Phone': 'emergencyContact.phone',
     'Email контакта / Emergency Email': 'emergencyContact.email',
     'Отношение / Relationship': 'emergencyContact.relationship',
-    'Год начала обучения / Study Period Start': 'education.0.periodStart',
-    'Год окончания / Study Period End': 'education.0.periodEnd',
+    "Полное имя отца / Father's full name": 'family.father.fullName',
+    "Национальность отца / Father's nationality": 'family.father.nationality',
+    "Номер телефона отца / Father's phone number": 'family.father.phone',
+    "Email отца / Father's email": 'family.father.email',
+    "Место работы отца / Father's work place": 'family.father.company',
+    "Должность отца / Father's job": 'family.father.position',
+    "Полное имя матери / Mother's full name": 'family.mother.fullName',
+    "Национальность матери / Mother's nationality": 'family.mother.nationality',
+    "Номер телефона матери / Mother's phone number": 'family.mother.phone',
+    "Email матери / Mother's email": 'family.mother.email',
+    "Место работы матери / Mother's work place": 'family.mother.company',
+    "Должность матери / Mother's job": 'family.mother.position',
 };
 const FORM_VALUES_PATHS = [
     undefined,
-    'personal.surname',
     'personal.givenName',
+    'personal.surname',
     'personal.sex',
     'personal.nationality',
     'personal.cityOfBirth',
@@ -79,12 +96,21 @@ const FORM_VALUES_PATHS = [
     'personal.postCode',
     'personal.currentInstitution',
     'personal.beenToChina',
+    'personal.desiredField',
     'personal.studiedInChina',
     'education.0.degree',
     'education.0.institution',
+    'education.1.institution',
     'education.0.major',
+    'languages.chinese',
+    'languages.english',
+    'applicationMajor',
+    'applicationDegree',
     'education.0.periodStart',
     'education.0.periodEnd',
+    'education.1.periodStart',
+    'education.1.periodEnd',
+    'applicationFunding',
     'guarantor.name',
     'guarantor.phone',
     'guarantor.email',
@@ -94,13 +120,18 @@ const FORM_VALUES_PATHS = [
     'emergencyContact.phone',
     'emergencyContact.email',
     'emergencyContact.relationship',
-    'languages.chinese',
-    'languages.english',
-    'applicationTargets',
-    'applicationMajor',
-    'applicationDegree',
-    'applicationDuration',
-    'applicationFunding',
+    'family.father.fullName',
+    'family.father.nationality',
+    'family.father.phone',
+    'family.father.email',
+    'family.father.company',
+    'family.father.position',
+    'family.mother.fullName',
+    'family.mother.nationality',
+    'family.mother.phone',
+    'family.mother.email',
+    'family.mother.company',
+    'family.mother.position',
 ];
 let WebhookService = WebhookService_1 = class WebhookService {
     studentsService;
@@ -197,11 +228,15 @@ let WebhookService = WebhookService_1 = class WebhookService {
     }
     toNormalizedPreview(normalized) {
         const personal = this.isRecord(normalized.personal) ? normalized.personal : {};
+        const family = this.isRecord(normalized.family) ? normalized.family : {};
         return {
             surname: personal.surname,
             givenName: personal.givenName,
             email: personal.email,
-            applicationTargets: normalized.applicationTargets,
+            applicationMajor: normalized.applicationMajor,
+            applicationDegree: normalized.applicationDegree,
+            familyFather: this.isRecord(family.father) ? family.father.fullName : undefined,
+            familyMother: this.isRecord(family.mother) ? family.mother.fullName : undefined,
         };
     }
     looksLikeTimestamp(value) {
@@ -215,16 +250,50 @@ let WebhookService = WebhookService_1 = class WebhookService {
     }
     resolveFieldPath(key) {
         const normalizedKey = this.normalizeKey(key);
+        const fatherPath = this.resolveRelativePath(normalizedKey, 'father', 'отца');
+        if (fatherPath) {
+            return fatherPath;
+        }
+        const motherPath = this.resolveRelativePath(normalizedKey, 'mother', 'матери');
+        if (motherPath) {
+            return motherPath;
+        }
         if (this.hasAny(normalizedKey, ['surname', 'фамилия'])) {
             return 'personal.surname';
         }
-        if (this.hasAny(normalizedKey, ['given name', 'имя'])) {
+        if (this.hasAny(normalizedKey, ['chinese name', 'китайское имя'])) {
+            return 'personal.chineseName';
+        }
+        if (this.hasAny(normalizedKey, [
+            'desired field',
+            'field of study',
+            'желаемое направление',
+            'направление',
+        ]) &&
+            !this.hasAny(normalizedKey, ['studied', 'учились', 'worked', 'работали'])) {
+            return 'personal.desiredField';
+        }
+        if (this.hasAny(normalizedKey, ['given name', 'имя']) &&
+            !this.hasAny(normalizedKey, [
+                'guarantor',
+                'гаранта',
+                'emergency',
+                'контакта',
+                'chinese',
+                'китайское',
+                'father',
+                'mother',
+                'отца',
+                'матери',
+            ])) {
             return 'personal.givenName';
         }
-        if (this.hasAny(normalizedKey, ['sex', 'пол'])) {
+        if (this.hasAny(normalizedKey, ['sex', 'пол']) &&
+            !this.hasAny(normalizedKey, ['marital', 'семейное'])) {
             return 'personal.sex';
         }
-        if (this.hasAny(normalizedKey, ['nationality', 'гражданство'])) {
+        if (this.hasAny(normalizedKey, ['nationality', 'гражданство']) &&
+            !this.hasAny(normalizedKey, ['father', 'mother', 'отца', 'матери'])) {
             return 'personal.nationality';
         }
         if (this.hasAny(normalizedKey, ['city of birth', 'город рождения'])) {
@@ -232,9 +301,6 @@ let WebhookService = WebhookService_1 = class WebhookService {
         }
         if (this.hasAny(normalizedKey, ['date of birth', 'дата рождения'])) {
             return 'personal.dateOfBirth';
-        }
-        if (this.hasAny(normalizedKey, ['chinese name', 'китайское имя'])) {
-            return 'personal.chineseName';
         }
         if (this.hasAny(normalizedKey, ['religion', 'религия'])) {
             return 'personal.religion';
@@ -255,10 +321,30 @@ let WebhookService = WebhookService_1 = class WebhookService {
         if (this.hasAny(normalizedKey, ['marital status', 'семейное положение'])) {
             return 'personal.maritalStatus';
         }
-        if (this.hasAny(normalizedKey, ['e mail', 'email', 'электронная почта'])) {
+        if (this.hasAny(normalizedKey, ['e mail', 'email', 'электронная почта']) &&
+            !this.hasAny(normalizedKey, [
+                'guarantor',
+                'гаранта',
+                'emergency',
+                'контакта',
+                'father',
+                'mother',
+                'отца',
+                'матери',
+            ])) {
             return 'personal.email';
         }
-        if (this.hasAny(normalizedKey, ['phone number', 'phone', 'номер телефона'])) {
+        if (this.hasAny(normalizedKey, ['phone number', 'phone', 'номер телефона']) &&
+            !this.hasAny(normalizedKey, [
+                'guarantor',
+                'гаранта',
+                'emergency',
+                'контакта',
+                'father',
+                'mother',
+                'отца',
+                'матери',
+            ])) {
             return 'personal.phone';
         }
         if (this.hasAny(normalizedKey, ['hobby', 'хобби'])) {
@@ -288,19 +374,52 @@ let WebhookService = WebhookService_1 = class WebhookService {
         ])) {
             return 'personal.studiedInChina';
         }
-        if (this.hasAny(normalizedKey, ['highest degree', 'высшее образование'])) {
+        if (this.hasAny(normalizedKey, ['highest degree']) ||
+            (this.hasAny(normalizedKey, ['высшее образование']) &&
+                this.hasAny(normalizedKey, ['степень', 'degree']) &&
+                !this.isStudyPeriodKey(normalizedKey))) {
             return 'education.0.degree';
+        }
+        if (!this.isStudyPeriodKey(normalizedKey) &&
+            this.hasAny(normalizedKey, [
+                'institution of higher education',
+                'высшего учебного заведения',
+                'название вашего высшего',
+            ])) {
+            return 'education.1.institution';
         }
         if (this.hasAny(normalizedKey, [
             'school of graduation',
+            'your school of graduation',
             'учебное заведение окончания',
+            'название вашей школы',
         ])) {
             return 'education.0.institution';
         }
-        if (this.hasAny(normalizedKey, ['major', 'специальность заявки'])) {
-            return this.hasAny(normalizedKey, ['application', 'заявки'])
-                ? 'applicationMajor'
-                : 'education.0.major';
+        if (this.hasAny(normalizedKey, ['application major', 'специальность заявки'])) {
+            return 'applicationMajor';
+        }
+        if (this.hasAny(normalizedKey, ['major', 'специальность']) &&
+            !this.hasAny(normalizedKey, ['application', 'заявки'])) {
+            return 'education.0.major';
+        }
+        if (this.isHigherEducationPeriodKey(normalizedKey)) {
+            return this.hasAny(normalizedKey, [
+                'start',
+                'начала',
+                'начало',
+            ])
+                ? 'education.1.periodStart'
+                : 'education.1.periodEnd';
+        }
+        if (this.isSchoolEducationPeriodKey(normalizedKey)) {
+            return this.hasAny(normalizedKey, [
+                'start',
+                'начала',
+                'начало',
+            ])
+                ? 'education.0.periodStart'
+                : 'education.0.periodEnd';
         }
         if (this.hasAny(normalizedKey, [
             'study period start',
@@ -340,8 +459,13 @@ let WebhookService = WebhookService_1 = class WebhookService {
         if (this.hasAny(normalizedKey, ['emergency email', 'email контакта'])) {
             return 'emergencyContact.email';
         }
-        if (this.hasAny(normalizedKey, ['emergency relationship', 'отношение']) &&
+        if (this.hasAny(normalizedKey, ['relationship', 'отношение']) &&
             this.hasAny(normalizedKey, ['emergency', 'контакт', 'экстрен'])) {
+            return 'emergencyContact.relationship';
+        }
+        if (normalizedKey === 'отношение relationship' ||
+            normalizedKey === 'relationship' ||
+            normalizedKey === 'отношение') {
             return 'emergencyContact.relationship';
         }
         if (this.hasAny(normalizedKey, ['chinese language', 'китайского языка'])) {
@@ -350,19 +474,9 @@ let WebhookService = WebhookService_1 = class WebhookService {
         if (this.hasAny(normalizedKey, ['english language', 'английского языка'])) {
             return 'languages.english';
         }
-        if (this.hasAny(normalizedKey, [
-            'application school',
-            'application university',
-            'куда подается заявка',
-            'куда подаётся заявка',
-        ])) {
-            return 'applicationTargets';
-        }
-        if (this.hasAny(normalizedKey, ['degree', 'степень'])) {
+        if (this.hasAny(normalizedKey, ['degree', 'степень']) &&
+            !this.hasAny(normalizedKey, ['highest', 'высшее', 'образование'])) {
             return 'applicationDegree';
-        }
-        if (this.hasAny(normalizedKey, ['duration of study', 'срок обучения'])) {
-            return 'applicationDuration';
         }
         if (this.hasAny(normalizedKey, [
             'financial resources',
@@ -373,6 +487,36 @@ let WebhookService = WebhookService_1 = class WebhookService {
         }
         return undefined;
     }
+    resolveRelativePath(normalizedKey, englishRole, russianRole) {
+        if (!this.hasAny(normalizedKey, [englishRole, russianRole])) {
+            return undefined;
+        }
+        const prefix = `family.${englishRole}`;
+        if (this.hasAny(normalizedKey, ['full name', 'полное имя', 'name', 'имя'])) {
+            return `${prefix}.fullName`;
+        }
+        if (this.hasAny(normalizedKey, ['nationality', 'национальность'])) {
+            return `${prefix}.nationality`;
+        }
+        if (this.hasAny(normalizedKey, ['phone', 'телефон'])) {
+            return `${prefix}.phone`;
+        }
+        if (this.hasAny(normalizedKey, ['email', 'e mail'])) {
+            return `${prefix}.email`;
+        }
+        if (this.hasAny(normalizedKey, [
+            'work place',
+            'workplace',
+            'место работы',
+            'company',
+        ])) {
+            return `${prefix}.company`;
+        }
+        if (this.hasAny(normalizedKey, ['job', 'должность', 'position'])) {
+            return `${prefix}.position`;
+        }
+        return undefined;
+    }
     normalizeKey(key) {
         return key
             .toLowerCase()
@@ -380,6 +524,37 @@ let WebhookService = WebhookService_1 = class WebhookService {
             .replace(/[^a-zа-я0-9]+/g, ' ')
             .trim()
             .replace(/\s+/g, ' ');
+    }
+    isStudyPeriodKey(normalizedKey) {
+        return this.hasAny(normalizedKey, [
+            'study period',
+            'period start',
+            'period end',
+            'год начала',
+            'год окончания',
+        ]);
+    }
+    isHigherEducationPeriodKey(normalizedKey) {
+        if (!this.isStudyPeriodKey(normalizedKey)) {
+            return false;
+        }
+        return this.hasAny(normalizedKey, [
+            'higher education',
+            'master',
+            'высшее образование',
+            'магистратуру',
+            'магистратура',
+        ]);
+    }
+    isSchoolEducationPeriodKey(normalizedKey) {
+        if (!this.isStudyPeriodKey(normalizedKey)) {
+            return false;
+        }
+        return this.hasAny(normalizedKey, [
+            'school education',
+            'среднее образование',
+            'среднее',
+        ]);
     }
     hasAny(value, needles) {
         return needles.some((needle) => value.includes(this.normalizeKey(needle)));

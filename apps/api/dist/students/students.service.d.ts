@@ -6,8 +6,9 @@ export declare class StudentsService {
     private readonly universitiesService;
     constructor(prisma: PrismaService, universitiesService: UniversitiesService);
     createFromNormalized(data: Record<string, any>): Promise<{
-        email: string;
         id: string;
+        email: string;
+        createdAt: Date;
         surname: string;
         givenName: string;
         sex: string | null;
@@ -27,7 +28,7 @@ export declare class StudentsService {
         currentInstitution: string | null;
         beenToChina: boolean;
         studiedInChina: boolean;
-        createdAt: Date;
+        desiredField: string | null;
     }>;
     getFullProfile(studentId: string): Promise<StudentProfile>;
     findAll(): Promise<({
@@ -42,8 +43,9 @@ export declare class StudentsService {
             studentId: string;
         }[];
     } & {
-        email: string;
         id: string;
+        email: string;
+        createdAt: Date;
         surname: string;
         givenName: string;
         sex: string | null;
@@ -63,11 +65,12 @@ export declare class StudentsService {
         currentInstitution: string | null;
         beenToChina: boolean;
         studiedInChina: boolean;
-        createdAt: Date;
+        desiredField: string | null;
     })[]>;
     findOne(id: string): Promise<{
-        email: string;
         id: string;
+        email: string;
+        createdAt: Date;
         surname: string;
         givenName: string;
         sex: string | null;
@@ -87,14 +90,21 @@ export declare class StudentsService {
         currentInstitution: string | null;
         beenToChina: boolean;
         studiedInChina: boolean;
-        createdAt: Date;
+        desiredField: string | null;
     }>;
+    remove(id: string): Promise<void>;
+    setApplicationTargetsByFormUrls(studentId: string, input: {
+        formUrls?: string[];
+    }): Promise<StudentProfile>;
     resolveApplicationTarget(studentId: string, input: {
         universityRaw: string;
         universityId: string;
     }): Promise<StudentProfile>;
+    private buildEducationCreates;
+    private educationRank;
     private hasContactData;
     private toContactCreateData;
+    private parseFamilyMembers;
     private parseTargets;
     private toArray;
     private toBoolean;

@@ -11,8 +11,10 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ApplicationsService = void 0;
 const common_1 = require("@nestjs/common");
+const shared_1 = require("@uni-apply/shared");
 const notifications_service_js_1 = require("../notifications/notifications.service.js");
 const prisma_service_js_1 = require("../prisma/prisma.service.js");
+const queue_service_js_1 = require("../queue/queue.service.js");
 const students_service_js_1 = require("../students/students.service.js");
 const universities_service_js_1 = require("../universities/universities.service.js");
 let ApplicationsService = class ApplicationsService {
@@ -20,28 +22,41 @@ let ApplicationsService = class ApplicationsService {
     studentsService;
     universitiesService;
     notificationsService;
-    constructor(prisma, studentsService, universitiesService, notificationsService) {
+    queueService;
+    constructor(prisma, studentsService, universitiesService, notificationsService, queueService) {
         this.prisma = prisma;
         this.studentsService = studentsService;
         this.universitiesService = universitiesService;
         this.notificationsService = notificationsService;
+        this.queueService = queueService;
     }
     async createBatch(input) {
         if (!input.studentId?.trim()) {
             throw new common_1.BadRequestException('studentId is required.');
         }
         const profile = await this.studentsService.getFullProfile(input.studentId);
-        if (profile.applicationTargets.length === 0) {
-            throw new common_1.BadRequestException('Student has no application targets.');
+        const resolvedTargets = profile.applicationTargets.filter((target) => Boolean(target.universityId));
+        if (resolvedTargets.length === 0) {
+            throw new common_1.BadRequestException('Student has no resolved application targets. Add universities by form URL first.');
         }
-        const prepared = await this.prepareApplications(profile);
+        const submittedUniversityIds = await this.findSubmittedUniversityIds(input.studentId);
+        const selectedTargets = resolvedTargets.filter((target) => target.universityId &&
+            !submittedUniversityIds.has(target.universityId));
+        if (selectedTargets.length === 0) {
+            throw new common_1.BadRequestException('All selected universities already have a submitted application.');
+        }
+        const batchProfile = {
+            ...profile,
+            applicationTargets: selectedTargets,
+        };
+        const prepared = await this.prepareApplications(batchProfile);
         const unresolvedCount = prepared.unresolvedTargets.length;
         const blockedCount = prepared.applications.filter((application) => application.status === 'blocked')
             .length + unresolvedCount;
         const batch = await this.prisma.applicationBatch.create({
             data: {
                 studentId: input.studentId,
-                total: profile.applicationTargets.length,
+                total: selectedTargets.length,
                 blocked: blockedCount,
                 status: prepared.applications.some((application) => application.status === 'ready_for_submission')
                     ? 'processing'
@@ -68,8 +83,15 @@ let ApplicationsService = class ApplicationsService {
             },
             include: this.batchInclude,
         });
-        await this.notifyUnresolvedTargets(profile, prepared.unresolvedTargets);
-        await this.notificationsService.notifyBatchCreated(batch, profile);
+        await this.notifyUnresolvedTargets(batchProfile, prepared.unresolvedTargets);
+        await this.notificationsService.notifyBatchCreated(batch, batchProfile);
+        const readyApplications = batch.applications.filter((app) => app.status === 'ready_for_submission');
+        await Promise.all(readyApplications.map((app) => this.queueService.addJob(shared_1.QUEUES.APPLICATION_PROCESS, {
+            applicationId: app.id,
+            batchId: batch.id,
+            studentId: input.studentId,
+            universityId: app.universityId,
+        })));
         return this.toBatchResponse(batch);
     }
     async findByStudent(studentId) {
@@ -279,7 +301,7 @@ let ApplicationsService = class ApplicationsService {
                 continue;
             }
             const university = resolved.university;
-            const missingDocuments = university.requiredDocuments.filter((documentType) => !profile.documents[documentType]);
+            const missingDocuments = university.requiredDocuments.filter((documentType) => !(0, shared_1.hasDocument)(profile.documents, documentType));
             const approvedLetter = university.requiresEssay
                 ? await this.findApprovedLetter(profile.id, university.id)
                 : null;
@@ -323,6 +345,17 @@ let ApplicationsService = class ApplicationsService {
             orderBy: { approvedAt: 'desc' },
             select: { id: true },
         });
+    }
+    async findSubmittedUniversityIds(studentId) {
+        const rows = await this.prisma.application.findMany({
+            where: {
+                status: 'submitted',
+                batch: { studentId },
+            },
+            select: { universityId: true },
+            distinct: ['universityId'],
+        });
+        return new Set(rows.map((row) => row.universityId));
     }
     async notifyUnresolvedTargets(profile, unresolvedTargets) {
         if (unresolvedTargets.length > 0) {
@@ -433,6 +466,7 @@ exports.ApplicationsService = ApplicationsService = __decorate([
     __metadata("design:paramtypes", [prisma_service_js_1.PrismaService,
         students_service_js_1.StudentsService,
         universities_service_js_1.UniversitiesService,
-        notifications_service_js_1.NotificationsService])
+        notifications_service_js_1.NotificationsService,
+        queue_service_js_1.QueueService])
 ], ApplicationsService);
 //# sourceMappingURL=applications.service.js.map

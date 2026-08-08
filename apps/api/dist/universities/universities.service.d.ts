@@ -11,6 +11,7 @@ export declare class UniversitiesService {
     findOne(id: string): Promise<UniversitySchemaResponse>;
     getFullSchemaForExtension(universityId: string): Promise<UniversitySchemaResponse>;
     findByFormUrl(pageUrl: string): Promise<UniversitySchemaResponse | null>;
+    resolveByFormUrl(formUrl: string): Promise<UniversitySchemaResponse>;
     private normalizePageUrl;
     private formUrlsMatch;
     findAliases(universityId: string): Promise<string[]>;

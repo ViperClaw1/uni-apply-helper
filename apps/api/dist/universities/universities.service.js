@@ -86,7 +86,13 @@ let UniversitiesService = class UniversitiesService {
         }
     }
     async findByFormUrl(pageUrl) {
-        const normalizedPageUrl = this.normalizePageUrl(pageUrl);
+        let normalizedPageUrl;
+        try {
+            normalizedPageUrl = this.normalizePageUrl(pageUrl);
+        }
+        catch {
+            return null;
+        }
         const universities = await this.findAll();
         for (const summary of universities) {
             const university = await this.findOne(summary.id);
@@ -95,6 +101,27 @@ let UniversitiesService = class UniversitiesService {
             }
         }
         return null;
+    }
+    async resolveByFormUrl(formUrl) {
+        const trimmed = formUrl?.trim();
+        if (!trimmed) {
+            throw new common_1.BadRequestException('formUrl is required.');
+        }
+        let parsed;
+        try {
+            parsed = new URL(trimmed);
+        }
+        catch {
+            throw new common_1.BadRequestException(`Invalid URL: "${formUrl}".`);
+        }
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+            throw new common_1.BadRequestException('URL must use http or https.');
+        }
+        const university = await this.findByFormUrl(parsed.toString());
+        if (!university) {
+            throw new common_1.NotFoundException(`No university schema matches form URL "${trimmed}".`);
+        }
+        return university;
     }
     normalizePageUrl(url) {
         const parsed = new URL(url);
@@ -289,7 +316,10 @@ let UniversitiesService = class UniversitiesService {
         }
         const field = value;
         return (typeof field.selector === 'string' &&
-            (typeof field.mapsTo === 'string' || field.mapsTo === null) &&
+            (field.mapsTo === null ||
+                typeof field.mapsTo === 'string' ||
+                (Array.isArray(field.mapsTo) &&
+                    field.mapsTo.every((p) => typeof p === 'string'))) &&
             typeof field.type === 'string' &&
             typeof field.required === 'boolean');
     }

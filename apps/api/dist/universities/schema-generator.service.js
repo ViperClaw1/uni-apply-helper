@@ -37,10 +37,38 @@ const STUDENT_PROFILE_PATHS = [
     'education.0.degree',
     'education.0.institution',
     'education.0.major',
+    'education.0.periodStart',
+    'education.0.periodEnd',
+    'education.0.level',
+    'education.1.degree',
+    'education.1.institution',
+    'education.1.major',
+    'education.1.periodStart',
+    'education.1.periodEnd',
+    'education.1.level',
     'guarantor.name',
     'guarantor.phone',
+    'guarantor.email',
+    'guarantor.homeAddress',
+    'guarantor.relationship',
     'emergencyContact.name',
     'emergencyContact.phone',
+    'emergencyContact.email',
+    'emergencyContact.relationship',
+    'familyMembers.0.fullName',
+    'familyMembers.0.relationship',
+    'familyMembers.0.nationality',
+    'familyMembers.0.phone',
+    'familyMembers.0.email',
+    'familyMembers.0.company',
+    'familyMembers.0.position',
+    'familyMembers.1.fullName',
+    'familyMembers.1.relationship',
+    'familyMembers.1.nationality',
+    'familyMembers.1.phone',
+    'familyMembers.1.email',
+    'familyMembers.1.company',
+    'familyMembers.1.position',
 ];
 const DOCUMENT_TYPES = [
     'photo',
@@ -129,7 +157,7 @@ let SchemaGeneratorService = class SchemaGeneratorService {
             '  "requiredDocuments": string[],',
             '  "fields": Array<{',
             '    "selector": string,',
-            '    "mapsTo": string | null,',
+            '    "mapsTo": string | string[] | null,',
             `    "type": ${JSON.stringify(FIELD_TYPES)},`,
             '    "required": boolean,',
             '    "wizardStep"?: number,',
@@ -225,8 +253,15 @@ let SchemaGeneratorService = class SchemaGeneratorService {
             if (field.type === 'file' && !field.documentType) {
                 warnings.push(`File field ${field.selector} has no documentType.`);
             }
-            if (field.mapsTo && !STUDENT_PROFILE_PATHS.includes(field.mapsTo)) {
-                warnings.push(`Unusual mapsTo path: ${field.mapsTo}`);
+            if (field.mapsTo) {
+                const paths = Array.isArray(field.mapsTo)
+                    ? field.mapsTo
+                    : [field.mapsTo];
+                for (const path of paths) {
+                    if (!STUDENT_PROFILE_PATHS.includes(path)) {
+                        warnings.push(`Unusual mapsTo path: ${path}`);
+                    }
+                }
             }
         }
         if (schema.wizard && schema.wizard.totalSteps < 1) {

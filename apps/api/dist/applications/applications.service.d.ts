@@ -1,5 +1,6 @@
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { QueueService } from '../queue/queue.service.js';
 import { StudentsService } from '../students/students.service.js';
 import { UniversitiesService } from '../universities/universities.service.js';
 import type { ActiveApplicationResponse, ApplicationBatchResponse, ApplicationResponse, ApplicationStepResponse, CreateApplicationBatchInput, SubmitApplicationInput, UpdateApplicationInput } from './types/application-api.types.js';
@@ -8,7 +9,8 @@ export declare class ApplicationsService {
     private readonly studentsService;
     private readonly universitiesService;
     private readonly notificationsService;
-    constructor(prisma: PrismaService, studentsService: StudentsService, universitiesService: UniversitiesService, notificationsService: NotificationsService);
+    private readonly queueService;
+    constructor(prisma: PrismaService, studentsService: StudentsService, universitiesService: UniversitiesService, notificationsService: NotificationsService, queueService: QueueService);
     createBatch(input: CreateApplicationBatchInput): Promise<ApplicationBatchResponse>;
     findByStudent(studentId: string): Promise<ApplicationBatchResponse[]>;
     findBatch(id: string): Promise<ApplicationBatchResponse>;
@@ -26,6 +28,7 @@ export declare class ApplicationsService {
     private prepareApplications;
     private resolveTarget;
     private findApprovedLetter;
+    private findSubmittedUniversityIds;
     private notifyUnresolvedTargets;
     private recalculateBatchCounters;
     private toApplicationUpdateInput;

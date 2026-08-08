@@ -42,6 +42,9 @@ let DocumentsController = class DocumentsController {
     parse(id) {
         return this.parserService.parseDocument(id);
     }
+    reorder(studentId, body) {
+        return this.documentsService.reorder(studentId, body);
+    }
     remove(id) {
         return this.documentsService.remove(id);
     }
@@ -94,6 +97,14 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], DocumentsController.prototype, "parse", null);
+__decorate([
+    (0, common_1.Patch)('students/:studentId/documents/reorder'),
+    __param(0, (0, common_1.Param)('studentId')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], DocumentsController.prototype, "reorder", null);
 __decorate([
     (0, common_1.Delete)('documents/:id'),
     __param(0, (0, common_1.Param)('id')),

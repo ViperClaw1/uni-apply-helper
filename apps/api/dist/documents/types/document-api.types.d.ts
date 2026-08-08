@@ -6,6 +6,7 @@ export type StudentDocumentResponse = {
     fileUrl: string;
     parsedData?: unknown;
     parseStatus: string;
+    sortOrder: number;
     uploadedAt: string;
 };
 export type CreateDocumentInput = {
@@ -13,8 +14,13 @@ export type CreateDocumentInput = {
     fileUrl: string;
     parsedData?: unknown;
     parseStatus?: DocumentParseStatus;
+    sortOrder?: number;
 };
 export type UpdateDocumentInput = Partial<CreateDocumentInput>;
+export type ReorderDocumentsInput = {
+    type: string;
+    orderedIds: string[];
+};
 export type UploadedDocumentFile = {
     originalname: string;
     mimetype: string;

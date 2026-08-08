@@ -50,7 +50,7 @@ let DocumentsService = class DocumentsService {
         await this.ensureStudentExists(studentId);
         const documents = await this.prisma.studentDocument.findMany({
             where: { studentId },
-            orderBy: { uploadedAt: 'desc' },
+            orderBy: [{ type: 'asc' }, { sortOrder: 'asc' }, { uploadedAt: 'asc' }],
         });
         return documents.map((document) => this.toResponse(document));
     }
@@ -68,6 +68,14 @@ let DocumentsService = class DocumentsService {
         this.assertDocumentInput(input);
         const documentType = input.type.trim();
         const parseStatus = this.getInitialParseStatus(documentType, input.parseStatus);
+        const maxOrder = await this.prisma.studentDocument.aggregate({
+            where: { studentId, type: documentType },
+            _max: { sortOrder: true },
+        });
+        const sortOrder = input.sortOrder ??
+            (maxOrder._max.sortOrder === null || maxOrder._max.sortOrder === undefined
+                ? 0
+                : maxOrder._max.sortOrder + 1);
         const document = await this.prisma.studentDocument.create({
             data: {
                 studentId,
@@ -75,6 +83,7 @@ let DocumentsService = class DocumentsService {
                 fileUrl: input.fileUrl.trim(),
                 parsedData: this.toJsonInput(input.parsedData),
                 parseStatus,
+                sortOrder,
             },
         });
         if (document.parseStatus === 'pending') {
@@ -117,18 +126,71 @@ let DocumentsService = class DocumentsService {
         if (input.parseStatus !== undefined) {
             data.parseStatus = input.parseStatus;
         }
+        if (input.sortOrder !== undefined) {
+            data.sortOrder = input.sortOrder;
+        }
         const document = await this.prisma.studentDocument.update({
             where: { id },
             data,
         });
         return this.toResponse(document);
     }
+    async reorder(studentId, input) {
+        await this.ensureStudentExists(studentId);
+        const type = input.type?.trim();
+        const orderedIds = input.orderedIds ?? [];
+        if (!type) {
+            throw new common_1.BadRequestException('Document type is required.');
+        }
+        if (orderedIds.length === 0) {
+            throw new common_1.BadRequestException('orderedIds cannot be empty.');
+        }
+        const existing = await this.prisma.studentDocument.findMany({
+            where: { studentId, type },
+            select: { id: true },
+        });
+        const existingIds = new Set(existing.map((doc) => doc.id));
+        if (existingIds.size !== orderedIds.length) {
+            throw new common_1.BadRequestException('orderedIds must include every document of this type exactly once.');
+        }
+        for (const id of orderedIds) {
+            if (!existingIds.has(id)) {
+                throw new common_1.BadRequestException(`Document "${id}" does not belong to type "${type}".`);
+            }
+        }
+        await this.prisma.$transaction(orderedIds.map((id, index) => this.prisma.studentDocument.update({
+            where: { id },
+            data: { sortOrder: index },
+        })));
+        return this.findByStudent(studentId).then((docs) => docs.filter((doc) => doc.type === type));
+    }
     async remove(id) {
-        await this.findOne(id);
+        const existing = await this.prisma.studentDocument.findUnique({
+            where: { id },
+        });
+        if (!existing) {
+            throw new common_1.NotFoundException(`Document "${id}" was not found.`);
+        }
+        await this.deleteFromStorage(existing.fileUrl);
         const document = await this.prisma.studentDocument.delete({
             where: { id },
         });
+        await this.normalizeSortOrder(document.studentId, document.type);
         return this.toResponse(document);
+    }
+    async normalizeSortOrder(studentId, type) {
+        const remaining = await this.prisma.studentDocument.findMany({
+            where: { studentId, type },
+            orderBy: [{ sortOrder: 'asc' }, { uploadedAt: 'asc' }],
+            select: { id: true },
+        });
+        if (remaining.length === 0) {
+            return;
+        }
+        await this.prisma.$transaction(remaining.map((doc, index) => this.prisma.studentDocument.update({
+            where: { id: doc.id },
+            data: { sortOrder: index },
+        })));
     }
     async ensureStudentExists(studentId) {
         const student = await this.prisma.student.findUnique({
@@ -166,6 +228,33 @@ let DocumentsService = class DocumentsService {
         }));
         return `${this.publicUrl.replace(/\/$/, '')}/${key}`;
     }
+    async deleteFromStorage(fileUrl) {
+        if (!this.s3 || !this.bucket || !this.publicUrl) {
+            return;
+        }
+        const key = this.keyFromPublicUrl(fileUrl);
+        if (!key) {
+            return;
+        }
+        try {
+            await this.s3.send(new client_s3_1.DeleteObjectCommand({
+                Bucket: this.bucket,
+                Key: key,
+            }));
+        }
+        catch {
+        }
+    }
+    keyFromPublicUrl(fileUrl) {
+        if (!this.publicUrl) {
+            return null;
+        }
+        const base = this.publicUrl.replace(/\/$/, '');
+        if (!fileUrl.startsWith(base + '/') && fileUrl !== base) {
+            return null;
+        }
+        return fileUrl.slice(base.length + 1);
+    }
     async enqueueParse(documentId) {
         const data = { documentId };
         await this.queueService.addJob(shared_1.QUEUES.DOCUMENT_PARSE, data, {
@@ -194,6 +283,7 @@ let DocumentsService = class DocumentsService {
             fileUrl: document.fileUrl,
             parsedData: document.parsedData ?? undefined,
             parseStatus: document.parseStatus,
+            sortOrder: document.sortOrder,
             uploadedAt: document.uploadedAt.toISOString(),
         };
     }

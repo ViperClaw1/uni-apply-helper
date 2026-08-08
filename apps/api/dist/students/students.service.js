@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.StudentsService = void 0;
 const common_1 = require("@nestjs/common");
+const shared_1 = require("@uni-apply/shared");
 const prisma_service_1 = require("../prisma/prisma.service");
 const universities_service_js_1 = require("../universities/universities.service.js");
 let StudentsService = class StudentsService {
@@ -27,6 +28,7 @@ let StudentsService = class StudentsService {
             duration: data.applicationDuration,
             fundingSource: data.applicationFunding,
         });
+        const familyMembers = this.parseFamilyMembers(data);
         return this.prisma.student.create({
             data: {
                 surname: data.personal?.surname ?? '',
@@ -49,16 +51,11 @@ let StudentsService = class StudentsService {
                 currentInstitution: data.personal?.currentInstitution,
                 beenToChina: this.toBoolean(data.personal?.beenToChina),
                 studiedInChina: this.toBoolean(data.personal?.studiedInChina),
+                desiredField: data.personal?.desiredField
+                    ? String(data.personal.desiredField).trim() || null
+                    : null,
                 education: {
-                    create: this.toArray(data.education)
-                        .filter((education) => education?.degree && education?.institution)
-                        .map((education) => ({
-                        degree: education.degree,
-                        institution: education.institution,
-                        major: education.major,
-                        periodStart: this.toDate(education.periodStart),
-                        periodEnd: this.toDate(education.periodEnd),
-                    })) ?? [],
+                    create: this.buildEducationCreates(data.education),
                 },
                 languageSkills: {
                     create: [
@@ -76,6 +73,9 @@ let StudentsService = class StudentsService {
                             }
                             : null,
                     ].filter((languageSkill) => languageSkill !== null),
+                },
+                familyMembers: {
+                    create: familyMembers,
                 },
                 applicationTargets: {
                     create: targets,
@@ -111,10 +111,9 @@ let StudentsService = class StudentsService {
                 applicationTargets: true,
             },
         });
-        const documents = student.documents.reduce((acc, document) => {
-            acc[document.type] = document.fileUrl;
-            return acc;
-        }, {});
+        const documents = (0, shared_1.groupDocumentUrls)(student.documents);
+        const universities = await this.universitiesService.findAll();
+        const formUrlByUniversityId = new Map(universities.map((university) => [university.id, university.formUrl]));
         return {
             id: student.id,
             personal: {
@@ -138,10 +137,16 @@ let StudentsService = class StudentsService {
                 currentInstitution: student.currentInstitution ?? undefined,
                 beenToChina: student.beenToChina,
                 studiedInChina: student.studiedInChina,
+                desiredField: student.desiredField ?? undefined,
             },
-            education: student.education.map((education) => ({
-                degree: education.degree,
-                institution: education.institution,
+            education: [...student.education]
+                .sort((a, b) => this.educationRank(a.level) - this.educationRank(b.level))
+                .map((education) => ({
+                level: education.level === 'school' || education.level === 'higher'
+                    ? education.level
+                    : undefined,
+                degree: education.degree ?? undefined,
+                institution: education.institution ?? undefined,
                 major: education.major ?? undefined,
                 periodStart: education.periodStart?.toISOString(),
                 periodEnd: education.periodEnd?.toISOString(),
@@ -193,8 +198,12 @@ let StudentsService = class StudentsService {
                 : undefined,
             documents,
             applicationTargets: student.applicationTargets.map((target) => ({
+                id: target.id,
                 universityRaw: target.universityRaw,
                 universityId: target.universityId ?? undefined,
+                formUrl: target.universityId
+                    ? formUrlByUniversityId.get(target.universityId)
+                    : undefined,
                 degree: target.degree ?? undefined,
                 major: target.major ?? undefined,
                 duration: target.duration ?? undefined,
@@ -210,6 +219,90 @@ let StudentsService = class StudentsService {
     }
     async findOne(id) {
         return this.prisma.student.findUniqueOrThrow({ where: { id } });
+    }
+    async remove(id) {
+        await this.findOne(id);
+        await this.prisma.$transaction(async (tx) => {
+            const batches = await tx.applicationBatch.findMany({
+                where: { studentId: id },
+                select: { id: true },
+            });
+            const batchIds = batches.map((batch) => batch.id);
+            if (batchIds.length > 0) {
+                const applications = await tx.application.findMany({
+                    where: { batchId: { in: batchIds } },
+                    select: { id: true },
+                });
+                const applicationIds = applications.map((application) => application.id);
+                if (applicationIds.length > 0) {
+                    await tx.applicationStep.deleteMany({
+                        where: { applicationId: { in: applicationIds } },
+                    });
+                }
+                await tx.application.deleteMany({
+                    where: { batchId: { in: batchIds } },
+                });
+                await tx.applicationBatch.deleteMany({ where: { studentId: id } });
+            }
+            await tx.generatedDocument.deleteMany({ where: { studentId: id } });
+            await tx.studentDocument.deleteMany({ where: { studentId: id } });
+            await tx.applicationTarget.deleteMany({ where: { studentId: id } });
+            await tx.education.deleteMany({ where: { studentId: id } });
+            await tx.workExperience.deleteMany({ where: { studentId: id } });
+            await tx.languageSkill.deleteMany({ where: { studentId: id } });
+            await tx.familyMember.deleteMany({ where: { studentId: id } });
+            await tx.guarantor.deleteMany({ where: { studentId: id } });
+            await tx.emergencyContact.deleteMany({ where: { studentId: id } });
+            await tx.student.delete({ where: { id } });
+        });
+    }
+    async setApplicationTargetsByFormUrls(studentId, input) {
+        if (!Array.isArray(input.formUrls)) {
+            throw new common_1.BadRequestException('formUrls must be an array of strings.');
+        }
+        await this.findOne(studentId);
+        const existingTargets = await this.prisma.applicationTarget.findMany({
+            where: { studentId },
+            orderBy: { id: 'asc' },
+        });
+        const shared = {
+            degree: existingTargets.find((target) => target.degree)?.degree ?? undefined,
+            major: existingTargets.find((target) => target.major)?.major ?? undefined,
+            duration: existingTargets.find((target) => target.duration)?.duration ?? undefined,
+            fundingSource: existingTargets.find((target) => target.fundingSource)?.fundingSource ??
+                undefined,
+        };
+        const resolvedUniversities = [];
+        const seenUniversityIds = new Set();
+        for (const formUrl of input.formUrls) {
+            const university = await this.universitiesService.resolveByFormUrl(formUrl);
+            if (seenUniversityIds.has(university.id)) {
+                continue;
+            }
+            seenUniversityIds.add(university.id);
+            resolvedUniversities.push({
+                id: university.id,
+                displayName: university.displayName,
+            });
+        }
+        await this.prisma.$transaction(async (tx) => {
+            await tx.applicationTarget.deleteMany({ where: { studentId } });
+            if (resolvedUniversities.length === 0) {
+                return;
+            }
+            await tx.applicationTarget.createMany({
+                data: resolvedUniversities.map((university) => ({
+                    studentId,
+                    universityRaw: university.displayName,
+                    universityId: university.id,
+                    degree: shared.degree,
+                    major: shared.major,
+                    duration: shared.duration,
+                    fundingSource: shared.fundingSource,
+                })),
+            });
+        });
+        return this.getFullProfile(studentId);
     }
     async resolveApplicationTarget(studentId, input) {
         const universityRaw = input.universityRaw.trim();
@@ -240,6 +333,62 @@ let StudentsService = class StudentsService {
         }
         return this.getFullProfile(studentId);
     }
+    buildEducationCreates(raw) {
+        const entries = this.toArray(raw);
+        const school = entries[0];
+        const higher = entries[1];
+        const schoolInstitution = school?.institution?.trim() || undefined;
+        const higherInstitution = higher?.institution?.trim() || undefined;
+        const hasHigherPeriods = Boolean(higher?.periodStart || higher?.periodEnd);
+        const hasHigher = hasHigherPeriods || Boolean(higherInstitution);
+        const hasSchoolPeriods = Boolean(school?.periodStart || school?.periodEnd);
+        const degree = school?.degree?.trim() || undefined;
+        const major = school?.major?.trim() || undefined;
+        const creates = [];
+        if (hasHigher) {
+            creates.push({
+                level: 'higher',
+                degree: degree ?? null,
+                institution: higherInstitution ?? null,
+                major: major ?? null,
+                periodStart: this.toDate(higher?.periodStart),
+                periodEnd: this.toDate(higher?.periodEnd),
+            });
+            if (hasSchoolPeriods || schoolInstitution) {
+                creates.push({
+                    level: 'school',
+                    degree: null,
+                    institution: schoolInstitution ?? null,
+                    major: null,
+                    periodStart: this.toDate(school?.periodStart),
+                    periodEnd: this.toDate(school?.periodEnd),
+                });
+            }
+        }
+        else if (hasSchoolPeriods || schoolInstitution || degree) {
+            creates.push({
+                level: 'school',
+                degree: degree ?? null,
+                institution: schoolInstitution ?? null,
+                major: major ?? null,
+                periodStart: this.toDate(school?.periodStart),
+                periodEnd: this.toDate(school?.periodEnd),
+            });
+        }
+        return creates.filter((education) => education.degree ||
+            education.institution ||
+            education.periodStart ||
+            education.periodEnd);
+    }
+    educationRank(level) {
+        if (level === 'higher') {
+            return 0;
+        }
+        if (level === 'school') {
+            return 1;
+        }
+        return 2;
+    }
     hasContactData(contact) {
         return Boolean(contact?.name?.trim());
     }
@@ -255,15 +404,49 @@ let StudentsService = class StudentsService {
             email: contact.email?.trim() || undefined,
         };
     }
-    parseTargets(raw, shared) {
-        if (!raw) {
-            return [];
+    parseFamilyMembers(data) {
+        const fromArray = this.toArray(data.familyMembers)
+            .filter((member) => member?.fullName?.trim())
+            .map((member) => ({
+            fullName: member.fullName.trim(),
+            relationship: member.relationship?.trim() || 'Not specified',
+            nationality: member.nationality?.trim() || undefined,
+            company: member.company?.trim() || undefined,
+            position: member.position?.trim() || undefined,
+            phone: member.phone?.trim() || undefined,
+            email: member.email?.trim() || undefined,
+        }));
+        if (fromArray.length > 0) {
+            return fromArray;
         }
-        const list = Array.isArray(raw) ? raw : [raw];
-        return list
+        const family = data.family ?? {};
+        const relatives = [
+            { role: 'father', member: family.father },
+            { role: 'mother', member: family.mother },
+        ];
+        return relatives
+            .filter((relative) => relative.member?.fullName?.trim())
+            .map((relative) => ({
+            fullName: relative.member.fullName.trim(),
+            relationship: relative.role,
+            nationality: relative.member.nationality?.trim() || undefined,
+            company: relative.member.company?.trim() || undefined,
+            position: relative.member.position?.trim() || undefined,
+            phone: relative.member.phone?.trim() || undefined,
+            email: relative.member.email?.trim() || undefined,
+        }));
+    }
+    parseTargets(raw, shared) {
+        const list = raw == null ? [] : Array.isArray(raw) ? raw : [raw];
+        const targets = list
             .map((universityRaw) => universityRaw.trim())
             .filter(Boolean)
             .map((universityRaw) => ({ universityRaw, ...shared }));
+        if (targets.length === 0 &&
+            (shared.major || shared.degree || shared.fundingSource || shared.duration)) {
+            return [{ universityRaw: 'Unassigned', ...shared }];
+        }
+        return targets;
     }
     toArray(value) {
         return Array.isArray(value) ? value : [];
@@ -275,7 +458,14 @@ let StudentsService = class StudentsService {
         if (typeof value !== 'string') {
             return false;
         }
-        return ['yes', 'true', 'да'].includes(value.trim().toLowerCase());
+        const normalized = value.trim().toLowerCase();
+        if (['yes', 'true', 'да', 'y', '1'].includes(normalized)) {
+            return true;
+        }
+        if (/(^|[^a-zа-я])(yes|да|true)([^a-zа-я]|$)/i.test(normalized)) {
+            return true;
+        }
+        return false;
     }
     toDate(value) {
         if (!value) {

@@ -19,6 +19,7 @@ const GEMINI_MAX_RETRIES = 3;
 const GEMINI_RETRY_BASE_DELAY_MS = 5000;
 const GEMINI_DOCUMENT_MODEL_FALLBACKS = [
     'gemini-3.5-flash',
+    'gemini-3.6-flash',
     'gemini-3.1-flash-lite',
 ];
 const DOCUMENT_PARSE_PROMPTS = {
@@ -299,6 +300,7 @@ let ParserService = ParserService_1 = class ParserService {
             studentId: document.studentId,
             type: document.type,
             fileUrl: document.fileUrl,
+            sortOrder: document.sortOrder,
             parsedData: document.parsedData ?? undefined,
             parseStatus: document.parseStatus,
             uploadedAt: document.uploadedAt.toISOString(),

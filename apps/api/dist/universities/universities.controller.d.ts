@@ -10,6 +10,7 @@ export declare class UniversitiesController {
     constructor(universitiesService: UniversitiesService, schemasService: SchemasService, schemaGeneratorService: SchemaGeneratorService);
     findAll(): Promise<import("./types/university-api.types.js").UniversitySummary[]>;
     resolve(name?: string): Promise<import("./types/university-api.types.js").ResolvedUniversity>;
+    resolveByFormUrl(url?: string): Promise<import("./types/university-api.types.js").UniversitySchemaResponse>;
     createAlias(body: CreateUniversityAliasInput): Promise<{
         universityId: string;
         alias: string;

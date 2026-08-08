@@ -13,6 +13,7 @@ export declare class SchemasService {
     private parseSchema;
     private toResponse;
     private parseWizard;
+    private parseNavigationHints;
     private hashSchema;
     private toStringArray;
     private isFieldConfig;

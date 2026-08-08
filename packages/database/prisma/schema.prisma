@@ -7,6 +7,44 @@ datasource db {
   provider = "postgresql"
 }
 
+enum AccountRole {
+  student
+  agency
+}
+
+model Account {
+  id                         String      @id @default(uuid())
+  email                      String      @unique
+  passwordHash               String
+  role                       AccountRole
+  emailVerifiedAt            DateTime?
+  verificationTokenHash      String?     @unique
+  verificationTokenExpiresAt DateTime?
+  createdAt                  DateTime    @default(now())
+
+  agencyProfile AgencyProfile?
+  sessions      Session[]
+}
+
+model AgencyProfile {
+  id        String   @id @default(uuid())
+  accountId String   @unique
+  account   Account  @relation(fields: [accountId], references: [id])
+  legalName String
+  country   String
+  taxId     String
+  createdAt DateTime @default(now())
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  accountId String
+  account   Account  @relation(fields: [accountId], references: [id])
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
 model Student {
   id                 String    @id @default(uuid())
   surname            String

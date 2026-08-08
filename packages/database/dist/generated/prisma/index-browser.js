@@ -120,6 +120,34 @@ exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
   Serializable: 'Serializable'
 });
 
+exports.Prisma.AccountScalarFieldEnum = {
+  id: 'id',
+  email: 'email',
+  passwordHash: 'passwordHash',
+  role: 'role',
+  emailVerifiedAt: 'emailVerifiedAt',
+  verificationTokenHash: 'verificationTokenHash',
+  verificationTokenExpiresAt: 'verificationTokenExpiresAt',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.AgencyProfileScalarFieldEnum = {
+  id: 'id',
+  accountId: 'accountId',
+  legalName: 'legalName',
+  country: 'country',
+  taxId: 'taxId',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.SessionScalarFieldEnum = {
+  id: 'id',
+  accountId: 'accountId',
+  tokenHash: 'tokenHash',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.StudentScalarFieldEnum = {
   id: 'id',
   surname: 'surname',
@@ -328,9 +356,15 @@ exports.Prisma.JsonNullValueFilter = {
   JsonNull: Prisma.JsonNull,
   AnyNull: Prisma.AnyNull
 };
-
+exports.AccountRole = exports.$Enums.AccountRole = {
+  student: 'student',
+  agency: 'agency'
+};
 
 exports.Prisma.ModelName = {
+  Account: 'Account',
+  AgencyProfile: 'AgencyProfile',
+  Session: 'Session',
   Student: 'Student',
   Education: 'Education',
   WorkExperience: 'WorkExperience',
