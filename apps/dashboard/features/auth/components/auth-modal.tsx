@@ -10,6 +10,8 @@ import { isPasswordValid, PASSWORD_POLICY_MESSAGE } from "../lib/password-policy
 type Mode = "login" | "signup";
 type Phase = "form" | "submitting" | "check-email";
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 type AuthModalProps = {
   open: boolean;
   initialMode: Mode;
@@ -75,6 +77,15 @@ export function AuthModal({ open, initialMode, initialRole, onClose }: AuthModal
   if (!open) {
     return null;
   }
+
+  const emailError =
+    fields.email && !EMAIL_REGEX.test(fields.email) ? "Enter a valid email address." : null;
+  const passwordError =
+    fields.password && !isPasswordValid(fields.password) ? PASSWORD_POLICY_MESSAGE : null;
+  const confirmPasswordError =
+    fields.confirmPassword && fields.confirmPassword !== fields.password
+      ? "Passwords do not match."
+      : null;
 
   function updateField<K extends keyof typeof INITIAL_FIELDS>(key: K, value: string) {
     setFields((current) => ({ ...current, [key]: value }));
@@ -209,21 +220,21 @@ export function AuthModal({ open, initialMode, initialRole, onClose }: AuthModal
 
             {mode === "login" ? (
               <form onSubmit={handleLoginSubmit} className="mt-4 flex flex-col gap-3">
-                <Field label="Email" type="email" value={fields.email} onChange={(v) => updateField("email", v)} required />
-                <Field label="Password" type="password" value={fields.password} onChange={(v) => updateField("password", v)} required />
+                <Field label="Email" type="email" placeholder="you@example.com" value={fields.email} onChange={(v) => updateField("email", v)} error={emailError} required />
+                <Field label="Password" type="password" placeholder="Enter your password" value={fields.password} onChange={(v) => updateField("password", v)} required />
                 <SubmitButton isSubmitting={isSubmitting} label="Log in" />
               </form>
             ) : step === 1 ? (
               <form onSubmit={handleSignupStep1Submit} className="mt-4 flex flex-col gap-3">
-                <Field label="Email" type="email" value={fields.email} onChange={(v) => updateField("email", v)} required />
-                <Field label="Password" type="password" value={fields.password} onChange={(v) => updateField("password", v)} required />
-                <Field label="Confirm password" type="password" value={fields.confirmPassword} onChange={(v) => updateField("confirmPassword", v)} required />
+                <Field label="Email" type="email" placeholder="you@example.com" value={fields.email} onChange={(v) => updateField("email", v)} error={emailError} required />
+                <Field label="Password" type="password" placeholder="At least 8 characters" value={fields.password} onChange={(v) => updateField("password", v)} error={passwordError} required />
+                <Field label="Confirm password" type="password" placeholder="Re-enter your password" value={fields.confirmPassword} onChange={(v) => updateField("confirmPassword", v)} error={confirmPasswordError} required />
                 <p className="text-xs text-slate-400">{PASSWORD_POLICY_MESSAGE}</p>
                 <SubmitButton isSubmitting={isSubmitting} label={role === "agency" ? "Continue" : "Create account"} />
               </form>
             ) : (
               <form onSubmit={handleSignupStep2Submit} className="mt-4 flex flex-col gap-3">
-                <Field label="Agency legal name" value={fields.legalName} onChange={(v) => updateField("legalName", v)} required />
+                <Field label="Agency legal name" placeholder="e.g. Acme Education Consulting" value={fields.legalName} onChange={(v) => updateField("legalName", v)} required />
                 <div className="flex flex-col gap-1">
                   <label className="text-xs font-medium text-slate-600">Business country</label>
                   <select
@@ -238,7 +249,7 @@ export function AuthModal({ open, initialMode, initialRole, onClose }: AuthModal
                     ))}
                   </select>
                 </div>
-                <Field label="Tax ID number" value={fields.taxId} onChange={(v) => updateField("taxId", v)} required />
+                <Field label="Tax ID number" placeholder="e.g. 12-3456789" value={fields.taxId} onChange={(v) => updateField("taxId", v)} required />
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -310,13 +321,17 @@ function Field({
   type = "text",
   value,
   onChange,
+  placeholder,
   required,
+  error,
 }: {
   label: string;
   type?: string;
   value: string;
   onChange: (value: string) => void;
+  placeholder?: string;
   required?: boolean;
+  error?: string | null;
 }) {
   return (
     <div className="flex flex-col gap-1">
@@ -324,10 +339,14 @@ function Field({
       <input
         type={type}
         value={value}
+        placeholder={placeholder}
         required={required}
         onChange={(event) => onChange(event.target.value)}
-        className="h-10 rounded-lg border border-slate-200 px-3 text-sm text-slate-800 outline-none focus:border-blue-400"
+        className={`h-10 rounded-lg border px-3 text-sm text-slate-800 outline-none placeholder:text-slate-400 ${
+          error ? "border-rose-300 focus:border-rose-400" : "border-slate-200 focus:border-blue-400"
+        }`}
       />
+      {error ? <p className="text-xs text-rose-600">{error}</p> : null}
     </div>
   );
 }
