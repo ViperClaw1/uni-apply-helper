@@ -220,6 +220,7 @@ exports.Prisma.StudentDocumentScalarFieldEnum = {
   fileUrl: 'fileUrl',
   parsedData: 'parsedData',
   parseStatus: 'parseStatus',
+  sortOrder: 'sortOrder',
   uploadedAt: 'uploadedAt'
 };
 

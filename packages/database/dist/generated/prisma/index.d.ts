@@ -10477,8 +10477,18 @@ export namespace Prisma {
 
   export type AggregateStudentDocument = {
     _count: StudentDocumentCountAggregateOutputType | null
+    _avg: StudentDocumentAvgAggregateOutputType | null
+    _sum: StudentDocumentSumAggregateOutputType | null
     _min: StudentDocumentMinAggregateOutputType | null
     _max: StudentDocumentMaxAggregateOutputType | null
+  }
+
+  export type StudentDocumentAvgAggregateOutputType = {
+    sortOrder: number | null
+  }
+
+  export type StudentDocumentSumAggregateOutputType = {
+    sortOrder: number | null
   }
 
   export type StudentDocumentMinAggregateOutputType = {
@@ -10487,6 +10497,7 @@ export namespace Prisma {
     type: string | null
     fileUrl: string | null
     parseStatus: string | null
+    sortOrder: number | null
     uploadedAt: Date | null
   }
 
@@ -10496,6 +10507,7 @@ export namespace Prisma {
     type: string | null
     fileUrl: string | null
     parseStatus: string | null
+    sortOrder: number | null
     uploadedAt: Date | null
   }
 
@@ -10506,10 +10518,19 @@ export namespace Prisma {
     fileUrl: number
     parsedData: number
     parseStatus: number
+    sortOrder: number
     uploadedAt: number
     _all: number
   }
 
+
+  export type StudentDocumentAvgAggregateInputType = {
+    sortOrder?: true
+  }
+
+  export type StudentDocumentSumAggregateInputType = {
+    sortOrder?: true
+  }
 
   export type StudentDocumentMinAggregateInputType = {
     id?: true
@@ -10517,6 +10538,7 @@ export namespace Prisma {
     type?: true
     fileUrl?: true
     parseStatus?: true
+    sortOrder?: true
     uploadedAt?: true
   }
 
@@ -10526,6 +10548,7 @@ export namespace Prisma {
     type?: true
     fileUrl?: true
     parseStatus?: true
+    sortOrder?: true
     uploadedAt?: true
   }
 
@@ -10536,6 +10559,7 @@ export namespace Prisma {
     fileUrl?: true
     parsedData?: true
     parseStatus?: true
+    sortOrder?: true
     uploadedAt?: true
     _all?: true
   }
@@ -10578,6 +10602,18 @@ export namespace Prisma {
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
      * 
+     * Select which fields to average
+    **/
+    _avg?: StudentDocumentAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: StudentDocumentSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
      * Select which fields to find the minimum value
     **/
     _min?: StudentDocumentMinAggregateInputType
@@ -10608,6 +10644,8 @@ export namespace Prisma {
     take?: number
     skip?: number
     _count?: StudentDocumentCountAggregateInputType | true
+    _avg?: StudentDocumentAvgAggregateInputType
+    _sum?: StudentDocumentSumAggregateInputType
     _min?: StudentDocumentMinAggregateInputType
     _max?: StudentDocumentMaxAggregateInputType
   }
@@ -10619,8 +10657,11 @@ export namespace Prisma {
     fileUrl: string
     parsedData: JsonValue | null
     parseStatus: string
+    sortOrder: number
     uploadedAt: Date
     _count: StudentDocumentCountAggregateOutputType | null
+    _avg: StudentDocumentAvgAggregateOutputType | null
+    _sum: StudentDocumentSumAggregateOutputType | null
     _min: StudentDocumentMinAggregateOutputType | null
     _max: StudentDocumentMaxAggregateOutputType | null
   }
@@ -10646,6 +10687,7 @@ export namespace Prisma {
     fileUrl?: boolean
     parsedData?: boolean
     parseStatus?: boolean
+    sortOrder?: boolean
     uploadedAt?: boolean
     student?: boolean | StudentDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["studentDocument"]>
@@ -10657,6 +10699,7 @@ export namespace Prisma {
     fileUrl?: boolean
     parsedData?: boolean
     parseStatus?: boolean
+    sortOrder?: boolean
     uploadedAt?: boolean
     student?: boolean | StudentDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["studentDocument"]>
@@ -10668,6 +10711,7 @@ export namespace Prisma {
     fileUrl?: boolean
     parsedData?: boolean
     parseStatus?: boolean
+    sortOrder?: boolean
     uploadedAt?: boolean
     student?: boolean | StudentDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["studentDocument"]>
@@ -10679,10 +10723,11 @@ export namespace Prisma {
     fileUrl?: boolean
     parsedData?: boolean
     parseStatus?: boolean
+    sortOrder?: boolean
     uploadedAt?: boolean
   }
 
-  export type StudentDocumentOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "studentId" | "type" | "fileUrl" | "parsedData" | "parseStatus" | "uploadedAt", ExtArgs["result"]["studentDocument"]>
+  export type StudentDocumentOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "studentId" | "type" | "fileUrl" | "parsedData" | "parseStatus" | "sortOrder" | "uploadedAt", ExtArgs["result"]["studentDocument"]>
   export type StudentDocumentInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     student?: boolean | StudentDefaultArgs<ExtArgs>
   }
@@ -10705,6 +10750,10 @@ export namespace Prisma {
       fileUrl: string
       parsedData: Prisma.JsonValue | null
       parseStatus: string
+      /**
+       * Display / attach order within the same type (0 = first).
+       */
+      sortOrder: number
       uploadedAt: Date
     }, ExtArgs["result"]["studentDocument"]>
     composites: {}
@@ -11136,6 +11185,7 @@ export namespace Prisma {
     readonly fileUrl: FieldRef<"StudentDocument", 'String'>
     readonly parsedData: FieldRef<"StudentDocument", 'Json'>
     readonly parseStatus: FieldRef<"StudentDocument", 'String'>
+    readonly sortOrder: FieldRef<"StudentDocument", 'Int'>
     readonly uploadedAt: FieldRef<"StudentDocument", 'DateTime'>
   }
     
@@ -19288,6 +19338,7 @@ export namespace Prisma {
     fileUrl: 'fileUrl',
     parsedData: 'parsedData',
     parseStatus: 'parseStatus',
+    sortOrder: 'sortOrder',
     uploadedAt: 'uploadedAt'
   };
 
@@ -20129,6 +20180,7 @@ export namespace Prisma {
     fileUrl?: StringFilter<"StudentDocument"> | string
     parsedData?: JsonNullableFilter<"StudentDocument">
     parseStatus?: StringFilter<"StudentDocument"> | string
+    sortOrder?: IntFilter<"StudentDocument"> | number
     uploadedAt?: DateTimeFilter<"StudentDocument"> | Date | string
     student?: XOR<StudentScalarRelationFilter, StudentWhereInput>
   }
@@ -20140,6 +20192,7 @@ export namespace Prisma {
     fileUrl?: SortOrder
     parsedData?: SortOrderInput | SortOrder
     parseStatus?: SortOrder
+    sortOrder?: SortOrder
     uploadedAt?: SortOrder
     student?: StudentOrderByWithRelationInput
   }
@@ -20154,6 +20207,7 @@ export namespace Prisma {
     fileUrl?: StringFilter<"StudentDocument"> | string
     parsedData?: JsonNullableFilter<"StudentDocument">
     parseStatus?: StringFilter<"StudentDocument"> | string
+    sortOrder?: IntFilter<"StudentDocument"> | number
     uploadedAt?: DateTimeFilter<"StudentDocument"> | Date | string
     student?: XOR<StudentScalarRelationFilter, StudentWhereInput>
   }, "id">
@@ -20165,10 +20219,13 @@ export namespace Prisma {
     fileUrl?: SortOrder
     parsedData?: SortOrderInput | SortOrder
     parseStatus?: SortOrder
+    sortOrder?: SortOrder
     uploadedAt?: SortOrder
     _count?: StudentDocumentCountOrderByAggregateInput
+    _avg?: StudentDocumentAvgOrderByAggregateInput
     _max?: StudentDocumentMaxOrderByAggregateInput
     _min?: StudentDocumentMinOrderByAggregateInput
+    _sum?: StudentDocumentSumOrderByAggregateInput
   }
 
   export type StudentDocumentScalarWhereWithAggregatesInput = {
@@ -20181,6 +20238,7 @@ export namespace Prisma {
     fileUrl?: StringWithAggregatesFilter<"StudentDocument"> | string
     parsedData?: JsonNullableWithAggregatesFilter<"StudentDocument">
     parseStatus?: StringWithAggregatesFilter<"StudentDocument"> | string
+    sortOrder?: IntWithAggregatesFilter<"StudentDocument"> | number
     uploadedAt?: DateTimeWithAggregatesFilter<"StudentDocument"> | Date | string
   }
 
@@ -21350,6 +21408,7 @@ export namespace Prisma {
     fileUrl: string
     parsedData?: NullableJsonNullValueInput | InputJsonValue
     parseStatus?: string
+    sortOrder?: number
     uploadedAt?: Date | string
     student: StudentCreateNestedOneWithoutDocumentsInput
   }
@@ -21361,6 +21420,7 @@ export namespace Prisma {
     fileUrl: string
     parsedData?: NullableJsonNullValueInput | InputJsonValue
     parseStatus?: string
+    sortOrder?: number
     uploadedAt?: Date | string
   }
 
@@ -21370,6 +21430,7 @@ export namespace Prisma {
     fileUrl?: StringFieldUpdateOperationsInput | string
     parsedData?: NullableJsonNullValueInput | InputJsonValue
     parseStatus?: StringFieldUpdateOperationsInput | string
+    sortOrder?: IntFieldUpdateOperationsInput | number
     uploadedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     student?: StudentUpdateOneRequiredWithoutDocumentsNestedInput
   }
@@ -21381,6 +21442,7 @@ export namespace Prisma {
     fileUrl?: StringFieldUpdateOperationsInput | string
     parsedData?: NullableJsonNullValueInput | InputJsonValue
     parseStatus?: StringFieldUpdateOperationsInput | string
+    sortOrder?: IntFieldUpdateOperationsInput | number
     uploadedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -21391,6 +21453,7 @@ export namespace Prisma {
     fileUrl: string
     parsedData?: NullableJsonNullValueInput | InputJsonValue
     parseStatus?: string
+    sortOrder?: number
     uploadedAt?: Date | string
   }
 
@@ -21400,6 +21463,7 @@ export namespace Prisma {
     fileUrl?: StringFieldUpdateOperationsInput | string
     parsedData?: NullableJsonNullValueInput | InputJsonValue
     parseStatus?: StringFieldUpdateOperationsInput | string
+    sortOrder?: IntFieldUpdateOperationsInput | number
     uploadedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -21410,6 +21474,7 @@ export namespace Prisma {
     fileUrl?: StringFieldUpdateOperationsInput | string
     parsedData?: NullableJsonNullValueInput | InputJsonValue
     parseStatus?: StringFieldUpdateOperationsInput | string
+    sortOrder?: IntFieldUpdateOperationsInput | number
     uploadedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -22498,6 +22563,17 @@ export namespace Prisma {
     not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
   }
 
+  export type IntFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel>
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntFilter<$PrismaModel> | number
+  }
+
   export type StudentDocumentCountOrderByAggregateInput = {
     id?: SortOrder
     studentId?: SortOrder
@@ -22505,7 +22581,12 @@ export namespace Prisma {
     fileUrl?: SortOrder
     parsedData?: SortOrder
     parseStatus?: SortOrder
+    sortOrder?: SortOrder
     uploadedAt?: SortOrder
+  }
+
+  export type StudentDocumentAvgOrderByAggregateInput = {
+    sortOrder?: SortOrder
   }
 
   export type StudentDocumentMaxOrderByAggregateInput = {
@@ -22514,6 +22595,7 @@ export namespace Prisma {
     type?: SortOrder
     fileUrl?: SortOrder
     parseStatus?: SortOrder
+    sortOrder?: SortOrder
     uploadedAt?: SortOrder
   }
 
@@ -22523,7 +22605,12 @@ export namespace Prisma {
     type?: SortOrder
     fileUrl?: SortOrder
     parseStatus?: SortOrder
+    sortOrder?: SortOrder
     uploadedAt?: SortOrder
+  }
+
+  export type StudentDocumentSumOrderByAggregateInput = {
+    sortOrder?: SortOrder
   }
   export type JsonNullableWithAggregatesFilter<$PrismaModel = never> =
     | PatchUndefined<
@@ -22550,6 +22637,22 @@ export namespace Prisma {
     _count?: NestedIntNullableFilter<$PrismaModel>
     _min?: NestedJsonNullableFilter<$PrismaModel>
     _max?: NestedJsonNullableFilter<$PrismaModel>
+  }
+
+  export type IntWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel>
+    in?: number[] | ListIntFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntWithAggregatesFilter<$PrismaModel> | number
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedFloatFilter<$PrismaModel>
+    _sum?: NestedIntFilter<$PrismaModel>
+    _min?: NestedIntFilter<$PrismaModel>
+    _max?: NestedIntFilter<$PrismaModel>
   }
 
   export type ApplicationTargetCountOrderByAggregateInput = {
@@ -22684,17 +22787,6 @@ export namespace Prisma {
     _max?: NestedJsonFilter<$PrismaModel>
   }
 
-  export type IntFilter<$PrismaModel = never> = {
-    equals?: number | IntFieldRefInput<$PrismaModel>
-    in?: number[] | ListIntFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
-    lt?: number | IntFieldRefInput<$PrismaModel>
-    lte?: number | IntFieldRefInput<$PrismaModel>
-    gt?: number | IntFieldRefInput<$PrismaModel>
-    gte?: number | IntFieldRefInput<$PrismaModel>
-    not?: NestedIntFilter<$PrismaModel> | number
-  }
-
   export type ApplicationListRelationFilter = {
     every?: ApplicationWhereInput
     some?: ApplicationWhereInput
@@ -22750,22 +22842,6 @@ export namespace Prisma {
     submitted?: SortOrder
     blocked?: SortOrder
     failed?: SortOrder
-  }
-
-  export type IntWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: number | IntFieldRefInput<$PrismaModel>
-    in?: number[] | ListIntFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
-    lt?: number | IntFieldRefInput<$PrismaModel>
-    lte?: number | IntFieldRefInput<$PrismaModel>
-    gt?: number | IntFieldRefInput<$PrismaModel>
-    gte?: number | IntFieldRefInput<$PrismaModel>
-    not?: NestedIntWithAggregatesFilter<$PrismaModel> | number
-    _count?: NestedIntFilter<$PrismaModel>
-    _avg?: NestedFloatFilter<$PrismaModel>
-    _sum?: NestedIntFilter<$PrismaModel>
-    _min?: NestedIntFilter<$PrismaModel>
-    _max?: NestedIntFilter<$PrismaModel>
   }
 
   export type ApplicationBatchScalarRelationFilter = {
@@ -23369,6 +23445,14 @@ export namespace Prisma {
     connect?: StudentWhereUniqueInput
   }
 
+  export type IntFieldUpdateOperationsInput = {
+    set?: number
+    increment?: number
+    decrement?: number
+    multiply?: number
+    divide?: number
+  }
+
   export type StudentUpdateOneRequiredWithoutDocumentsNestedInput = {
     create?: XOR<StudentCreateWithoutDocumentsInput, StudentUncheckedCreateWithoutDocumentsInput>
     connectOrCreate?: StudentCreateOrConnectWithoutDocumentsInput
@@ -23409,14 +23493,6 @@ export namespace Prisma {
     connectOrCreate?: ApplicationCreateOrConnectWithoutBatchInput | ApplicationCreateOrConnectWithoutBatchInput[]
     createMany?: ApplicationCreateManyBatchInputEnvelope
     connect?: ApplicationWhereUniqueInput | ApplicationWhereUniqueInput[]
-  }
-
-  export type IntFieldUpdateOperationsInput = {
-    set?: number
-    increment?: number
-    decrement?: number
-    multiply?: number
-    divide?: number
   }
 
   export type StudentUpdateOneRequiredWithoutBatchesNestedInput = {
@@ -23721,29 +23797,6 @@ export namespace Prisma {
     gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
     not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
   }
-  export type NestedJsonFilter<$PrismaModel = never> =
-    | PatchUndefined<
-        Either<Required<NestedJsonFilterBase<$PrismaModel>>, Exclude<keyof Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>,
-        Required<NestedJsonFilterBase<$PrismaModel>>
-      >
-    | OptionalFlat<Omit<Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>
-
-  export type NestedJsonFilterBase<$PrismaModel = never> = {
-    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-    path?: string[]
-    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
-    string_contains?: string | StringFieldRefInput<$PrismaModel>
-    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
-    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
-    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-  }
 
   export type NestedIntWithAggregatesFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel>
@@ -23770,6 +23823,29 @@ export namespace Prisma {
     gt?: number | FloatFieldRefInput<$PrismaModel>
     gte?: number | FloatFieldRefInput<$PrismaModel>
     not?: NestedFloatFilter<$PrismaModel> | number
+  }
+  export type NestedJsonFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<NestedJsonFilterBase<$PrismaModel>>, Exclude<keyof Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>,
+        Required<NestedJsonFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>
+
+  export type NestedJsonFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
   }
 
   export type EducationCreateWithoutStudentInput = {
@@ -23950,6 +24026,7 @@ export namespace Prisma {
     fileUrl: string
     parsedData?: NullableJsonNullValueInput | InputJsonValue
     parseStatus?: string
+    sortOrder?: number
     uploadedAt?: Date | string
   }
 
@@ -23959,6 +24036,7 @@ export namespace Prisma {
     fileUrl: string
     parsedData?: NullableJsonNullValueInput | InputJsonValue
     parseStatus?: string
+    sortOrder?: number
     uploadedAt?: Date | string
   }
 
@@ -24246,6 +24324,7 @@ export namespace Prisma {
     fileUrl?: StringFilter<"StudentDocument"> | string
     parsedData?: JsonNullableFilter<"StudentDocument">
     parseStatus?: StringFilter<"StudentDocument"> | string
+    sortOrder?: IntFilter<"StudentDocument"> | number
     uploadedAt?: DateTimeFilter<"StudentDocument"> | Date | string
   }
 
@@ -25981,6 +26060,7 @@ export namespace Prisma {
     fileUrl: string
     parsedData?: NullableJsonNullValueInput | InputJsonValue
     parseStatus?: string
+    sortOrder?: number
     uploadedAt?: Date | string
   }
 
@@ -26124,6 +26204,7 @@ export namespace Prisma {
     fileUrl?: StringFieldUpdateOperationsInput | string
     parsedData?: NullableJsonNullValueInput | InputJsonValue
     parseStatus?: StringFieldUpdateOperationsInput | string
+    sortOrder?: IntFieldUpdateOperationsInput | number
     uploadedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -26133,6 +26214,7 @@ export namespace Prisma {
     fileUrl?: StringFieldUpdateOperationsInput | string
     parsedData?: NullableJsonNullValueInput | InputJsonValue
     parseStatus?: StringFieldUpdateOperationsInput | string
+    sortOrder?: IntFieldUpdateOperationsInput | number
     uploadedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -26142,6 +26224,7 @@ export namespace Prisma {
     fileUrl?: StringFieldUpdateOperationsInput | string
     parsedData?: NullableJsonNullValueInput | InputJsonValue
     parseStatus?: StringFieldUpdateOperationsInput | string
+    sortOrder?: IntFieldUpdateOperationsInput | number
     uploadedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 

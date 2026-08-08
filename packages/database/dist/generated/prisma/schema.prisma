@@ -125,7 +125,11 @@ model StudentDocument {
   fileUrl     String
   parsedData  Json?
   parseStatus String   @default("pending")
+  /// Display / attach order within the same type (0 = first).
+  sortOrder   Int      @default(0)
   uploadedAt  DateTime @default(now())
+
+  @@index([studentId, type, sortOrder])
 }
 
 model ApplicationTarget {

@@ -1,1 +1,2 @@
-$ nest build
+$ pnpm --filter @uni-apply/database generate
+$ pnpm exec prisma generate
