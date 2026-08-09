@@ -6,14 +6,21 @@ import {
   type FamilyRelativeInput,
   type MyFamilyInput,
 } from "@/features/students/api/students.api";
+import { COUNTRIES, flagEmoji } from "@/features/auth/lib/countries";
 import type { StudentProfile } from "@/features/students/types/student.types";
 import {
   ErrorBanner,
   Field,
+  SelectField,
   StepActions,
   StepSection,
   extractErrorMessage,
 } from "./shared";
+
+const NATIONALITY_OPTIONS = COUNTRIES.map((country) => ({
+  value: country.name,
+  label: `${flagEmoji(country.code)} ${country.name}`,
+}));
 
 export function FamilyStep({
   initial,
@@ -60,32 +67,38 @@ export function FamilyStep({
       <StepSection title="Father">
         <Field
           label="Full name"
+          placeholder="Bekzat Yusupov"
           value={fields.father?.fullName ?? ""}
           onChange={(v) => updateRelative("father", "fullName", v)}
         />
-        <Field
+        <SelectField
           label="Nationality"
           value={fields.father?.nationality ?? ""}
           onChange={(v) => updateRelative("father", "nationality", v)}
+          options={NATIONALITY_OPTIONS}
         />
         <Field
           label="Phone"
+          placeholder="+7 701 234 5678"
           value={fields.father?.phone ?? ""}
           onChange={(v) => updateRelative("father", "phone", v)}
         />
         <Field
           label="Email"
           type="email"
+          placeholder="father@example.com"
           value={fields.father?.email ?? ""}
           onChange={(v) => updateRelative("father", "email", v)}
         />
         <Field
           label="Work place"
+          placeholder="Oil Corp"
           value={fields.father?.company ?? ""}
           onChange={(v) => updateRelative("father", "company", v)}
         />
         <Field
           label="Job"
+          placeholder="Engineer"
           value={fields.father?.position ?? ""}
           onChange={(v) => updateRelative("father", "position", v)}
         />
@@ -94,22 +107,26 @@ export function FamilyStep({
       <StepSection title="Mother">
         <Field
           label="Full name"
+          placeholder="Aigerim Yusupova"
           value={fields.mother?.fullName ?? ""}
           onChange={(v) => updateRelative("mother", "fullName", v)}
         />
-        <Field
+        <SelectField
           label="Nationality"
           value={fields.mother?.nationality ?? ""}
           onChange={(v) => updateRelative("mother", "nationality", v)}
+          options={NATIONALITY_OPTIONS}
         />
         <Field
           label="Phone"
+          placeholder="+7 701 111 2233"
           value={fields.mother?.phone ?? ""}
           onChange={(v) => updateRelative("mother", "phone", v)}
         />
         <Field
           label="Email"
           type="email"
+          placeholder="mother@example.com"
           value={fields.mother?.email ?? ""}
           onChange={(v) => updateRelative("mother", "email", v)}
         />
@@ -125,7 +142,11 @@ export function FamilyStep({
         />
       </StepSection>
 
-      <StepActions onBack={onBack} isSubmitting={isSubmitting} continueLabel="Finish" />
+      <StepActions
+        onBack={onBack}
+        isSubmitting={isSubmitting}
+        continueLabel="Finish"
+      />
     </form>
   );
 }

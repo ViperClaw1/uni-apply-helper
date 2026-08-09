@@ -55,6 +55,7 @@ export function GuarantorStep({
       <StepSection title="Guarantor">
         <Field
           label="Full name"
+          placeholder="Bekzat Yusupov"
           value={fields.name}
           onChange={(v) => updateField("name", v)}
           required
@@ -67,17 +68,20 @@ export function GuarantorStep({
         />
         <Field
           label="Phone"
+          placeholder="+7 701 234 5678"
           value={fields.phone ?? ""}
           onChange={(v) => updateField("phone", v)}
         />
         <Field
           label="Email"
           type="email"
+          placeholder="guarantor@example.com"
           value={fields.email ?? ""}
           onChange={(v) => updateField("email", v)}
         />
         <Field
           label="Home address"
+          placeholder="456 Oak St, Almaty"
           value={fields.homeAddress ?? ""}
           onChange={(v) => updateField("homeAddress", v)}
         />

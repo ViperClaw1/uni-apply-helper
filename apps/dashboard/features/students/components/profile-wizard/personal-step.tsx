@@ -7,15 +7,37 @@ import {
   saveMyProfile,
   type MyProfileInput,
 } from "@/features/students/api/students.api";
+import { COUNTRIES, flagEmoji } from "@/features/auth/lib/countries";
 import type { StudentProfile } from "@/features/students/types/student.types";
 import {
   CheckboxField,
   ErrorBanner,
   Field,
+  SelectField,
   StepActions,
   StepSection,
   extractErrorMessage,
 } from "./shared";
+
+const SEX_OPTIONS = [
+  { value: "Male", label: "Male" },
+  { value: "Female", label: "Female" },
+];
+
+const RELIGION_OPTIONS = [
+  { value: "None", label: "None" },
+  { value: "Christianity", label: "Christianity" },
+  { value: "Islam", label: "Islam" },
+  { value: "Buddhism", label: "Buddhism" },
+  { value: "Hinduism", label: "Hinduism" },
+  { value: "Judaism", label: "Judaism" },
+  { value: "Other", label: "Other" },
+];
+
+const NATIONALITY_OPTIONS = COUNTRIES.map((country) => ({
+  value: country.name,
+  label: `${flagEmoji(country.code)} ${country.name}`,
+}));
 
 export function PersonalStep({
   initial,
@@ -68,17 +90,17 @@ export function PersonalStep({
           onChange={(v) => updateField("givenName", v)}
           required
         />
-        <Field
+        <SelectField
           label="Sex"
-          placeholder="Female"
           value={fields.sex ?? ""}
           onChange={(v) => updateField("sex", v)}
+          options={SEX_OPTIONS}
         />
-        <Field
+        <SelectField
           label="Nationality"
-          placeholder="Kazakhstan"
           value={fields.nationality ?? ""}
           onChange={(v) => updateField("nationality", v)}
+          options={NATIONALITY_OPTIONS}
         />
         <Field
           label="City of birth"
@@ -98,10 +120,11 @@ export function PersonalStep({
           value={fields.chineseName ?? ""}
           onChange={(v) => updateField("chineseName", v)}
         />
-        <Field
+        <SelectField
           label="Religion"
           value={fields.religion ?? ""}
           onChange={(v) => updateField("religion", v)}
+          options={RELIGION_OPTIONS}
         />
         <Field
           label="Marital status"
@@ -126,6 +149,7 @@ export function PersonalStep({
         />
         <Field
           label="Consulate applying for visa"
+          placeholder="Beijing"
           value={fields.consulate ?? ""}
           onChange={(v) => updateField("consulate", v)}
         />
@@ -153,11 +177,13 @@ export function PersonalStep({
         </div>
         <Field
           label="Permanent address"
+          placeholder="123 Main St, Almaty"
           value={fields.permanentAddress ?? ""}
           onChange={(v) => updateField("permanentAddress", v)}
         />
         <Field
           label="Post code"
+          placeholder="050000"
           value={fields.postCode ?? ""}
           onChange={(v) => updateField("postCode", v)}
         />
@@ -166,16 +192,19 @@ export function PersonalStep({
       <StepSection title="Background">
         <Field
           label="Current employer or institution"
+          placeholder="Al-Farabi KazNU"
           value={fields.currentInstitution ?? ""}
           onChange={(v) => updateField("currentInstitution", v)}
         />
         <Field
           label="Hobby"
+          placeholder="Reading, chess"
           value={fields.hobby ?? ""}
           onChange={(v) => updateField("hobby", v)}
         />
         <Field
           label="Desired field of study"
+          placeholder="Computer Science"
           value={fields.desiredField ?? ""}
           onChange={(v) => updateField("desiredField", v)}
         />

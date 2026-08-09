@@ -61,16 +61,19 @@ export function EducationStep({
       <StepSection title="Secondary education (school)">
         <Field
           label="School name"
+          placeholder="School 123"
           value={fields.school?.institution ?? ""}
           onChange={(v) => updateLevel("school", "institution", v)}
         />
         <Field
           label="Degree"
+          placeholder="High School Diploma"
           value={fields.school?.degree ?? ""}
           onChange={(v) => updateLevel("school", "degree", v)}
         />
         <Field
           label="Major"
+          placeholder="General"
           value={fields.school?.major ?? ""}
           onChange={(v) => updateLevel("school", "major", v)}
         />
@@ -91,16 +94,19 @@ export function EducationStep({
       <StepSection title="Higher education">
         <Field
           label="Institution"
+          placeholder="Peking University"
           value={fields.higher?.institution ?? ""}
           onChange={(v) => updateLevel("higher", "institution", v)}
         />
         <Field
           label="Degree"
+          placeholder="Bachelor's"
           value={fields.higher?.degree ?? ""}
           onChange={(v) => updateLevel("higher", "degree", v)}
         />
         <Field
           label="Major"
+          placeholder="Computer Science"
           value={fields.higher?.major ?? ""}
           onChange={(v) => updateLevel("higher", "major", v)}
         />

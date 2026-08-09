@@ -55,6 +55,7 @@ export function EmergencyContactStep({
       <StepSection title="Emergency contact">
         <Field
           label="Full name"
+          placeholder="Dana Yusupova"
           value={fields.name}
           onChange={(v) => updateField("name", v)}
           required
@@ -67,12 +68,14 @@ export function EmergencyContactStep({
         />
         <Field
           label="Phone"
+          placeholder="+7 701 987 6543"
           value={fields.phone ?? ""}
           onChange={(v) => updateField("phone", v)}
         />
         <Field
           label="Email"
           type="email"
+          placeholder="contact@example.com"
           value={fields.email ?? ""}
           onChange={(v) => updateField("email", v)}
         />

@@ -22,6 +22,9 @@ export declare class StudentsService {
     constructor(prisma: PrismaService, universitiesService: UniversitiesService);
     createFromNormalized(data: Record<string, any>): Promise<{
         id: string;
+        email: string;
+        createdAt: Date;
+        accountId: string | null;
         surname: string;
         givenName: string;
         sex: string | null;
@@ -34,7 +37,6 @@ export declare class StudentsService {
         passportExpiry: Date | null;
         consulate: string | null;
         maritalStatus: string | null;
-        email: string;
         phone: string | null;
         hobby: string | null;
         permanentAddress: string | null;
@@ -43,23 +45,24 @@ export declare class StudentsService {
         beenToChina: boolean;
         studiedInChina: boolean;
         desiredField: string | null;
-        createdAt: Date;
-        accountId: string | null;
     }>;
     getFullProfile(studentId: string): Promise<StudentProfile>;
     findAll(): Promise<({
         applicationTargets: {
             id: string;
+            universityId: string | null;
+            universityRaw: string;
             degree: string | null;
             major: string | null;
-            universityRaw: string;
-            universityId: string | null;
             duration: string | null;
             fundingSource: string | null;
             studentId: string;
         }[];
     } & {
         id: string;
+        email: string;
+        createdAt: Date;
+        accountId: string | null;
         surname: string;
         givenName: string;
         sex: string | null;
@@ -72,7 +75,6 @@ export declare class StudentsService {
         passportExpiry: Date | null;
         consulate: string | null;
         maritalStatus: string | null;
-        email: string;
         phone: string | null;
         hobby: string | null;
         permanentAddress: string | null;
@@ -81,11 +83,12 @@ export declare class StudentsService {
         beenToChina: boolean;
         studiedInChina: boolean;
         desiredField: string | null;
-        createdAt: Date;
-        accountId: string | null;
     })[]>;
     findOne(id: string): Promise<{
         id: string;
+        email: string;
+        createdAt: Date;
+        accountId: string | null;
         surname: string;
         givenName: string;
         sex: string | null;
@@ -98,7 +101,6 @@ export declare class StudentsService {
         passportExpiry: Date | null;
         consulate: string | null;
         maritalStatus: string | null;
-        email: string;
         phone: string | null;
         hobby: string | null;
         permanentAddress: string | null;
@@ -107,8 +109,6 @@ export declare class StudentsService {
         beenToChina: boolean;
         studiedInChina: boolean;
         desiredField: string | null;
-        createdAt: Date;
-        accountId: string | null;
     }>;
     findByAccountId(accountId: string): Promise<StudentProfile | null>;
     upsertMyProfile(accountId: string, input: {
