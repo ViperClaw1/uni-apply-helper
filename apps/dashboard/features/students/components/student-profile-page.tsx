@@ -26,7 +26,13 @@ import type {
 
 export function StudentProfilePage({
   studentId: studentIdProp,
-}: { studentId?: string } = {}) {
+  showBackLink = true,
+  embedded = false,
+}: {
+  studentId?: string;
+  showBackLink?: boolean;
+  embedded?: boolean;
+} = {}) {
   const params = useParams<{ id: string }>();
   const studentId = studentIdProp ?? params.id;
   const [student, setStudent] = useState<StudentProfile | null>(null);
@@ -201,13 +207,21 @@ export function StudentProfilePage({
   const studentName = formatStudentName(student.personal);
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-6 py-8">
-      <Link
-        href="/dashboard"
-        className="mb-6 inline-flex h-10 w-fit items-center rounded-xl px-3 text-sm font-medium text-slate-600 transition-colors hover:bg-white hover:text-slate-950"
-      >
-        Назад к студентам
-      </Link>
+    <main
+      className={
+        embedded
+          ? "flex w-full flex-col"
+          : "mx-auto flex min-h-screen w-full max-w-5xl flex-col px-6 py-8"
+      }
+    >
+      {showBackLink ? (
+        <Link
+          href="/dashboard"
+          className="mb-6 inline-flex h-10 w-fit items-center rounded-xl px-3 text-sm font-medium text-slate-600 transition-colors hover:bg-white hover:text-slate-950"
+        >
+          Назад к студентам
+        </Link>
+      ) : null}
 
       <section className="rounded-3xl bg-white p-6 shadow-[0_1px_2px_rgba(15,23,42,0.08),0_12px_45px_rgba(15,23,42,0.05)] ring-1 ring-black/5">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">

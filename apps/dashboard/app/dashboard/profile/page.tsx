@@ -66,15 +66,12 @@ export default function ProfileWizardPage() {
     );
   }
 
-  // Step 6 is the existing, self-contained student-card page (its own
-  // layout/width/back-link) — rendered on its own rather than nested inside
-  // the wizard's chrome, which would otherwise double up on padding/cards.
-  if (step === 6 && profile) {
-    return <StudentProfilePage studentId={profile.id} />;
-  }
-
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-6 py-8">
+    <div
+      className={`mx-auto flex min-h-screen w-full flex-col px-6 py-8 ${
+        step === 6 ? "max-w-5xl" : "max-w-3xl"
+      }`}
+    >
       <header className="mb-6 flex items-center justify-between">
         <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
           Your profile
@@ -97,38 +94,48 @@ export default function ProfileWizardPage() {
         }}
       />
 
-      <div className="mt-6 rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(15,23,42,0.08),0_8px_30px_rgba(15,23,42,0.04)] ring-1 ring-black/5">
-        {step === 1 ? (
-          <PersonalStep
-            initial={toPersonalInput(profile)}
-            onNext={handleStepComplete}
+      {step === 6 && profile ? (
+        <div className="mt-6">
+          <StudentProfilePage
+            studentId={profile.id}
+            showBackLink={false}
+            embedded
           />
-        ) : step === 2 ? (
-          <EducationStep
-            initial={toEducationInput(profile)}
-            onNext={handleStepComplete}
-            onBack={() => setStep(1)}
-          />
-        ) : step === 3 ? (
-          <GuarantorStep
-            initial={toGuarantorInput(profile)}
-            onNext={handleStepComplete}
-            onBack={() => setStep(2)}
-          />
-        ) : step === 4 ? (
-          <EmergencyContactStep
-            initial={toEmergencyContactInput(profile)}
-            onNext={handleStepComplete}
-            onBack={() => setStep(3)}
-          />
-        ) : (
-          <FamilyStep
-            initial={toFamilyInput(profile)}
-            onNext={handleStepComplete}
-            onBack={() => setStep(4)}
-          />
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="mt-6 rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(15,23,42,0.08),0_8px_30px_rgba(15,23,42,0.04)] ring-1 ring-black/5">
+          {step === 1 ? (
+            <PersonalStep
+              initial={toPersonalInput(profile)}
+              onNext={handleStepComplete}
+            />
+          ) : step === 2 ? (
+            <EducationStep
+              initial={toEducationInput(profile)}
+              onNext={handleStepComplete}
+              onBack={() => setStep(1)}
+            />
+          ) : step === 3 ? (
+            <GuarantorStep
+              initial={toGuarantorInput(profile)}
+              onNext={handleStepComplete}
+              onBack={() => setStep(2)}
+            />
+          ) : step === 4 ? (
+            <EmergencyContactStep
+              initial={toEmergencyContactInput(profile)}
+              onNext={handleStepComplete}
+              onBack={() => setStep(3)}
+            />
+          ) : (
+            <FamilyStep
+              initial={toFamilyInput(profile)}
+              onNext={handleStepComplete}
+              onBack={() => setStep(4)}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }
