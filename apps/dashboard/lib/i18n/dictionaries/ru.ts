@@ -170,14 +170,17 @@ const ru: Dictionary = {
       deleting: "Удаляем...",
     },
     myProfile: {
-      eyebrow: "Uni Apply",
-      title: "Мой профиль",
+      brand: "LotsApply",
+      title: "Мои заявки",
       emptyTitle: "Вы ещё не заполнили профиль",
       emptyDesc:
         "Добавьте основные данные, чтобы вузы могли найти их в ваших заявках.",
       fillProfile: "Заполнить профиль",
       noUniversitiesYet: "Вузы пока не выбраны",
-      editProfile: "Редактировать профиль",
+      phone: "Телефон",
+      startApplication: "Начать заявку",
+      editApplication: "Редактировать заявку",
+      viewDetails: "Посмотреть детали",
     },
     newStudent: {
       eyebrow: "За пределами MVP",

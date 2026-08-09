@@ -163,14 +163,17 @@ const en = {
       deleting: "Deleting…",
     },
     myProfile: {
-      eyebrow: "Uni Apply",
-      title: "My profile",
+      brand: "LotsApply",
+      title: "My Applications",
       emptyTitle: "You haven't filled in your profile yet",
       emptyDesc:
         "Add your basic details so universities can find them on your applications.",
       fillProfile: "Fill in your profile",
       noUniversitiesYet: "No universities yet",
-      editProfile: "Edit profile",
+      phone: "Phone",
+      startApplication: "Start application",
+      editApplication: "Edit application",
+      viewDetails: "View details",
     },
     newStudent: {
       eyebrow: "Outside MVP scope",

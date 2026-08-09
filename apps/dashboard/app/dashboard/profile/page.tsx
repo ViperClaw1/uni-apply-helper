@@ -95,7 +95,7 @@ export default function ProfileWizardPage() {
       />
 
       {step === 6 && profile ? (
-        <div className="mt-6">
+        <div key={step} className="page-transition mt-6">
           <StudentProfilePage
             studentId={profile.id}
             showBackLink={false}
@@ -103,7 +103,10 @@ export default function ProfileWizardPage() {
           />
         </div>
       ) : (
-        <div className="mt-6 rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(15,23,42,0.08),0_8px_30px_rgba(15,23,42,0.04)] ring-1 ring-black/5">
+        <div
+          key={step}
+          className="page-transition mt-6 rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(15,23,42,0.08),0_8px_30px_rgba(15,23,42,0.04)] ring-1 ring-black/5"
+        >
           {step === 1 ? (
             <PersonalStep
               initial={toPersonalInput(profile)}

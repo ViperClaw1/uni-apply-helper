@@ -3,6 +3,14 @@
 import type { ReactNode } from "react";
 import { useLocale } from "@/lib/i18n/context";
 
+export function Logo() {
+  return (
+    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-sm font-bold text-white">
+      L
+    </span>
+  );
+}
+
 export function LanguageSwitcher() {
   const { locale, setLocale } = useLocale();
 
@@ -41,9 +49,7 @@ export function Header({ eyebrow, title, nav, actions, variant = "page" }: Heade
       <header className="border-b border-slate-100">
         <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-6">
           <div className="flex items-center gap-2">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-sm font-bold text-white">
-              L
-            </span>
+            <Logo />
             <span className="text-lg font-semibold tracking-tight text-slate-950">{title}</span>
           </div>
 
