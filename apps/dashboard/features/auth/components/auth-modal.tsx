@@ -3,9 +3,10 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { isAxiosError } from "axios";
+import { useT } from "@/lib/i18n/context";
 import { login, signup, type AccountRole } from "../api/auth.api";
 import { COUNTRIES, flagEmoji } from "../lib/countries";
-import { isPasswordValid, PASSWORD_POLICY_MESSAGE } from "../lib/password-policy";
+import { isPasswordValid } from "../lib/password-policy";
 
 type Mode = "login" | "signup";
 type Phase = "form" | "submitting" | "check-email";
@@ -29,6 +30,7 @@ const INITIAL_FIELDS = {
 };
 
 export function AuthModal({ open, initialMode, initialRole, onClose }: AuthModalProps) {
+  const t = useT();
   const router = useRouter();
   const [mode, setMode] = useState<Mode>(initialMode);
   const [role, setRole] = useState<AccountRole>(initialRole);
@@ -79,12 +81,12 @@ export function AuthModal({ open, initialMode, initialRole, onClose }: AuthModal
   }
 
   const emailError =
-    fields.email && !EMAIL_REGEX.test(fields.email) ? "Enter a valid email address." : null;
+    fields.email && !EMAIL_REGEX.test(fields.email) ? t.auth.errors.invalidEmail : null;
   const passwordError =
-    fields.password && !isPasswordValid(fields.password) ? PASSWORD_POLICY_MESSAGE : null;
+    fields.password && !isPasswordValid(fields.password) ? t.auth.errors.passwordPolicy : null;
   const confirmPasswordError =
     fields.confirmPassword && fields.confirmPassword !== fields.password
-      ? "Passwords do not match."
+      ? t.auth.errors.passwordMismatch
       : null;
 
   function updateField<K extends keyof typeof INITIAL_FIELDS>(key: K, value: string) {
@@ -101,13 +103,13 @@ export function AuthModal({ open, initialMode, initialRole, onClose }: AuthModal
 
   function validateCredentialsStep(): string | null {
     if (!fields.email.trim()) {
-      return "Email is required.";
+      return t.auth.errors.emailRequired;
     }
     if (!isPasswordValid(fields.password)) {
-      return PASSWORD_POLICY_MESSAGE;
+      return t.auth.errors.passwordPolicy;
     }
     if (fields.password !== fields.confirmPassword) {
-      return "Passwords do not match.";
+      return t.auth.errors.passwordMismatch;
     }
     return null;
   }
@@ -121,7 +123,7 @@ export function AuthModal({ open, initialMode, initialRole, onClose }: AuthModal
       await login({ email: fields.email, password: fields.password });
       router.push("/dashboard");
     } catch (submitError) {
-      setError(extractErrorMessage(submitError));
+      setError(extractErrorMessage(submitError, t.common.somethingWentWrong));
       setPhase("form");
     }
   }
@@ -146,7 +148,7 @@ export function AuthModal({ open, initialMode, initialRole, onClose }: AuthModal
     event.preventDefault();
 
     if (!fields.legalName.trim() || !fields.taxId.trim()) {
-      setError("Legal name and tax ID are required.");
+      setError(t.auth.errors.legalNameRequired);
       return;
     }
 
@@ -182,7 +184,7 @@ export function AuthModal({ open, initialMode, initialRole, onClose }: AuthModal
         setPhase("check-email");
       }
     } catch (submitError) {
-      setError(extractErrorMessage(submitError));
+      setError(extractErrorMessage(submitError, t.common.somethingWentWrong));
       setPhase("form");
     }
   }
@@ -193,7 +195,7 @@ export function AuthModal({ open, initialMode, initialRole, onClose }: AuthModal
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
         type="button"
-        aria-label="Close"
+        aria-label={t.common.close}
         disabled={isSubmitting}
         onClick={onClose}
         className="absolute inset-0 bg-slate-950/40 backdrop-blur-[2px]"
@@ -209,7 +211,7 @@ export function AuthModal({ open, initialMode, initialRole, onClose }: AuthModal
         ) : (
           <>
             <h2 id="auth-modal-title" className="text-lg font-semibold tracking-tight text-slate-950">
-              {mode === "login" ? "Log in" : "Create your account"}
+              {mode === "login" ? t.auth.logInTitle : t.auth.createAccountTitle}
             </h2>
 
             {mode === "signup" ? (
@@ -228,23 +230,23 @@ export function AuthModal({ open, initialMode, initialRole, onClose }: AuthModal
 
             {mode === "login" ? (
               <form onSubmit={handleLoginSubmit} className="mt-4 flex flex-col gap-3">
-                <Field label="Email" type="email" placeholder="you@example.com" value={fields.email} onChange={(v) => updateField("email", v)} error={emailError} required />
-                <Field label="Password" type="password" placeholder="Enter your password" value={fields.password} onChange={(v) => updateField("password", v)} required />
-                <SubmitButton isSubmitting={isSubmitting} label="Log in" />
+                <Field label={t.auth.email} type="email" placeholder={t.auth.emailPlaceholder} value={fields.email} onChange={(v) => updateField("email", v)} error={emailError} required />
+                <Field label={t.auth.password} type="password" placeholder={t.auth.passwordPlaceholderLogin} value={fields.password} onChange={(v) => updateField("password", v)} required />
+                <SubmitButton isSubmitting={isSubmitting} label={t.auth.logInTitle} />
               </form>
             ) : step === 1 ? (
               <form onSubmit={handleSignupStep1Submit} className="mt-4 flex flex-col gap-3">
-                <Field label="Email" type="email" placeholder="you@example.com" value={fields.email} onChange={(v) => updateField("email", v)} error={emailError} required />
-                <Field label="Password" type="password" placeholder="At least 8 characters" value={fields.password} onChange={(v) => updateField("password", v)} error={passwordError} required />
-                <Field label="Confirm password" type="password" placeholder="Re-enter your password" value={fields.confirmPassword} onChange={(v) => updateField("confirmPassword", v)} error={confirmPasswordError} required />
-                <p className="text-xs text-slate-400">{PASSWORD_POLICY_MESSAGE}</p>
-                <SubmitButton isSubmitting={isSubmitting} label={role === "agency" ? "Continue" : "Create account"} />
+                <Field label={t.auth.email} type="email" placeholder={t.auth.emailPlaceholder} value={fields.email} onChange={(v) => updateField("email", v)} error={emailError} required />
+                <Field label={t.auth.password} type="password" placeholder={t.auth.passwordPlaceholderSignup} value={fields.password} onChange={(v) => updateField("password", v)} error={passwordError} required />
+                <Field label={t.auth.confirmPassword} type="password" placeholder={t.auth.confirmPasswordPlaceholder} value={fields.confirmPassword} onChange={(v) => updateField("confirmPassword", v)} error={confirmPasswordError} required />
+                <p className="text-xs text-slate-400">{t.auth.errors.passwordPolicy}</p>
+                <SubmitButton isSubmitting={isSubmitting} label={role === "agency" ? t.auth.continueButton : t.auth.createAccountButton} />
               </form>
             ) : (
               <form onSubmit={handleSignupStep2Submit} className="mt-4 flex flex-col gap-3">
-                <Field label="Agency legal name" placeholder="e.g. Acme Education Consulting" value={fields.legalName} onChange={(v) => updateField("legalName", v)} required />
+                <Field label={t.auth.agencyLegalName} placeholder={t.auth.agencyLegalNamePlaceholder} value={fields.legalName} onChange={(v) => updateField("legalName", v)} required />
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium text-slate-600">Business country</label>
+                  <label className="text-xs font-medium text-slate-600">{t.auth.businessCountry}</label>
                   <select
                     value={fields.country}
                     onChange={(event) => updateField("country", event.target.value)}
@@ -257,7 +259,7 @@ export function AuthModal({ open, initialMode, initialRole, onClose }: AuthModal
                     ))}
                   </select>
                 </div>
-                <Field label="Tax ID number" placeholder="e.g. 12-3456789" value={fields.taxId} onChange={(v) => updateField("taxId", v)} required />
+                <Field label={t.auth.taxId} placeholder={t.auth.taxIdPlaceholder} value={fields.taxId} onChange={(v) => updateField("taxId", v)} required />
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -265,9 +267,9 @@ export function AuthModal({ open, initialMode, initialRole, onClose }: AuthModal
                     onClick={() => setStep(1)}
                     className="inline-flex h-10 flex-1 cursor-pointer items-center justify-center rounded-xl px-4 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-60"
                   >
-                    Back
+                    {t.common.back}
                   </button>
-                  <SubmitButton isSubmitting={isSubmitting} label="Create account" className="flex-1" />
+                  <SubmitButton isSubmitting={isSubmitting} label={t.auth.createAccountButton} className="flex-1" />
                 </div>
               </form>
             )}
@@ -275,16 +277,16 @@ export function AuthModal({ open, initialMode, initialRole, onClose }: AuthModal
             <p className="mt-4 text-center text-xs text-slate-500">
               {mode === "login" ? (
                 <>
-                  Don&apos;t have an account?{" "}
+                  {t.auth.dontHaveAccount}{" "}
                   <button type="button" onClick={() => switchMode("signup")} className="cursor-pointer font-semibold text-blue-600">
-                    Sign up
+                    {t.auth.signUp}
                   </button>
                 </>
               ) : (
                 <>
-                  Already have an account?{" "}
+                  {t.auth.alreadyHaveAccount}{" "}
                   <button type="button" onClick={() => switchMode("login")} className="cursor-pointer font-semibold text-blue-600">
-                    Log in
+                    {t.auth.logInTitle}
                   </button>
                 </>
               )}
@@ -305,6 +307,8 @@ function RoleTabs({
   disabled: boolean;
   onChange: (role: AccountRole) => void;
 }) {
+  const t = useT();
+
   return (
     <div className="mt-3 flex rounded-xl bg-slate-100 p-1 text-sm font-medium">
       {(["student", "agency"] as const).map((option) => (
@@ -317,7 +321,7 @@ function RoleTabs({
             role === option ? "bg-white text-slate-950 shadow-sm" : "text-slate-500"
           }`}
         >
-          {option === "student" ? "Student" : "Agency"}
+          {option === "student" ? t.auth.student : t.auth.agency}
         </button>
       ))}
     </div>
@@ -368,39 +372,42 @@ function SubmitButton({
   label: string;
   className?: string;
 }) {
+  const t = useT();
+
   return (
     <button
       type="submit"
       disabled={isSubmitting}
       className={`inline-flex h-10 cursor-pointer items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-500 disabled:pointer-events-none disabled:opacity-60 ${className}`}
     >
-      {isSubmitting ? "Please wait…" : label}
+      {isSubmitting ? t.auth.pleaseWait : label}
     </button>
   );
 }
 
 function CheckEmailPanel({ email, onClose }: { email: string; onClose: () => void }) {
+  const t = useT();
+
   return (
     <div className="text-center">
-      <h2 className="text-lg font-semibold tracking-tight text-slate-950">Check your email</h2>
+      <h2 className="text-lg font-semibold tracking-tight text-slate-950">{t.auth.checkEmailTitle}</h2>
       <p className="mt-2 text-sm leading-6 text-slate-600">
-        We sent a confirmation link to <span className="font-medium text-slate-800">{email}</span>.
-        Click it to finish setting up your account.
+        {t.auth.checkEmailDescPrefix}<span className="font-medium text-slate-800">{email}</span>{t.auth.checkEmailDescSuffix}
       </p>
       <button
         type="button"
         onClick={onClose}
         className="mt-5 inline-flex h-10 cursor-pointer items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-500"
       >
-        Got it
+        {t.auth.gotIt}
       </button>
     </div>
   );
 }
 
-function extractErrorMessage(error: unknown): string {
+function extractErrorMessage(error: unknown, fallback: string): string {
   if (isAxiosError(error) && typeof error.response?.data?.message === "string") {
     return error.response.data.message;
   }
-  return "Something went wrong. Please try again.";
+  return fallback;
 }

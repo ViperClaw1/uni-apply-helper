@@ -6,6 +6,7 @@ import {
   type MyGuarantorInput,
 } from "@/features/students/api/students.api";
 import type { StudentProfile } from "@/features/students/types/student.types";
+import { useT } from "@/lib/i18n/context";
 import {
   ErrorBanner,
   Field,
@@ -23,6 +24,7 @@ export function GuarantorStep({
   onNext: (profile: StudentProfile) => void;
   onBack: () => void;
 }) {
+  const t = useT();
   const [fields, setFields] = useState<MyGuarantorInput>(initial);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +45,7 @@ export function GuarantorStep({
       const profile = await saveMyGuarantor(fields);
       onNext(profile);
     } catch (submitError) {
-      setError(extractErrorMessage(submitError));
+      setError(extractErrorMessage(submitError, t.common.somethingWentWrong));
       setIsSubmitting(false);
     }
   }
@@ -52,35 +54,35 @@ export function GuarantorStep({
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       <ErrorBanner message={error} />
 
-      <StepSection title="Guarantor">
+      <StepSection title={t.profileWizard.guarantor.section}>
         <Field
-          label="Full name"
+          label={t.profileWizard.guarantor.fullName}
           placeholder="Bekzat Yusupov"
           value={fields.name}
           onChange={(v) => updateField("name", v)}
           required
         />
         <Field
-          label="Relationship"
+          label={t.profileWizard.guarantor.relationship}
           placeholder="Father"
           value={fields.relationship ?? ""}
           onChange={(v) => updateField("relationship", v)}
         />
         <Field
-          label="Phone"
+          label={t.profileWizard.guarantor.phone}
           placeholder="+7 701 234 5678"
           value={fields.phone ?? ""}
           onChange={(v) => updateField("phone", v)}
         />
         <Field
-          label="Email"
+          label={t.profileWizard.guarantor.email}
           type="email"
           placeholder="guarantor@example.com"
           value={fields.email ?? ""}
           onChange={(v) => updateField("email", v)}
         />
         <Field
-          label="Home address"
+          label={t.profileWizard.guarantor.homeAddress}
           placeholder="456 Oak St, Almaty"
           value={fields.homeAddress ?? ""}
           onChange={(v) => updateField("homeAddress", v)}

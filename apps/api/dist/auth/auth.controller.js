@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthController = void 0;
 const common_1 = require("@nestjs/common");
@@ -116,7 +117,6 @@ __decorate([
 ], AuthController.prototype, "me", null);
 exports.AuthController = AuthController = __decorate([
     (0, common_1.Controller)('auth'),
-    __metadata("design:paramtypes", [auth_service_1.AuthService,
-        config_1.ConfigService])
+    __metadata("design:paramtypes", [auth_service_1.AuthService, typeof (_a = typeof config_1.ConfigService !== "undefined" && config_1.ConfigService) === "function" ? _a : Object])
 ], AuthController);
 //# sourceMappingURL=auth.controller.js.map

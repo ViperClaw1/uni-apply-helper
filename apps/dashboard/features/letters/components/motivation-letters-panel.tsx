@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocale, useT } from "@/lib/i18n/context";
 import {
   approveLetter,
   generateLetter,
@@ -27,6 +28,8 @@ export function MotivationLettersPanel({
   student,
   highlightUniversityId,
 }: MotivationLettersPanelProps) {
+  const t = useT();
+  const { locale } = useLocale();
   const studentId = student.id;
   const [letters, setLetters] = useState<MotivationLetter[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -59,11 +62,11 @@ export function MotivationLettersPanel({
     try {
       setLetters(await getStudentLetters(studentId));
     } catch {
-      setError("Не удалось загрузить мотивационные письма.");
+      setError(t.letters.loadFailed);
     } finally {
       setIsLoading(false);
     }
-  }, [studentId]);
+  }, [studentId, t]);
 
   useEffect(() => {
     loadLetters().catch(() => undefined);
@@ -97,7 +100,7 @@ export function MotivationLettersPanel({
       setExpandedLetterId(letter.id);
       setApprovalConfirmed((current) => ({ ...current, [letter.id]: false }));
     } catch {
-      setActionError("Не удалось сгенерировать письмо. Проверь GEMINI_API_KEY на API.");
+      setActionError(t.letters.generateFailed);
     } finally {
       setGeneratingUniversityId(null);
     }
@@ -118,7 +121,7 @@ export function MotivationLettersPanel({
       );
       setApprovalConfirmed((current) => ({ ...current, [letter.id]: false }));
     } catch {
-      setActionError("Не удалось одобрить письмо.");
+      setActionError(t.letters.approveFailed);
     } finally {
       setPendingAction(null);
     }
@@ -134,7 +137,7 @@ export function MotivationLettersPanel({
         current.map((item) => (item.id === updated.id ? updated : item)),
       );
     } catch {
-      setActionError("Не удалось снять одобрение.");
+      setActionError(t.letters.unapproveFailed);
     } finally {
       setPendingAction(null);
     }
@@ -152,10 +155,10 @@ export function MotivationLettersPanel({
     >
       <div>
         <h2 className="text-xl font-semibold tracking-tight text-slate-950">
-          Мотивационные письма
+          {t.letters.title}
         </h2>
         <p className="mt-1 text-sm text-slate-500">
-          Сгенерируй, проверь имя студента в тексте и одобри перед подачей заявок.
+          {t.letters.description}
         </p>
       </div>
 
@@ -174,15 +177,15 @@ export function MotivationLettersPanel({
                 className="inline-flex h-10 w-full cursor-pointer items-center justify-center rounded-xl bg-slate-950 px-4 text-xs font-semibold text-white transition-colors hover:bg-slate-800 disabled:pointer-events-none disabled:opacity-60"
               >
                 {generatingUniversityId === target.universityId
-                  ? "Генерируем..."
-                  : `Сгенерировать · ${target.universityRaw}`}
+                  ? t.letters.generating
+                  : `${t.letters.generatePrefix}${target.universityRaw}`}
               </button>
             </div>
           ))}
         </div>
       ) : (
         <div className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800 ring-1 ring-amber-100">
-          Нет вузов с привязанным universityId — генерация недоступна.
+          {t.letters.noTargets}
         </div>
       )}
 
@@ -194,14 +197,14 @@ export function MotivationLettersPanel({
 
       <div className="mt-5">
         {isLoading ? (
-          <div className="text-sm text-slate-500">Загрузка писем...</div>
+          <div className="text-sm text-slate-500">{t.letters.loadingLetters}</div>
         ) : error ? (
           <div className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700 ring-1 ring-rose-100">
             {error}
           </div>
         ) : letters.length === 0 ? (
           <div className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
-            Писем пока нет.
+            {t.letters.noLetters}
           </div>
         ) : (
           <div className="divide-y divide-slate-100">
@@ -241,7 +244,7 @@ export function MotivationLettersPanel({
                       </div>
                       <div className="mt-1 text-xs text-slate-500 tabular-nums">
                         {letter.universityId} ·{" "}
-                        {new Intl.DateTimeFormat("ru-RU", {
+                        {new Intl.DateTimeFormat(locale === "ru" ? "ru-RU" : "en-US", {
                           dateStyle: "medium",
                           timeStyle: "short",
                         }).format(new Date(letter.generatedAt))}
@@ -259,27 +262,27 @@ export function MotivationLettersPanel({
                     <div className="mt-4 space-y-4">
                       <div className="rounded-xl bg-sky-50 px-4 py-3 ring-1 ring-sky-100">
                         <div className="text-xs font-semibold uppercase tracking-wide text-sky-800">
-                          Сверка перед одобрением
+                          {t.letters.reviewBeforeApproval}
                         </div>
                         <div className="mt-2 text-sm font-semibold text-slate-950">
-                          {studentName || "Имя не указано"}
+                          {studentName || t.common.nameNotSet}
                         </div>
                         <div className="mt-1 text-sm text-slate-600">
-                          {student.personal.email || "Email не указан"}
+                          {student.personal.email || t.common.emailNotProvided}
                         </div>
                         <div className="mt-2 text-xs text-slate-500">
-                          Вуз: {universityLabel} ({letter.universityId})
+                          {t.letters.universityPrefix}{universityLabel} ({letter.universityId})
                         </div>
                         {studentMismatch ? (
                           <div className="mt-2 text-xs font-semibold text-rose-700">
-                            Ошибка матчинга: letter.studentId не совпадает с карточкой.
+                            {t.letters.mismatchError}
                           </div>
                         ) : null}
                       </div>
 
                       <div className="rounded-xl bg-slate-50 px-4 py-3 ring-1 ring-slate-100">
                         <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          Текст письма
+                          {t.letters.letterText}
                         </div>
                         <div className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-800">
                           {letter.content}
@@ -289,9 +292,9 @@ export function MotivationLettersPanel({
                       {letter.approvedByConsultant ? (
                         <div className="flex flex-wrap items-center gap-3">
                           <div className="text-xs text-emerald-700">
-                            Одобрено{" "}
+                            {t.letters.approvedPrefix}
                             {letter.approvedAt
-                              ? new Intl.DateTimeFormat("ru-RU", {
+                              ? new Intl.DateTimeFormat(locale === "ru" ? "ru-RU" : "en-US", {
                                   dateStyle: "medium",
                                   timeStyle: "short",
                                 }).format(new Date(letter.approvedAt))
@@ -303,7 +306,7 @@ export function MotivationLettersPanel({
                             disabled={pendingAction !== null}
                             className="inline-flex h-9 items-center rounded-xl px-3 text-xs font-semibold text-amber-800 ring-1 ring-amber-200 transition-colors hover:bg-amber-50 disabled:opacity-60"
                           >
-                            {isUnapproving ? "Снимаем..." : "Снять одобрение"}
+                            {isUnapproving ? t.letters.removing : t.letters.removeApproval}
                           </button>
                         </div>
                       ) : (
@@ -322,8 +325,7 @@ export function MotivationLettersPanel({
                               className="mt-0.5 h-4 w-4 rounded border-slate-300"
                             />
                             <span>
-                              Подтверждаю: письмо относится к этому студенту и вузу, имя
-                              и данные в тексте проверены.
+                              {t.letters.confirmCheckbox}
                             </span>
                           </label>
                           <button
@@ -335,7 +337,7 @@ export function MotivationLettersPanel({
                             }
                             className="inline-flex h-10 items-center rounded-xl bg-emerald-700 px-4 text-xs font-semibold text-white transition-colors hover:bg-emerald-600 disabled:pointer-events-none disabled:opacity-60"
                           >
-                            {isApproving ? "Одобряем..." : "Одобрить письмо"}
+                            {isApproving ? t.letters.approving : t.letters.approveLetter}
                           </button>
                         </div>
                       )}
@@ -352,6 +354,8 @@ export function MotivationLettersPanel({
 }
 
 function LetterStatusBadge({ approved }: { approved: boolean }) {
+  const t = useT();
+
   return (
     <span
       className={[
@@ -361,7 +365,7 @@ function LetterStatusBadge({ approved }: { approved: boolean }) {
           : "bg-amber-50 text-amber-700 ring-amber-100",
       ].join(" ")}
     >
-      {approved ? "Одобрено" : "Черновик"}
+      {approved ? t.letters.statusApproved : t.letters.statusDraft}
     </span>
   );
 }

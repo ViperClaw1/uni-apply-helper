@@ -1,19 +1,21 @@
+"use client";
+
 import Link from "next/link";
+import { Header } from "@/components/header";
+import { useT } from "@/lib/i18n/context";
 import { toTitleCase } from "@/lib/format";
 import type { StudentProfile } from "../types/student.types";
 
 export function MyProfileCard({ student }: { student: StudentProfile | null }) {
+  const t = useT();
+
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-2xl flex-col px-6 py-8">
-      <header className="mb-8 flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-slate-500">Uni Apply</p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-950">
-            My profile
-          </h1>
-        </div>
-        <BackButton />
-      </header>
+      <Header
+        eyebrow={t.students.myProfile.eyebrow}
+        title={t.students.myProfile.title}
+        actions={<BackButton />}
+      />
 
       {student ? <FilledCard student={student} /> : <EmptyCard />}
     </div>
@@ -21,26 +23,28 @@ export function MyProfileCard({ student }: { student: StudentProfile | null }) {
 }
 
 function EmptyCard() {
+  const t = useT();
+
   return (
     <div className="rounded-2xl bg-white p-10 text-center shadow-[0_1px_2px_rgba(15,23,42,0.08),0_8px_30px_rgba(15,23,42,0.04)] ring-1 ring-black/5">
       <h2 className="text-lg font-semibold text-slate-950">
-        You haven&apos;t filled in your profile yet
+        {t.students.myProfile.emptyTitle}
       </h2>
       <p className="mt-2 text-sm text-slate-500">
-        Add your basic details so universities can find them on your
-        applications.
+        {t.students.myProfile.emptyDesc}
       </p>
       <Link
         href="/dashboard/profile"
         className="mt-6 inline-flex h-11 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-medium text-white shadow-sm transition-transform hover:bg-slate-800 active:scale-[0.96]"
       >
-        Fill in your profile
+        {t.students.myProfile.fillProfile}
       </Link>
     </div>
   );
 }
 
 function FilledCard({ student }: { student: StudentProfile }) {
+  const t = useT();
   const name = [student.personal.givenName, student.personal.surname]
     .filter(Boolean)
     .map(toTitleCase)
@@ -52,7 +56,7 @@ function FilledCard({ student }: { student: StudentProfile }) {
   return (
     <div className="rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.08),0_8px_30px_rgba(15,23,42,0.04)] ring-1 ring-black/5">
       <div className="text-base font-semibold text-slate-950">
-        {name || "Name not set"}
+        {name || t.common.nameNotSet}
       </div>
       <div className="mt-1 text-sm text-slate-500">{student.personal.email}</div>
 
@@ -68,27 +72,29 @@ function FilledCard({ student }: { student: StudentProfile }) {
           ))}
         </div>
       ) : (
-        <div className="mt-3 text-sm text-slate-400">No universities yet</div>
+        <div className="mt-3 text-sm text-slate-400">{t.students.myProfile.noUniversitiesYet}</div>
       )}
 
       <Link
         href="/dashboard/profile"
         className="mt-5 inline-flex h-10 items-center justify-center rounded-xl px-4 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-slate-50"
       >
-        Edit profile
+        {t.students.myProfile.editProfile}
       </Link>
     </div>
   );
 }
 
 function BackButton() {
+  const t = useT();
+
   return (
     <Link
       href="/"
       className="inline-flex h-10 items-center justify-center gap-1.5 rounded-xl px-4 text-sm font-medium text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-slate-50"
     >
       <BackIcon />
-      Back
+      {t.common.back}
     </Link>
   );
 }

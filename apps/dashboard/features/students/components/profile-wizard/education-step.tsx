@@ -7,6 +7,7 @@ import {
   type MyEducationInput,
 } from "@/features/students/api/students.api";
 import type { StudentProfile } from "@/features/students/types/student.types";
+import { useT } from "@/lib/i18n/context";
 import {
   ErrorBanner,
   Field,
@@ -25,6 +26,7 @@ export function EducationStep({
   onNext: (profile: StudentProfile) => void;
   onBack: () => void;
 }) {
+  const t = useT();
   const [fields, setFields] = useState<MyEducationInput>(initial);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +51,7 @@ export function EducationStep({
       const profile = await saveMyEducation(fields);
       onNext(profile);
     } catch (submitError) {
-      setError(extractErrorMessage(submitError));
+      setError(extractErrorMessage(submitError, t.common.somethingWentWrong));
       setIsSubmitting(false);
     }
   }
@@ -58,81 +60,81 @@ export function EducationStep({
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       <ErrorBanner message={error} />
 
-      <StepSection title="Secondary education (school)">
+      <StepSection title={t.profileWizard.education.sectionSchool}>
         <Field
-          label="School name"
+          label={t.profileWizard.education.schoolName}
           placeholder="School 123"
           value={fields.school?.institution ?? ""}
           onChange={(v) => updateLevel("school", "institution", v)}
         />
         <Field
-          label="Degree"
+          label={t.profileWizard.education.degree}
           placeholder="High School Diploma"
           value={fields.school?.degree ?? ""}
           onChange={(v) => updateLevel("school", "degree", v)}
         />
         <Field
-          label="Major"
+          label={t.profileWizard.education.major}
           placeholder="General"
           value={fields.school?.major ?? ""}
           onChange={(v) => updateLevel("school", "major", v)}
         />
         <div className="grid grid-cols-2 gap-4">
           <YearField
-            label="Start year"
+            label={t.profileWizard.education.startYear}
             value={fields.school?.periodStartYear}
             onChange={(v) => updateLevel("school", "periodStartYear", v)}
           />
           <YearField
-            label="End year"
+            label={t.profileWizard.education.endYear}
             value={fields.school?.periodEndYear}
             onChange={(v) => updateLevel("school", "periodEndYear", v)}
           />
         </div>
       </StepSection>
 
-      <StepSection title="Higher education">
+      <StepSection title={t.profileWizard.education.sectionHigher}>
         <Field
-          label="Institution"
+          label={t.profileWizard.education.institution}
           placeholder="Peking University"
           value={fields.higher?.institution ?? ""}
           onChange={(v) => updateLevel("higher", "institution", v)}
         />
         <Field
-          label="Degree"
+          label={t.profileWizard.education.degree}
           placeholder="Bachelor's"
           value={fields.higher?.degree ?? ""}
           onChange={(v) => updateLevel("higher", "degree", v)}
         />
         <Field
-          label="Major"
+          label={t.profileWizard.education.major}
           placeholder="Computer Science"
           value={fields.higher?.major ?? ""}
           onChange={(v) => updateLevel("higher", "major", v)}
         />
         <div className="grid grid-cols-2 gap-4">
           <YearField
-            label="Start year"
+            label={t.profileWizard.education.startYear}
             value={fields.higher?.periodStartYear}
             onChange={(v) => updateLevel("higher", "periodStartYear", v)}
           />
           <YearField
-            label="End year"
+            label={t.profileWizard.education.endYear}
             value={fields.higher?.periodEndYear}
             onChange={(v) => updateLevel("higher", "periodEndYear", v)}
           />
         </div>
       </StepSection>
 
-      <StepSection title="Languages">
+      <StepSection title={t.profileWizard.education.sectionLanguages}>
         <Field
-          label="Chinese level (HSK score)"
+          label={t.profileWizard.education.chineseLevel}
           placeholder="HSK 4"
           value={fields.chineseLevel ?? ""}
           onChange={(v) => setFields((current) => ({ ...current, chineseLevel: v }))}
         />
         <Field
-          label="English level"
+          label={t.profileWizard.education.englishLevel}
           placeholder="IELTS 6.5"
           value={fields.englishLevel ?? ""}
           onChange={(v) => setFields((current) => ({ ...current, englishLevel: v }))}

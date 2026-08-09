@@ -1,23 +1,13 @@
-export function getBatchStatusLabel(status: string) {
-  const labels: Record<string, string> = {
-    queued: "В очереди",
-    processing: "В работе",
-    completed: "Завершен",
-    failed: "Ошибка",
-  };
+import type { Dictionary } from "@/lib/i18n/dictionaries/en";
+
+export function getBatchStatusLabel(status: string, t: Dictionary) {
+  const labels: Record<string, string> = t.applications.status.batch;
 
   return labels[status] ?? status;
 }
 
-export function getApplicationStatusLabel(status: string) {
-  const labels: Record<string, string> = {
-    queued: "В очереди",
-    processing: "В обработке",
-    ready_for_submission: "Готова к подаче",
-    blocked: "Заблокирована",
-    submitted: "Отправлена",
-    failed: "Ошибка",
-  };
+export function getApplicationStatusLabel(status: string, t: Dictionary) {
+  const labels: Record<string, string> = t.applications.status.application;
 
   return labels[status] ?? status;
 }

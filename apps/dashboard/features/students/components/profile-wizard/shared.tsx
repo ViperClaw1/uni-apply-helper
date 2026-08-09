@@ -1,4 +1,5 @@
 import { isAxiosError } from "axios";
+import { useT } from "@/lib/i18n/context";
 
 export function Field({
   label,
@@ -38,7 +39,7 @@ export function SelectField({
   value,
   onChange,
   options,
-  placeholder = "Select…",
+  placeholder,
   required,
 }: {
   label: string;
@@ -48,6 +49,8 @@ export function SelectField({
   placeholder?: string;
   required?: boolean;
 }) {
+  const t = useT();
+
   return (
     <div className="flex flex-col gap-1">
       <label className="text-xs font-medium text-slate-600">
@@ -61,7 +64,7 @@ export function SelectField({
         className="h-10 rounded-lg border border-slate-200 px-3 text-sm text-slate-800 outline-none focus:border-blue-400"
       >
         <option value="" disabled hidden>
-          {placeholder}
+          {placeholder ?? t.profileWizard.shared.selectPlaceholder}
         </option>
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -140,12 +143,14 @@ export function StepSection({
 export function StepActions({
   onBack,
   isSubmitting,
-  continueLabel = "Continue",
+  continueLabel,
 }: {
   onBack?: () => void;
   isSubmitting: boolean;
   continueLabel?: string;
 }) {
+  const t = useT();
+
   return (
     <div className="flex gap-2">
       {onBack ? (
@@ -155,7 +160,7 @@ export function StepActions({
           disabled={isSubmitting}
           className="inline-flex h-11 flex-1 cursor-pointer items-center justify-center rounded-xl px-5 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-60"
         >
-          Back
+          {t.common.back}
         </button>
       ) : null}
       <button
@@ -163,7 +168,7 @@ export function StepActions({
         disabled={isSubmitting}
         className="inline-flex h-11 flex-1 cursor-pointer items-center justify-center rounded-xl bg-slate-950 px-5 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:pointer-events-none disabled:opacity-60"
       >
-        {isSubmitting ? "Saving…" : continueLabel}
+        {isSubmitting ? t.profileWizard.shared.saving : (continueLabel ?? t.common.continueLabel)}
       </button>
     </div>
   );
@@ -181,12 +186,12 @@ export function ErrorBanner({ message }: { message: string | null }) {
   );
 }
 
-export function extractErrorMessage(error: unknown): string {
+export function extractErrorMessage(error: unknown, fallback: string): string {
   if (
     isAxiosError(error) &&
     typeof error.response?.data?.message === "string"
   ) {
     return error.response.data.message;
   }
-  return "Something went wrong. Please try again.";
+  return fallback;
 }

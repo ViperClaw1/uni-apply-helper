@@ -4,6 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { DragEvent } from "react";
 import { useDropzone } from "react-dropzone";
 import { toTitleCase } from "@/lib/format";
+import { useT } from "@/lib/i18n/context";
+import type { Dictionary } from "@/lib/i18n/dictionaries/en";
 import {
   deleteStudentDocument,
   reorderStudentDocuments,
@@ -36,6 +38,7 @@ export function DocumentUploader({
   existingDocuments = [],
   onUploaded,
 }: DocumentUploaderProps) {
+  const t = useT();
   const [status, setStatus] = useState<UploadStatus>("idle");
   const [isRetryingParse, setIsRetryingParse] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -187,12 +190,12 @@ export function DocumentUploader({
             <div className="text-sm font-semibold text-slate-950">{label}</div>
             <div className="mt-1 text-xs font-medium text-emerald-700">
               {status === "uploading"
-                ? "Добавляем файлы..."
-                : `Загружено файлов: ${orderedDocs.length}`}
+                ? t.documents.uploader.addingFiles
+                : `${t.documents.uploader.filesUploadedPrefix}${orderedDocs.length}`}
             </div>
             {status === "error" ? (
               <div className="mt-1 text-xs font-medium text-rose-700">
-                Ошибка загрузки
+                {t.documents.uploader.uploadError}
               </div>
             ) : null}
           </div>
@@ -206,7 +209,7 @@ export function DocumentUploader({
             ].join(" ")}
           >
             <input {...getInputProps()} />
-            {status === "uploading" ? "Загрузка..." : "Добавить ещё"}
+            {status === "uploading" ? t.documents.uploader.uploading : t.documents.uploader.addMore}
           </div>
         </div>
 
@@ -229,7 +232,7 @@ export function DocumentUploader({
         </div>
 
         <p className="mt-3 text-[11px] text-slate-400">
-          Перетащите карточки для порядка · первый слева уйдёт в портал первым
+          {t.documents.uploader.reorderHint}
         </p>
       </div>
     );
@@ -249,18 +252,18 @@ export function DocumentUploader({
                 ].join(" ")}
               >
                 {status === "uploading"
-                  ? "Загружаем новую версию..."
-                  : getUploadedStatusText(existingDocument, parse, 1)}
+                  ? t.documents.uploader.uploadingNewVersion
+                  : getUploadedStatusText(existingDocument, parse, 1, t)}
               </div>
             ) : null}
             {status === "error" ? (
               <div className="mt-1 text-xs font-medium text-rose-700">
-                Ошибка повторной загрузки
+                {t.documents.uploader.reuploadError}
               </div>
             ) : null}
             {parse && existingDocument?.parseStatus === "failed" ? (
               <div className="mt-3 rounded-xl bg-rose-50 px-3 py-2 text-xs text-rose-700 ring-1 ring-rose-100">
-                {formatParseError(existingDocument.parsedData)}
+                {formatParseError(existingDocument.parsedData, t)}
               </div>
             ) : null}
             {parse && existingDocument?.parseStatus === "failed" ? (
@@ -270,12 +273,12 @@ export function DocumentUploader({
                 disabled={isRetryingParse}
                 className="mt-2 inline-flex h-8 cursor-pointer items-center rounded-lg px-3 text-xs font-semibold text-rose-700 ring-1 ring-rose-200 transition-colors hover:bg-rose-100 disabled:opacity-60"
               >
-                {isRetryingParse ? "Повторяем..." : "Повторить парсинг"}
+                {isRetryingParse ? t.documents.uploader.retrying : t.documents.uploader.retryParsing}
               </button>
             ) : null}
             {parse && existingDocument?.parseStatus === "parsed" ? (
               <div className="mt-3 rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600 ring-1 ring-slate-100">
-                {formatParsedPreview(type, existingDocument.parsedData)}
+                {formatParsedPreview(type, existingDocument.parsedData, t)}
               </div>
             ) : null}
           </div>
@@ -287,7 +290,7 @@ export function DocumentUploader({
                 rel="noreferrer"
                 className="inline-flex h-10 items-center justify-center rounded-xl px-3 text-xs font-semibold text-sky-700 ring-1 ring-sky-200 transition-colors hover:bg-sky-50"
               >
-                Открыть
+                {t.documents.uploader.open}
               </a>
             ) : null}
             {existingDocument ? (
@@ -297,7 +300,7 @@ export function DocumentUploader({
                 disabled={deletingId === existingDocument.id}
                 className="inline-flex h-10 cursor-pointer items-center justify-center rounded-xl px-3 text-xs font-semibold text-rose-700 ring-1 ring-rose-200 transition-colors hover:bg-rose-50 disabled:opacity-60"
               >
-                {deletingId === existingDocument.id ? "…" : "Удалить"}
+                {deletingId === existingDocument.id ? "…" : t.common.delete}
               </button>
             ) : null}
             <div
@@ -310,7 +313,7 @@ export function DocumentUploader({
               ].join(" ")}
             >
               <input {...getInputProps()} />
-              {status === "uploading" ? "Загрузка..." : "Загрузить заново"}
+              {status === "uploading" ? t.documents.uploader.uploading : t.documents.uploader.reupload}
             </div>
           </div>
         </div>
@@ -333,17 +336,17 @@ export function DocumentUploader({
     >
       <input {...getInputProps()} />
       <div className="text-sm font-semibold text-slate-950">{label}</div>
-      <div className="mt-1 text-xs text-slate-500">{getStatusText(status)}</div>
+      <div className="mt-1 text-xs text-slate-500">{getStatusText(status, t)}</div>
     </div>
   );
 }
 
-function getStatusText(status: UploadStatus) {
+function getStatusText(status: UploadStatus, t: Dictionary) {
   const labels: Record<UploadStatus, string> = {
-    done: "Загружено",
-    error: "Ошибка загрузки",
-    idle: "Перетащите PDF, JPG или PNG сюда",
-    uploading: "Загрузка...",
+    done: t.documents.uploader.uploaded,
+    error: t.documents.uploader.uploadError,
+    idle: t.documents.uploader.idle,
+    uploading: t.documents.uploader.uploading,
   };
 
   return labels[status];
@@ -353,24 +356,19 @@ function getUploadedStatusText(
   document: StudentDocument,
   parse: boolean,
   documentCount: number,
+  t: Dictionary,
 ) {
   if (!parse) {
     return documentCount > 1
-      ? `Загружено файлов: ${documentCount}`
-      : "Загружен";
+      ? `${t.documents.uploader.filesUploadedPrefix}${documentCount}`
+      : t.documents.uploader.uploaded;
   }
 
-  return `Загружен · Парсинг: ${formatParseStatus(document.parseStatus)}`;
+  return `${t.documents.uploader.uploaded} · ${t.documents.uploader.parsingLabel}: ${formatParseStatus(document.parseStatus, t)}`;
 }
 
-function formatParseStatus(status: string) {
-  const labels: Record<string, string> = {
-    failed: "ошибка",
-    parsed: "готово",
-    pending: "в очереди",
-    processing: "обработка",
-    uploaded: "не требуется",
-  };
+function formatParseStatus(status: string, t: Dictionary) {
+  const labels: Record<string, string> = t.documents.uploader.parseStatus;
 
   return labels[status] ?? status;
 }
@@ -395,27 +393,18 @@ function getParseStatusTone(parseStatus: string, parse: boolean) {
   return "text-slate-600";
 }
 
-const PASSPORT_FIELD_LABELS: Record<string, string> = {
-  surname: "Фамилия",
-  givenName: "Имя",
-  dateOfBirth: "Дата рождения",
-  nationality: "Гражданство",
-  passportNo: "Номер паспорта",
-  passportExpiry: "Срок действия",
-  cityOfBirth: "Город рождения",
-};
-
 const PASSPORT_TITLE_CASE_FIELDS = new Set(["nationality", "cityOfBirth"]);
 
-function formatParsedPreview(documentType: string, parsedData: unknown) {
+function formatParsedPreview(documentType: string, parsedData: unknown, t: Dictionary) {
   if (!parsedData || typeof parsedData !== "object") {
-    return "Данные извлечены.";
+    return t.documents.uploader.dataExtracted;
   }
 
   const record = parsedData as Record<string, unknown>;
+  const passportFieldLabels = t.documents.uploader.passportFields;
 
   if (documentType === "passport") {
-    const lines = Object.entries(PASSPORT_FIELD_LABELS)
+    const lines = Object.entries(passportFieldLabels)
       .map(([key, label]) => {
         const value = record[key];
 
@@ -433,7 +422,7 @@ function formatParsedPreview(documentType: string, parsedData: unknown) {
       })
       .filter((line): line is string => line !== null);
 
-    return lines.length > 0 ? lines.join(" · ") : "Данные извлечены.";
+    return lines.length > 0 ? lines.join(" · ") : t.documents.uploader.dataExtracted;
   }
 
   const entries = Object.entries(record)
@@ -441,15 +430,15 @@ function formatParsedPreview(documentType: string, parsedData: unknown) {
     .slice(0, 5)
     .map(([key, value]) => `${key}: ${formatPreviewValue(value)}`);
 
-  return entries.length > 0 ? entries.join(" · ") : "Данные извлечены.";
+  return entries.length > 0 ? entries.join(" · ") : t.documents.uploader.dataExtracted;
 }
 
-function formatParseError(parsedData: unknown) {
+function formatParseError(parsedData: unknown, t: Dictionary) {
   if (parsedData && typeof parsedData === "object" && "error" in parsedData) {
     const error = (parsedData as { error?: unknown }).error;
 
     if (typeof error !== "string") {
-      return "Не удалось распознать документ.";
+      return t.documents.uploader.parseFailed;
     }
 
     const unavailableMatch = error.match(
@@ -469,12 +458,12 @@ function formatParseError(parsedData: unknown) {
     return error.length > 240 ? `${error.slice(0, 240)}…` : error;
   }
 
-  return "Не удалось распознать документ.";
+  return t.documents.uploader.parseFailed;
 }
 
 function formatPreviewValue(value: unknown) {
   if (Array.isArray(value)) {
-    return `${value.length} записей`;
+    return `${value.length}`;
   }
 
   if (typeof value === "object" && value !== null) {

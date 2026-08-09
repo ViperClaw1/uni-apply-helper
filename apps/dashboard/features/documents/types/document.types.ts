@@ -19,7 +19,6 @@ export type StudentDocument = {
 
 export type DocumentTypeOption = {
   key: string;
-  label: string;
   accept: Record<string, string[]>;
   parse: boolean;
   multiple?: boolean;

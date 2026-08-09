@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { LocaleProvider } from "@/lib/i18n/context";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -25,11 +26,11 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="ru"
+      lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full scroll-smooth antialiased`}
     >
       <body className="flex min-h-full flex-col bg-slate-50 text-slate-950">
-        {children}
+        <LocaleProvider>{children}</LocaleProvider>
       </body>
     </html>
   );

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { DragEvent } from "react";
+import { useT } from "@/lib/i18n/context";
 import type { StudentDocument } from "../types/document.types";
 
 type DocumentFileCardProps = {
@@ -25,6 +26,8 @@ export function DocumentFileCard({
   onDragOver,
   onDragEnd,
 }: DocumentFileCardProps) {
+  const t = useT();
+
   return (
     <div
       draggable
@@ -35,7 +38,7 @@ export function DocumentFileCard({
         "group relative aspect-[4/5] cursor-grab overflow-hidden rounded-xl bg-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.06)] outline outline-1 outline-black/10 active:cursor-grabbing",
         isDragging ? "opacity-50 ring-2 ring-sky-300" : "",
       ].join(" ")}
-      title="Перетащите для изменения порядка"
+      title={t.documents.fileCard.dragToReorder}
     >
       <a
         href={document.fileUrl}
@@ -54,8 +57,8 @@ export function DocumentFileCard({
 
       <button
         type="button"
-        title="Удалить файл"
-        aria-label={`Удалить файл ${index + 1}`}
+        title={t.documents.fileCard.deleteFile}
+        aria-label={`${t.documents.fileCard.deleteFile} ${index + 1}`}
         disabled={isDeleting}
         onClick={(event) => {
           event.preventDefault();
@@ -73,7 +76,7 @@ export function DocumentFileCard({
 
       <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/70 to-transparent px-2.5 pb-2.5 pt-8">
         <div className="truncate text-[11px] font-semibold text-white">
-          Файл {index + 1}
+          {t.documents.fileCard.filePrefix}{index + 1}
         </div>
       </div>
     </div>

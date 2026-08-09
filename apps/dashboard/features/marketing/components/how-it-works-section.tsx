@@ -1,10 +1,10 @@
 import type { CSSProperties } from "react";
+import { useT } from "@/lib/i18n/context";
 import { HOW_IT_WORKS_SLIDES } from "../constants/how-it-works";
 
 const SLIDE_SECONDS = 4;
 const TOTAL_SECONDS = SLIDE_SECONDS * HOW_IT_WORKS_SLIDES.length;
 
-const MOCK_DOCUMENTS = ["Passport scan", "Diploma", "Transcript", "Photo"];
 const MOCK_UNIVERSITIES = [
   { name: "Peking University", picked: true },
   { name: "Nanjing University", picked: true },
@@ -24,19 +24,20 @@ function slideAnimation(name: string, delaySeconds: number): CSSProperties {
 }
 
 export function HowItWorksSection() {
+  const t = useT();
+
   return (
     <section id="how-it-works" className="border-t border-slate-100 bg-white">
       <div className="mx-auto w-full max-w-7xl px-6 py-16">
         <div className="mx-auto max-w-2xl text-center">
           <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
-            How it works
+            {t.landing.howItWorks.badge}
           </span>
           <h2 className="mt-4 text-3xl font-bold tracking-tight text-slate-950">
-            One profile, every step of the way
+            {t.landing.howItWorks.title}
           </h2>
           <p className="mt-3 text-base leading-7 text-slate-500">
-            From filling in your personal details to tracking every
-            application — here&apos;s the whole flow, on autoplay.
+            {t.landing.howItWorks.description}
           </p>
         </div>
 
@@ -114,14 +115,16 @@ function FormSlide({
 }
 
 function UploadSlide() {
+  const t = useT();
+
   return (
     <div className="flex h-full flex-col">
-      <p className="text-xs font-semibold text-blue-600">Documents</p>
+      <p className="text-xs font-semibold text-blue-600">{t.landing.howItWorks.documentsLabel}</p>
       <h3 className="mt-1 text-sm font-semibold text-slate-950">
-        Upload your documents
+        {t.landing.howItWorks.uploadTitle}
       </h3>
       <div className="mt-4 flex flex-col gap-2.5">
-        {MOCK_DOCUMENTS.map((name) => (
+        {t.landing.howItWorks.mockDocuments.map((name) => (
           <div
             key={name}
             className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5"
@@ -138,11 +141,13 @@ function UploadSlide() {
 }
 
 function UniversitiesSlide() {
+  const t = useT();
+
   return (
     <div className="flex h-full flex-col">
-      <p className="text-xs font-semibold text-blue-600">Universities</p>
+      <p className="text-xs font-semibold text-blue-600">{t.landing.howItWorks.universitiesLabel}</p>
       <h3 className="mt-1 text-sm font-semibold text-slate-950">
-        Choose universities &amp; majors
+        {t.landing.howItWorks.chooseTitle}
       </h3>
       <div className="mt-4 flex flex-col gap-2.5">
         {MOCK_UNIVERSITIES.map((university) => (
@@ -174,11 +179,13 @@ function UniversitiesSlide() {
 }
 
 function ApplySlide({ delaySeconds }: { delaySeconds: number }) {
+  const t = useT();
+
   return (
     <div className="flex h-full flex-col items-center justify-center text-center">
-      <p className="text-xs font-semibold text-blue-600">One click</p>
+      <p className="text-xs font-semibold text-blue-600">{t.landing.howItWorks.oneClickLabel}</p>
       <h3 className="mt-1 text-sm font-semibold text-slate-950">
-        Apply to all your universities
+        {t.landing.howItWorks.applyTitle}
       </h3>
 
       <div className="relative mt-6 flex h-12 w-56 items-center justify-center">
@@ -187,14 +194,14 @@ function ApplySlide({ delaySeconds }: { delaySeconds: number }) {
           style={slideAnimation("how-it-works-apply-loading", delaySeconds)}
         >
           <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-          Submitting…
+          {t.landing.howItWorks.submitting}
         </div>
         <div
           className="absolute inset-0 flex items-center justify-center gap-2 rounded-xl bg-emerald-600 text-sm font-semibold text-white"
           style={slideAnimation("how-it-works-apply-done", delaySeconds)}
         >
           <CheckIcon />
-          {APPLY_UNIVERSITY_COUNT} applications submitted
+          {APPLY_UNIVERSITY_COUNT} {t.landing.howItWorks.applicationsSubmitted}
         </div>
       </div>
     </div>
@@ -202,15 +209,17 @@ function ApplySlide({ delaySeconds }: { delaySeconds: number }) {
 }
 
 function StatusSlide({ delaySeconds }: { delaySeconds: number }) {
+  const t = useT();
+
   return (
     <div className="flex h-full flex-col">
-      <p className="text-xs font-semibold text-blue-600">Status</p>
+      <p className="text-xs font-semibold text-blue-600">{t.landing.howItWorks.statusLabel}</p>
       <h3 className="mt-1 text-sm font-semibold text-slate-950">
-        Track every application
+        {t.landing.howItWorks.statusTitle}
       </h3>
       <div className="mt-4 flex flex-col gap-2.5">
-        <StatusRow name="Peking University" tone="ring-emerald-100 bg-emerald-50 text-emerald-700" label="Submitted" />
-        <StatusRow name="Nanjing University" tone="ring-emerald-100 bg-emerald-50 text-emerald-700" label="Submitted" />
+        <StatusRow name="Peking University" tone="ring-emerald-100 bg-emerald-50 text-emerald-700" label={t.landing.howItWorks.statusSubmitted} />
+        <StatusRow name="Nanjing University" tone="ring-emerald-100 bg-emerald-50 text-emerald-700" label={t.landing.howItWorks.statusSubmitted} />
         <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
           <span className="text-xs font-medium text-slate-800">
             Sichuan University
@@ -220,19 +229,19 @@ function StatusSlide({ delaySeconds }: { delaySeconds: number }) {
               className="absolute right-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500 ring-1 ring-slate-200"
               style={slideAnimation("how-it-works-status-a", delaySeconds)}
             >
-              Draft
+              {t.landing.howItWorks.statusDraft}
             </span>
             <span
               className="absolute right-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-amber-100"
               style={slideAnimation("how-it-works-status-b", delaySeconds)}
             >
-              In progress
+              {t.landing.howItWorks.statusInProgress}
             </span>
             <span
               className="absolute right-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-emerald-100"
               style={slideAnimation("how-it-works-status-c", delaySeconds)}
             >
-              Submitted
+              {t.landing.howItWorks.statusSubmitted}
             </span>
           </span>
         </div>

@@ -2,12 +2,16 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { Header } from "@/components/header";
+import { useLocale, useT } from "@/lib/i18n/context";
 import { toTitleCase } from "@/lib/format";
 import { deleteStudent, getStudents } from "../api/students.api";
 import type { StudentListItem } from "../types/student.types";
 import { ConfirmDialog } from "./confirm-dialog";
 
 export function StudentList() {
+  const t = useT();
+  const { locale } = useLocale();
   const [students, setStudents] = useState<StudentListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +32,7 @@ export function StudentList() {
       })
       .catch(() => {
         if (isMounted) {
-          setError("Не удалось загрузить студентов.");
+          setError(t.students.list.loadFailed);
         }
       })
       .finally(() => {
@@ -40,6 +44,7 @@ export function StudentList() {
     return () => {
       isMounted = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const closeDeleteDialog = useCallback(() => {
@@ -64,41 +69,39 @@ export function StudentList() {
       );
       setStudentToDelete(null);
     } catch {
-      setError("Не удалось удалить студента.");
+      setError(t.students.list.deleteFailed);
     } finally {
       setDeletingId(null);
     }
   }
 
   const deleteName = studentToDelete
-    ? formatStudentName(studentToDelete)
+    ? formatStudentName(studentToDelete, t.common.nameNotSet)
     : "";
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-6 py-8">
-      <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm font-medium text-slate-500">Uni Apply</p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-950">
-            Студенты
-          </h1>
-        </div>
-        <Link
-          href="/students/new"
-          className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-medium text-white shadow-sm transition-transform hover:bg-slate-800 active:scale-[0.96]"
-        >
-          Создать вручную
-        </Link>
-      </header>
+      <Header
+        eyebrow={t.students.list.eyebrow}
+        title={t.students.list.title}
+        actions={
+          <Link
+            href="/students/new"
+            className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-medium text-white shadow-sm transition-transform hover:bg-slate-800 active:scale-[0.96]"
+          >
+            {t.students.list.createManually}
+          </Link>
+        }
+      />
 
       {isLoading ? (
-        <StateCard title="Загружаем студентов" description="Секунду..." />
+        <StateCard title={t.students.list.loadingTitle} description={t.students.list.loadingDesc} />
       ) : error && students.length === 0 ? (
-        <StateCard title="Ошибка" description={error} tone="danger" />
+        <StateCard title={t.common.error} description={error} tone="danger" />
       ) : students.length === 0 ? (
         <StateCard
-          title="Пока нет студентов"
-          description="Заявки должны прийти через Google Form. Ручное создание вынесено за MVP."
+          title={t.students.list.emptyTitle}
+          description={t.students.list.emptyDesc}
         />
       ) : (
         <div className="grid gap-3">
@@ -122,14 +125,14 @@ export function StudentList() {
                   className="min-w-0 flex-1 active:scale-[0.99]"
                 >
                   <div className="text-base font-semibold text-slate-950">
-                    {formatStudentName(student)}
+                    {formatStudentName(student, t.common.nameNotSet)}
                   </div>
                   <div className="mt-1 flex items-center gap-1.5 text-sm text-slate-500">
                     <span className="shrink-0 text-slate-400">
                       <MailIcon />
                     </span>
                     <span className="truncate">
-                      {student.email || "Email не указан"}
+                      {student.email || t.common.emailNotProvided}
                     </span>
                   </div>
                   {targets.length > 0 ? (
@@ -145,19 +148,19 @@ export function StudentList() {
                     </div>
                   ) : (
                     <div className="mt-3 text-sm text-slate-400">
-                      Вузы не указаны
+                      {t.students.list.noUniversities}
                     </div>
                   )}
                 </Link>
 
                 <div className="flex shrink-0 flex-col items-end gap-2">
                   <div className="text-sm text-slate-400 tabular-nums">
-                    {formatDate(student.createdAt)}
+                    {formatDate(student.createdAt, locale)}
                   </div>
                   <button
                     type="button"
-                    title="Удалить студента"
-                    aria-label="Удалить студента"
+                    title={t.students.list.deleteAria}
+                    aria-label={t.students.list.deleteAria}
                     disabled={deletingId === student.id}
                     onClick={() => setStudentToDelete(student)}
                     className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 disabled:pointer-events-none disabled:opacity-50"
@@ -173,9 +176,9 @@ export function StudentList() {
 
       <ConfirmDialog
         open={studentToDelete !== null}
-        title="Удалить студента?"
-        description={`Профиль «${deleteName}» будет удалён вместе с документами и заявками. Это действие нельзя отменить.`}
-        confirmLabel="Удалить"
+        title={t.students.list.deleteConfirmTitle}
+        description={`${t.students.list.deleteConfirmDescPrefix}${deleteName}${t.students.list.deleteConfirmDescSuffix}`}
+        confirmLabel={t.common.delete}
         isPending={deletingId !== null}
         onConfirm={confirmDelete}
         onCancel={closeDeleteDialog}
@@ -184,17 +187,20 @@ export function StudentList() {
   );
 }
 
-function formatStudentName(student: Pick<StudentListItem, "givenName" | "surname">) {
+function formatStudentName(
+  student: Pick<StudentListItem, "givenName" | "surname">,
+  fallback: string,
+) {
   const name = [student.givenName, student.surname]
     .filter((part): part is string => Boolean(part))
     .map(toTitleCase)
     .join(" ");
 
-  return name || "Имя не указано";
+  return name || fallback;
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("ru-RU").format(new Date(value));
+function formatDate(value: string, locale: "en" | "ru") {
+  return new Intl.DateTimeFormat(locale === "ru" ? "ru-RU" : "en-US").format(new Date(value));
 }
 
 function MailIcon() {

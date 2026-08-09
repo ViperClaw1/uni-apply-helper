@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useT } from "@/lib/i18n/context";
 
 type ConfirmDialogProps = {
   open: boolean;
@@ -17,12 +18,15 @@ export function ConfirmDialog({
   open,
   title,
   description,
-  confirmLabel = "Удалить",
-  cancelLabel = "Отмена",
+  confirmLabel,
+  cancelLabel,
   isPending = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const t = useT();
+  const resolvedConfirmLabel = confirmLabel ?? t.common.delete;
+  const resolvedCancelLabel = cancelLabel ?? t.common.cancel;
   useEffect(() => {
     if (!open) {
       return;
@@ -52,7 +56,7 @@ export function ConfirmDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
         type="button"
-        aria-label="Закрыть"
+        aria-label={t.common.close}
         disabled={isPending}
         onClick={onCancel}
         className="absolute inset-0 bg-slate-950/40 backdrop-blur-[2px]"
@@ -83,7 +87,7 @@ export function ConfirmDialog({
             onClick={onCancel}
             className="inline-flex h-10 cursor-pointer items-center justify-center rounded-xl px-4 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-60"
           >
-            {cancelLabel}
+            {resolvedCancelLabel}
           </button>
           <button
             type="button"
@@ -91,7 +95,7 @@ export function ConfirmDialog({
             onClick={onConfirm}
             className="inline-flex h-10 cursor-pointer items-center justify-center rounded-xl bg-rose-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-rose-500 disabled:pointer-events-none disabled:opacity-60"
           >
-            {isPending ? "Удаляем..." : confirmLabel}
+            {isPending ? t.students.list.deleting : resolvedConfirmLabel}
           </button>
         </div>
       </div>

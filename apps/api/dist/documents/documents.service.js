@@ -8,6 +8,7 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DocumentsService = void 0;
 const common_1 = require("@nestjs/common");
@@ -298,8 +299,6 @@ let DocumentsService = class DocumentsService {
 exports.DocumentsService = DocumentsService;
 exports.DocumentsService = DocumentsService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_js_1.PrismaService,
-        config_1.ConfigService,
-        queue_service_js_1.QueueService])
+    __metadata("design:paramtypes", [prisma_service_js_1.PrismaService, typeof (_a = typeof config_1.ConfigService !== "undefined" && config_1.ConfigService) === "function" ? _a : Object, queue_service_js_1.QueueService])
 ], DocumentsService);
 //# sourceMappingURL=documents.service.js.map

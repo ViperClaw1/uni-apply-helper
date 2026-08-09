@@ -1,11 +1,4 @@
-const STEP_LABELS: Record<string, string> = {
-  validate_requirements: "Проверка документов",
-  open_form: "Открытие формы",
-  fill_wizard: "Заполнение формы",
-  submit: "Отправка",
-  extension_ready: "Готово к заполнению",
-  consultant_submit: "Отправка консультантом",
-};
+import type { Dictionary } from "@/lib/i18n/dictionaries/en";
 
 const STEP_ORDER: Record<string, number> = {
   validate_requirements: 1,
@@ -16,18 +9,13 @@ const STEP_ORDER: Record<string, number> = {
   consultant_submit: 6,
 };
 
-export function getStepLabel(stepName: string) {
-  return STEP_LABELS[stepName] ?? stepName;
+export function getStepLabel(stepName: string, t: Dictionary) {
+  const labels: Record<string, string> = t.applications.steps.names;
+  return labels[stepName] ?? stepName;
 }
 
-export function getStepStatusLabel(status: string) {
-  const labels: Record<string, string> = {
-    queued: "в очереди",
-    processing: "в работе",
-    completed: "готово",
-    failed: "ошибка",
-    skipped: "пропущено",
-  };
+export function getStepStatusLabel(status: string, t: Dictionary) {
+  const labels: Record<string, string> = t.applications.steps.status;
 
   return labels[status] ?? status;
 }

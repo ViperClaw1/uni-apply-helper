@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useT } from "@/lib/i18n/context";
 import { ApplicationTargetsPanel } from "@/features/applications/components/application-targets-panel";
 import { BatchPanel } from "@/features/applications/components/batch-panel";
 import { MotivationLettersPanel } from "@/features/letters/components/motivation-letters-panel";
@@ -12,7 +13,7 @@ import {
 } from "@/features/applications/api/applications.api";
 import { isActiveBatch } from "@/features/applications/lib/status";
 import type { ApplicationBatch } from "@/features/applications/types/application.types";
-import { DEFAULT_DOCUMENT_TYPES } from "@/features/documents/constants/document-types";
+import { DEFAULT_DOCUMENT_TYPES, useDocumentTypeLabel } from "@/features/documents/constants/document-types";
 import { DocumentUploader } from "@/features/documents/components/document-uploader";
 import { getStudentDocuments } from "@/features/documents/api/documents.api";
 import type { StudentDocument } from "@/features/documents/types/document.types";
@@ -33,6 +34,8 @@ export function StudentProfilePage({
   showBackLink?: boolean;
   embedded?: boolean;
 } = {}) {
+  const t = useT();
+  const documentTypeLabel = useDocumentTypeLabel();
   const params = useParams<{ id: string }>();
   const studentId = studentIdProp ?? params.id;
   const [student, setStudent] = useState<StudentProfile | null>(null);
@@ -74,7 +77,7 @@ export function StudentProfilePage({
       })
       .catch(() => {
         if (isMounted) {
-          setError("Не удалось загрузить карточку студента.");
+          setError(t.students.profilePage.loadFailed);
         }
       })
       .finally(() => {
@@ -86,6 +89,7 @@ export function StudentProfilePage({
     return () => {
       isMounted = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [studentId]);
 
   const latestBatch = batches[0];
@@ -174,12 +178,12 @@ export function StudentProfilePage({
 
   async function handleCreateBatch() {
     if (resolvedTargets.length === 0) {
-      setSubmitError("Сначала добавьте хотя бы один вуз по URL формы.");
+      setSubmitError(t.students.profilePage.noTargetError);
       return;
     }
 
     if (pendingTargets.length === 0) {
-      setSubmitError("Все добавленные вузы уже имеют отправленные заявки.");
+      setSubmitError(t.students.profilePage.allSubmittedError);
       return;
     }
 
@@ -190,21 +194,21 @@ export function StudentProfilePage({
       await createApplicationBatch(studentId);
       await Promise.all([loadBatches(), loadProfile()]);
     } catch {
-      setSubmitError("Не удалось запустить подачу заявок.");
+      setSubmitError(t.students.profilePage.createBatchFailed);
     } finally {
       setIsSubmitting(false);
     }
   }
 
   if (isLoading) {
-    return <PageShell title="Загрузка..." />;
+    return <PageShell title={t.common.loading} />;
   }
 
   if (error || !student) {
-    return <PageShell title="Ошибка" description={error ?? "Студент не найден."} />;
+    return <PageShell title={t.common.error} description={error ?? t.students.profilePage.studentNotFound} />;
   }
 
-  const studentName = formatStudentName(student.personal);
+  const studentName = formatStudentName(student.personal, t.common.nameNotSet);
 
   return (
     <main
@@ -219,33 +223,33 @@ export function StudentProfilePage({
           href="/dashboard"
           className="mb-6 inline-flex h-10 w-fit items-center rounded-xl px-3 text-sm font-medium text-slate-600 transition-colors hover:bg-white hover:text-slate-950"
         >
-          Назад к студентам
+          {t.students.profilePage.backToStudents}
         </Link>
       ) : null}
 
       <section className="rounded-3xl bg-white p-6 shadow-[0_1px_2px_rgba(15,23,42,0.08),0_12px_45px_rgba(15,23,42,0.05)] ring-1 ring-black/5">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <p className="text-sm font-medium text-slate-500">Карточка студента</p>
+            <p className="text-sm font-medium text-slate-500">{t.students.profilePage.eyebrow}</p>
             <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-950">
               {studentName}
             </h1>
             <div className="mt-3 flex flex-wrap gap-2 text-sm text-slate-600">
-              <span>{student.personal.email || "Email не указан"}</span>
+              <span>{student.personal.email || t.common.emailNotProvided}</span>
               {student.personal.phone ? <span>{student.personal.phone}</span> : null}
               {student.personal.passportNo ? (
-                <span>Паспорт: {student.personal.passportNo}</span>
+                <span>{t.students.profilePage.passportPrefix}{student.personal.passportNo}</span>
               ) : null}
             </div>
           </div>
           <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600 lg:max-w-sm">
-            <div className="font-semibold text-slate-950">Вузы</div>
+            <div className="font-semibold text-slate-950">{t.students.profilePage.universitiesCardTitle}</div>
             <div className="mt-2">
               {resolvedTargets.length > 0
                 ? resolvedTargets
                     .map((target) => target.universityRaw)
                     .join(", ")
-                : "Не выбраны — добавьте URL ниже"}
+                : t.students.profilePage.noneSelected}
             </div>
           </div>
         </div>
@@ -255,14 +259,14 @@ export function StudentProfilePage({
         <section className="mt-8 grid gap-4 md:grid-cols-2">
           {student.guarantor ? (
             <ContactInfoCard
-              title="Гарант"
+              title={t.students.profilePage.guarantor}
               variant="guarantor"
               contact={student.guarantor}
             />
           ) : null}
           {student.emergencyContact ? (
             <ContactInfoCard
-              title="Экстренный контакт"
+              title={t.students.profilePage.emergencyContact}
               variant="emergency"
               contact={student.emergencyContact}
             />
@@ -275,10 +279,10 @@ export function StudentProfilePage({
           <div className="mb-3 flex items-end justify-between">
             <div>
               <h2 className="text-xl font-semibold tracking-tight text-slate-950">
-                Документы
+                {t.students.profilePage.documentsTitle}
               </h2>
               <p className="mt-1 text-sm text-slate-500">
-                Загрузите файлы — система сама распознает данные из документов.
+                {t.students.profilePage.documentsDesc}
               </p>
             </div>
           </div>
@@ -289,7 +293,7 @@ export function StudentProfilePage({
                 key={documentType.key}
                 studentId={studentId}
                 type={documentType.key}
-                label={documentType.label}
+                label={documentTypeLabel(documentType.key)}
                 accept={documentType.accept}
                 parse={documentType.parse}
                 multiple={documentType.multiple}
@@ -304,10 +308,10 @@ export function StudentProfilePage({
           <section>
             <div className="mb-3">
               <h2 className="text-xl font-semibold tracking-tight text-slate-950">
-                Вузы
+                {t.students.profilePage.universitiesSectionTitle}
               </h2>
               <p className="mt-1 text-sm text-slate-500">
-                Добавьте ссылки на формы подачи — вузы появятся в списке автоматически.
+                {t.students.profilePage.universitiesSectionDesc}
               </p>
             </div>
 
@@ -326,12 +330,10 @@ export function StudentProfilePage({
           <section>
             <div className="mb-3">
               <h2 className="text-xl font-semibold tracking-tight text-slate-950">
-                Подача заявок
+                {t.students.profilePage.submitSectionTitle}
               </h2>
               <p className="mt-1 text-sm text-slate-500">
-                Нажмите «Отправить заявки» — система проверит документы и заполнит
-                формы вузов. Если что-то пойдёт не так, ошибка появится ниже;
-                форму можно открыть и дозаполнить вручную.
+                {t.students.profilePage.submitSectionDesc}
               </p>
             </div>
 
@@ -354,12 +356,12 @@ export function StudentProfilePage({
               className="mt-4 inline-flex h-12 w-full cursor-pointer items-center justify-center rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white shadow-sm transition-transform hover:bg-slate-800 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-60"
             >
               {isSubmitting
-                ? "Запускаем..."
+                ? t.students.profilePage.submitting
                 : resolvedTargets.length === 0
-                  ? "Добавьте вузы для батча"
+                  ? t.students.profilePage.submitNoTargets
                   : pendingTargets.length === 0
-                    ? "Все заявки уже отправлены"
-                    : `Отправить заявки (${pendingTargets.length})`}
+                    ? t.students.profilePage.submitAllDone
+                    : `${t.students.profilePage.submitButtonPrefix}${pendingTargets.length}${t.students.profilePage.submitButtonSuffix}`}
             </button>
           </section>
         </div>
@@ -368,13 +370,16 @@ export function StudentProfilePage({
   );
 }
 
-function formatStudentName(student: { givenName?: string; surname?: string }) {
+function formatStudentName(
+  student: { givenName?: string; surname?: string },
+  fallback: string,
+) {
   const name = [student.givenName, student.surname]
     .filter((part): part is string => Boolean(part))
     .map(toTitleCase)
     .join(" ");
 
-  return name || "Имя не указано";
+  return name || fallback;
 }
 
 function ContactInfoCard({

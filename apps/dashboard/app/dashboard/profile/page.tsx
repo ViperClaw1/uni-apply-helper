@@ -18,17 +18,10 @@ import { EmergencyContactStep } from "@/features/students/components/profile-wiz
 import { FamilyStep } from "@/features/students/components/profile-wizard/family-step";
 import { GuarantorStep } from "@/features/students/components/profile-wizard/guarantor-step";
 import { PersonalStep } from "@/features/students/components/profile-wizard/personal-step";
-
-const STEP_LABELS = [
-  "Personal",
-  "Education",
-  "Guarantor",
-  "Emergency contact",
-  "Family",
-  "Universities & documents",
-];
+import { useT } from "@/lib/i18n/context";
 
 export default function ProfileWizardPage() {
+  const t = useT();
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [step, setStep] = useState(1);
   const [furthestStep, setFurthestStep] = useState(1);
@@ -67,7 +60,7 @@ export default function ProfileWizardPage() {
   if (isLoading) {
     return (
       <div className="mx-auto flex min-h-screen w-full max-w-3xl items-center justify-center px-6">
-        <p className="text-sm text-slate-500">Loading…</p>
+        <p className="text-sm text-slate-500">{t.common.loading}</p>
       </div>
     );
   }
@@ -80,20 +73,20 @@ export default function ProfileWizardPage() {
     >
       <header className="mb-6 flex items-center justify-between">
         <h1 className="text-3xl font-semibold tracking-tight text-slate-950">
-          Your profile
+          {t.profileWizard.title}
         </h1>
         <Link
           href="/dashboard"
           className="text-sm font-medium text-slate-600 hover:text-slate-950"
         >
-          ← Back to dashboard
+          {t.profileWizard.backToDashboard}
         </Link>
       </header>
 
       <StepProgress
         current={step}
         furthestStep={furthestStep}
-        labels={STEP_LABELS}
+        labels={t.profileWizard.stepLabels}
         onStepClick={(target) => {
           if (target <= furthestStep) {
             setStep(target);

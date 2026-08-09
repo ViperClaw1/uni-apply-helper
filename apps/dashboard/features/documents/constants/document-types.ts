@@ -1,21 +1,19 @@
+import { useT } from "@/lib/i18n/context";
 import type { DocumentTypeOption } from "../types/document.types";
 
 export const DEFAULT_DOCUMENT_TYPES: DocumentTypeOption[] = [
   {
     key: "photo",
-    label: "Фото 3x4",
     accept: { "image/*": [] },
     parse: false,
   },
   {
     key: "passport",
-    label: "Загранпаспорт",
     accept: { "application/pdf": [".pdf"], "image/*": [] },
     parse: true,
   },
   {
     key: "transcript",
-    label: "Аттестат с оценками + перевод",
     accept: {
       "image/jpeg": [".jpg", ".jpeg"],
       "image/png": [".png"],
@@ -26,7 +24,6 @@ export const DEFAULT_DOCUMENT_TYPES: DocumentTypeOption[] = [
   },
   {
     key: "medical",
-    label: "Медицинская справка",
     accept: {
       "image/jpeg": [".jpg", ".jpeg"],
       "image/png": [".png"],
@@ -37,7 +34,6 @@ export const DEFAULT_DOCUMENT_TYPES: DocumentTypeOption[] = [
   },
   {
     key: "financial",
-    label: "Справка о финансовой состоятельности",
     accept: {
       "image/jpeg": [".jpg", ".jpeg"],
       "image/png": [".png"],
@@ -47,7 +43,6 @@ export const DEFAULT_DOCUMENT_TYPES: DocumentTypeOption[] = [
   },
   {
     key: "criminal_record",
-    label: "Справка о несудимости",
     accept: {
       "image/jpeg": [".jpg", ".jpeg"],
       "image/png": [".png"],
@@ -58,7 +53,6 @@ export const DEFAULT_DOCUMENT_TYPES: DocumentTypeOption[] = [
   },
   {
     key: "recommendation",
-    label: "Рекомендации / Портфолио / Языковые сертификаты",
     accept: {
       "image/jpeg": [".jpg", ".jpeg"],
       "image/png": [".png"],
@@ -69,7 +63,6 @@ export const DEFAULT_DOCUMENT_TYPES: DocumentTypeOption[] = [
   },
   {
     key: "diploma",
-    label: "Диплом / Diploma",
     accept: {
       "image/jpeg": [".jpg", ".jpeg"],
       "image/png": [".png"],
@@ -80,14 +73,34 @@ export const DEFAULT_DOCUMENT_TYPES: DocumentTypeOption[] = [
   },
   {
     key: "recommendation_letter",
-    label: "Рекомендательное письмо / Recommendation Letter",
     accept: { "application/pdf": [".pdf"], "image/*": [] },
     parse: false,
   },
   {
     key: "personal_statement",
-    label: "Personal Statement / Мотивационное письмо",
     accept: { "application/pdf": [".pdf"], "application/msword": [".doc"], "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [".docx"] },
     parse: false,
   },
 ];
+
+const LABEL_KEYS = {
+  photo: "photo",
+  passport: "passport",
+  transcript: "transcript",
+  medical: "medical",
+  financial: "financial",
+  criminal_record: "criminalRecord",
+  recommendation: "recommendation",
+  diploma: "diploma",
+  recommendation_letter: "recommendationLetter",
+  personal_statement: "personalStatement",
+} as const satisfies Record<string, keyof ReturnType<typeof useT>["documents"]["types"]>;
+
+export function useDocumentTypeLabel() {
+  const t = useT();
+
+  return (key: string) => {
+    const labelKey = LABEL_KEYS[key as keyof typeof LABEL_KEYS];
+    return labelKey ? t.documents.types[labelKey] : key;
+  };
+}

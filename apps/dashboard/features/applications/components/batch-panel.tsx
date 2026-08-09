@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
+import { useLocale, useT } from "@/lib/i18n/context";
 import { isMissingApprovedMotivationLetter } from "@/features/letters/lib/letter-utils";
 import {
   formatErrorMessage,
@@ -33,6 +34,8 @@ export function BatchPanel({
   studentId,
   onApplicationsChange,
 }: BatchPanelProps) {
+  const t = useT();
+  const { locale } = useLocale();
   const [openingApplicationId, setOpeningApplicationId] = useState<string | null>(
     null,
   );
@@ -50,7 +53,7 @@ export function BatchPanel({
   if (!batch) {
     return (
       <div className="rounded-2xl bg-white p-5 text-sm text-slate-500 shadow-[0_1px_2px_rgba(15,23,42,0.08)] ring-1 ring-black/5">
-        Заявки ещё не отправлялись. Нажмите кнопку ниже, когда будете готовы.
+        {t.applications.batch.empty}
       </div>
     );
   }
@@ -70,7 +73,7 @@ export function BatchPanel({
       });
       await onApplicationsChange?.();
     } catch {
-      setOpenError("Не удалось открыть форму. Попробуйте ещё раз.");
+      setOpenError(t.applications.batch.openFormFailed);
     } finally {
       setOpeningApplicationId(null);
     }
@@ -81,30 +84,30 @@ export function BatchPanel({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <div className="text-sm font-semibold text-slate-950">
-            Отправка #{batch.id.slice(0, 8)}
+            {t.applications.batch.submissionPrefix}{batch.id.slice(0, 8)}
           </div>
           <div className="mt-1 text-xs text-slate-500 tabular-nums">
-            {new Intl.DateTimeFormat("ru-RU", {
+            {new Intl.DateTimeFormat(locale === "ru" ? "ru-RU" : "en-US", {
               dateStyle: "medium",
               timeStyle: "short",
             }).format(new Date(batch.createdAt))}
           </div>
         </div>
-        <StatusBadge label={getBatchStatusLabel(batch.status)} status={batch.status} />
+        <StatusBadge label={getBatchStatusLabel(batch.status, t)} status={batch.status} />
       </div>
 
       <div className="mt-5 grid grid-cols-4 gap-2 text-center">
-        <Counter label="Всего" value={batch.total} tone="slate" />
-        <Counter label="Отправлено" value={batch.submitted} tone="emerald" />
-        <Counter label="Блок" value={batch.blocked} tone="amber" />
-        <Counter label="Ошибок" value={batch.failed} tone="rose" />
+        <Counter label={t.applications.batch.counterTotal} value={batch.total} tone="slate" />
+        <Counter label={t.applications.batch.counterSubmitted} value={batch.submitted} tone="emerald" />
+        <Counter label={t.applications.batch.counterBlocked} value={batch.blocked} tone="amber" />
+        <Counter label={t.applications.batch.counterFailed} value={batch.failed} tone="rose" />
       </div>
 
       {submitted.length > 0 || pending.length > 0 ? (
         <div className="mt-5 grid gap-5">
           {submitted.length > 0 ? (
             <ApplicationGroup
-              title="Успешно отправлены"
+              title={t.applications.batch.groupSubmitted}
               count={submitted.length}
               tone="success"
             >
@@ -121,7 +124,7 @@ export function BatchPanel({
 
           {pending.length > 0 ? (
             <ApplicationGroup
-              title="На отправку"
+              title={t.applications.batch.groupPending}
               count={pending.length}
               tone="pending"
             >
@@ -181,6 +184,8 @@ function ApplicationRow({
   openingApplicationId: string | null;
   onOpenForm: (application: ApplicationItem) => void | Promise<void>;
 }) {
+  const t = useT();
+
   return (
     <div className="min-w-0 py-3">
       <div className="flex items-start justify-between gap-3">
@@ -196,7 +201,7 @@ function ApplicationRow({
                   href={`#motivation-letter-${application.universityId}`}
                   className="mt-1 block font-semibold text-sky-700 underline-offset-2 hover:underline"
                 >
-                  Перейти к мотивационному письму →
+                  {t.applications.batch.goToLetter}
                 </a>
               ) : null}
             </div>
@@ -207,19 +212,19 @@ function ApplicationRow({
           {application.formUrl && canOpenUniversityForm(application) ? (
             <button
               type="button"
-              title="Откроет форму вуза. Данные заполнятся автоматически — проверьте и отправьте."
+              title={t.applications.batch.openFormTitle}
               disabled={openingApplicationId === application.id}
               onClick={() => onOpenForm(application)}
               className="mt-2 inline-flex h-8 cursor-pointer items-center rounded-lg bg-violet-600 px-3 text-xs font-semibold text-white transition-colors hover:bg-violet-700 disabled:pointer-events-none disabled:opacity-60"
             >
               {openingApplicationId === application.id
-                ? "Открываем..."
-                : "Открыть форму →"}
+                ? t.applications.batch.opening
+                : t.applications.batch.openForm}
             </button>
           ) : null}
         </div>
         <StatusBadge
-          label={getApplicationStatusLabel(application.status)}
+          label={getApplicationStatusLabel(application.status, t)}
           status={application.status}
         />
       </div>
@@ -239,7 +244,7 @@ function ApplicationRow({
                       : "bg-slate-100 text-slate-600 ring-slate-200/60"
               }`}
             >
-              {getStepLabel(step.stepName)}: {getStepStatusLabel(step.status)}
+              {getStepLabel(step.stepName, t)}: {getStepStatusLabel(step.status, t)}
             </span>
           ))}
         </div>
@@ -255,7 +260,8 @@ function ErrorBadge({
   message: string;
   className?: string;
 }) {
-  const display = formatErrorMessage(message);
+  const t = useT();
+  const display = formatErrorMessage(message, t);
 
   return (
     <div className={`min-w-0 max-w-full ${className}`}>

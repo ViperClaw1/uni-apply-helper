@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useT } from "@/lib/i18n/context";
 import { setStudentApplicationTargets } from "@/features/students/api/students.api";
 import type { ApplicationTarget } from "@/features/students/types/student.types";
 import { resolveUniversityByFormUrl } from "@/features/universities/api/universities.api";
@@ -17,6 +18,7 @@ export function ApplicationTargetsPanel({
   targets,
   onTargetsChange,
 }: ApplicationTargetsPanelProps) {
+  const t = useT();
   const [urlInput, setUrlInput] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +40,7 @@ export function ApplicationTargetsPanel({
       const profile = await setStudentApplicationTargets(studentId, formUrls);
       onTargetsChange(profile.applicationTargets);
     } catch {
-      setError("Не удалось сохранить список вузов.");
+      setError(t.applications.targets.saveFailed);
       throw new Error("Failed to persist application targets.");
     } finally {
       setIsSaving(false);
@@ -49,12 +51,12 @@ export function ApplicationTargetsPanel({
     const trimmed = urlInput.trim();
 
     if (!trimmed) {
-      setError("Вставьте URL формы вуза.");
+      setError(t.applications.targets.urlRequired);
       return;
     }
 
     if (!isValidHttpUrl(trimmed)) {
-      setError("Нужен валидный http(s) URL.");
+      setError(t.applications.targets.urlInvalid);
       return;
     }
 
@@ -67,7 +69,7 @@ export function ApplicationTargetsPanel({
           normalizeFormUrl(target.formUrl) === normalized,
       )
     ) {
-      setError("Этот вуз уже добавлен.");
+      setError(t.applications.targets.alreadyAdded);
       return;
     }
 
@@ -80,7 +82,7 @@ export function ApplicationTargetsPanel({
       if (
         targets.some((target) => target.universityId === university.id)
       ) {
-        setError("Этот вуз уже добавлен.");
+        setError(t.applications.targets.alreadyAdded);
         return;
       }
 
@@ -106,11 +108,11 @@ export function ApplicationTargetsPanel({
       const status = getAxiosStatus(caught);
 
       if (status === 404) {
-        setError("URL не совпал ни с одной известной схемой вуза.");
+        setError(t.applications.targets.urlNotMatched);
       } else if (status === 400) {
-        setError("Некорректный URL.");
+        setError(t.applications.targets.urlBad);
       } else {
-        setError("Не удалось проверить URL вуза.");
+        setError(t.applications.targets.urlCheckFailed);
       }
     } finally {
       setIsSaving(false);
@@ -141,9 +143,9 @@ export function ApplicationTargetsPanel({
     <div className="rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.08),0_8px_30px_rgba(15,23,42,0.04)] ring-1 ring-black/5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-slate-950">Список вузов</h3>
+          <h3 className="text-sm font-semibold text-slate-950">{t.applications.targets.title}</h3>
           <p className="mt-1 text-xs text-slate-500">
-            Вставьте ссылку на форму подачи — вуз определится сам.
+            {t.applications.targets.description}
           </p>
         </div>
         <div className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium tabular-nums text-slate-600">
@@ -174,7 +176,7 @@ export function ApplicationTargetsPanel({
           disabled={isSaving}
           className="inline-flex h-11 shrink-0 cursor-pointer items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-semibold text-white transition-colors hover:bg-slate-800 disabled:pointer-events-none disabled:opacity-60"
         >
-          {isSaving ? "..." : "Добавить"}
+          {isSaving ? "..." : t.applications.targets.add}
         </button>
       </div>
 
@@ -186,7 +188,7 @@ export function ApplicationTargetsPanel({
 
       {targets.length === 0 ? (
         <div className="mt-4 rounded-xl bg-slate-50 px-3 py-3 text-xs text-slate-500">
-          Пока пусто — добавьте хотя бы один URL перед созданием батча.
+          {t.applications.targets.empty}
         </div>
       ) : (
         <ul className="mt-4 divide-y divide-slate-100">
@@ -210,7 +212,7 @@ export function ApplicationTargetsPanel({
                   </a>
                 ) : (
                   <div className="mt-1 text-xs text-amber-700">
-                    URL не задан — вуз не резолвнут
+                    {t.applications.targets.noUrl}
                   </div>
                 )}
               </div>
@@ -224,7 +226,7 @@ export function ApplicationTargetsPanel({
                 disabled={isSaving}
                 className="shrink-0 cursor-pointer rounded-lg px-2 py-1 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 disabled:opacity-60"
               >
-                Удалить
+                {t.common.delete}
               </button>
             </li>
           ))}

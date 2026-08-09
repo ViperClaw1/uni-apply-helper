@@ -9,6 +9,7 @@ import {
 } from "@/features/students/api/students.api";
 import { COUNTRIES, flagEmoji } from "@/features/auth/lib/countries";
 import type { StudentProfile } from "@/features/students/types/student.types";
+import { useT } from "@/lib/i18n/context";
 import {
   CheckboxField,
   ErrorBanner,
@@ -18,21 +19,6 @@ import {
   StepSection,
   extractErrorMessage,
 } from "./shared";
-
-const SEX_OPTIONS = [
-  { value: "Male", label: "Male" },
-  { value: "Female", label: "Female" },
-];
-
-const RELIGION_OPTIONS = [
-  { value: "None", label: "None" },
-  { value: "Christianity", label: "Christianity" },
-  { value: "Islam", label: "Islam" },
-  { value: "Buddhism", label: "Buddhism" },
-  { value: "Hinduism", label: "Hinduism" },
-  { value: "Judaism", label: "Judaism" },
-  { value: "Other", label: "Other" },
-];
 
 const NATIONALITY_OPTIONS = COUNTRIES.map((country) => ({
   value: country.name,
@@ -46,9 +32,25 @@ export function PersonalStep({
   initial: MyProfileInput;
   onNext: (profile: StudentProfile) => void;
 }) {
+  const t = useT();
   const [fields, setFields] = useState<MyProfileInput>(initial);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const SEX_OPTIONS = [
+    { value: "Male", label: t.profileWizard.personal.sexOptions.male },
+    { value: "Female", label: t.profileWizard.personal.sexOptions.female },
+  ];
+
+  const RELIGION_OPTIONS = [
+    { value: "None", label: t.profileWizard.personal.religionOptions.none },
+    { value: "Christianity", label: t.profileWizard.personal.religionOptions.christianity },
+    { value: "Islam", label: t.profileWizard.personal.religionOptions.islam },
+    { value: "Buddhism", label: t.profileWizard.personal.religionOptions.buddhism },
+    { value: "Hinduism", label: t.profileWizard.personal.religionOptions.hinduism },
+    { value: "Judaism", label: t.profileWizard.personal.religionOptions.judaism },
+    { value: "Other", label: t.profileWizard.personal.religionOptions.other },
+  ];
 
   function updateField<K extends keyof MyProfileInput>(
     key: K,
@@ -66,7 +68,7 @@ export function PersonalStep({
       const profile = await saveMyProfile(fields);
       onNext(profile);
     } catch (submitError) {
-      setError(extractErrorMessage(submitError));
+      setError(extractErrorMessage(submitError, t.common.somethingWentWrong));
       setIsSubmitting(false);
     }
   }
@@ -75,89 +77,89 @@ export function PersonalStep({
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       <ErrorBanner message={error} />
 
-      <StepSection title="Basic information">
+      <StepSection title={t.profileWizard.personal.sectionBasic}>
         <Field
-          label="Surname"
+          label={t.profileWizard.personal.surname}
           placeholder="Ivanova"
           value={fields.surname}
           onChange={(v) => updateField("surname", v)}
           required
         />
         <Field
-          label="Given name"
+          label={t.profileWizard.personal.givenName}
           placeholder="Anna"
           value={fields.givenName}
           onChange={(v) => updateField("givenName", v)}
           required
         />
         <SelectField
-          label="Sex"
+          label={t.profileWizard.personal.sex}
           value={fields.sex ?? ""}
           onChange={(v) => updateField("sex", v)}
           options={SEX_OPTIONS}
         />
         <SelectField
-          label="Nationality"
+          label={t.profileWizard.personal.nationality}
           value={fields.nationality ?? ""}
           onChange={(v) => updateField("nationality", v)}
           options={NATIONALITY_OPTIONS}
         />
         <Field
-          label="City of birth"
+          label={t.profileWizard.personal.cityOfBirth}
           placeholder="Almaty"
           value={fields.cityOfBirth ?? ""}
           onChange={(v) => updateField("cityOfBirth", v)}
         />
         <Field
-          label="Date of birth"
+          label={t.profileWizard.personal.dateOfBirth}
           type="date"
           value={fields.dateOfBirth ?? ""}
           onChange={(v) => updateField("dateOfBirth", v)}
         />
         <Field
-          label="Chinese name (if any)"
+          label={t.profileWizard.personal.chineseName}
           placeholder="安娜"
           value={fields.chineseName ?? ""}
           onChange={(v) => updateField("chineseName", v)}
         />
         <SelectField
-          label="Religion"
+          label={t.profileWizard.personal.religion}
           value={fields.religion ?? ""}
           onChange={(v) => updateField("religion", v)}
           options={RELIGION_OPTIONS}
         />
         <Field
-          label="Marital status"
+          label={t.profileWizard.personal.maritalStatus}
           placeholder="Single"
           value={fields.maritalStatus ?? ""}
           onChange={(v) => updateField("maritalStatus", v)}
         />
       </StepSection>
 
-      <StepSection title="Passport & visa">
+      <StepSection title={t.profileWizard.personal.sectionPassport}>
         <Field
-          label="Passport number"
+          label={t.profileWizard.personal.passportNo}
           placeholder="N01234567"
           value={fields.passportNo ?? ""}
           onChange={(v) => updateField("passportNo", v)}
         />
         <Field
-          label="Passport expiry"
+          label={t.profileWizard.personal.passportExpiry}
           type="date"
           value={fields.passportExpiry ?? ""}
           onChange={(v) => updateField("passportExpiry", v)}
         />
         <Field
-          label="Consulate applying for visa"
+          label={t.profileWizard.personal.consulate}
           placeholder="Beijing"
           value={fields.consulate ?? ""}
           onChange={(v) => updateField("consulate", v)}
         />
       </StepSection>
 
-      <StepSection title="Contact">
+      <StepSection title={t.profileWizard.personal.sectionContact}>
         <Field
-          label="Email"
+          label={t.profileWizard.personal.email}
           type="email"
           placeholder="you@example.com"
           value={fields.email}
@@ -165,57 +167,57 @@ export function PersonalStep({
           required
         />
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-slate-600">Phone</label>
+          <label className="text-xs font-medium text-slate-600">{t.profileWizard.personal.phone}</label>
           <PhoneInput
             value={(fields.phone ?? "").replace(/^\+/, "")}
             onChange={(value) => updateField("phone", `+${value}`)}
-            placeholder="Enter your phone number"
+            placeholder={t.profileWizard.personal.phonePlaceholder}
             inputClass="!h-10 !w-full !rounded-lg !border !border-slate-200 !text-sm !text-slate-800"
             buttonClass="!rounded-l-lg !border !border-slate-200"
             containerClass="!w-full"
           />
         </div>
         <Field
-          label="Permanent address"
+          label={t.profileWizard.personal.permanentAddress}
           placeholder="123 Main St, Almaty"
           value={fields.permanentAddress ?? ""}
           onChange={(v) => updateField("permanentAddress", v)}
         />
         <Field
-          label="Post code"
+          label={t.profileWizard.personal.postCode}
           placeholder="050000"
           value={fields.postCode ?? ""}
           onChange={(v) => updateField("postCode", v)}
         />
       </StepSection>
 
-      <StepSection title="Background">
+      <StepSection title={t.profileWizard.personal.sectionBackground}>
         <Field
-          label="Current employer or institution"
+          label={t.profileWizard.personal.currentInstitution}
           placeholder="Al-Farabi KazNU"
           value={fields.currentInstitution ?? ""}
           onChange={(v) => updateField("currentInstitution", v)}
         />
         <Field
-          label="Hobby"
+          label={t.profileWizard.personal.hobby}
           placeholder="Reading, chess"
           value={fields.hobby ?? ""}
           onChange={(v) => updateField("hobby", v)}
         />
         <Field
-          label="Desired field of study"
+          label={t.profileWizard.personal.desiredField}
           placeholder="Computer Science"
           value={fields.desiredField ?? ""}
           onChange={(v) => updateField("desiredField", v)}
         />
         <div className="flex flex-col justify-center gap-2">
           <CheckboxField
-            label="I have been to China before"
+            label={t.profileWizard.personal.beenToChina}
             checked={fields.beenToChina ?? false}
             onChange={(v) => updateField("beenToChina", v)}
           />
           <CheckboxField
-            label="I have studied or worked in China before"
+            label={t.profileWizard.personal.studiedInChina}
             checked={fields.studiedInChina ?? false}
             onChange={(v) => updateField("studiedInChina", v)}
           />
