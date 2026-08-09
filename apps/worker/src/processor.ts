@@ -553,6 +553,7 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
 
     return {
       id: student.id,
+      onboardingStep: student.onboardingStep,
       personal: {
         surname: student.surname,
         givenName: student.givenName,
