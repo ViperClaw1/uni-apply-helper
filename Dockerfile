@@ -25,7 +25,7 @@ FROM deps AS playwright
 
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
-RUN pnpm --filter worker exec playwright install --with-deps chromium
+RUN for i in 1 2 3; do pnpm --filter worker exec playwright install --with-deps chromium && break || { echo "playwright install failed (attempt $i), retrying..." >&2; sleep 5; }; done
 
 FROM deps AS build
 

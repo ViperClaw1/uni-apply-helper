@@ -1,0 +1,47 @@
+# Playwright Auto-Filling: How Applications Get Submitted
+
+**Scope:** `apps/worker/src/{processor.ts, steps/, filler/, agent/, browser/}` — the pipeline that opens a university's application form in a real browser, fills it from a student's profile, and submits it. Mid-level, compact mode.
+
+## Overview
+
+Each application is a BullMQ job. A `Processor` (`processor.ts`) pulls a job, opens one Playwright `Page` per university session, and runs it through an ordered list of **pipeline steps** (`steps/*.step.ts`) — open the form, fill fields, attach documents, submit, log the result. Every step's outcome is persisted to Postgres (`applicationStep` rows) so the dashboard can show live per-step status, and a failure captures a screenshot before rethrowing.
+
+There are two very different ways a form actually gets filled:
+
+1. **Deterministic / schema-driven** (`filler/form.filler.ts`) — a per-university JSON schema (`data/university-schemas/*.json`) lists every field as a CSS selector + type + "maps to" path into the student profile. The filler loops the field list and drives Playwright directly. This is the default and handles ~all of the simple one-page forms.
+2. **AI agent loop** (`agent/form.agent.ts`) — for the multi-step "wizard" forms (mainland Chinese university portals, 6–7 steps, heavy AJAX, no stable DOM contract), an observe → think → act loop screenshots/DOM-dumps the page, asks Gemini what to click/type next, executes one action, and repeats. This runs either as the *primary* strategy for a university (`fillMode: 'agent'` in its schema) or as an automatic **fallback** when the deterministic wizard filler throws partway through.
+
+The wizard case additionally goes through `WizardNavigator`, which owns "click Next and prove the step actually advanced" — because these portals are AJAX single-page apps that keep the same URL across steps, so "did navigation happen" has to be inferred from DOM fingerprints, not `page.waitForURL`.
+
+## Key Components
+
+- **`Processor.processApplication()`** (`processor.ts:204`) — loads the student + university schema from DB, opens a page via `BrowserService.withPage`, runs `getSteps(university)` (5-step flow for simple forms, 3-step `[open, fill_wizard, log]` for wizard universities), updates `application.status`, captures before/after screenshots, notifies on success/failure.
+- **`Processor.runStep()`** (`processor.ts:355`) — wraps each step in an `applicationStep` DB record (processing → completed/failed) so partial progress is visible even mid-run; closes out orphaned `processing` rows from a prior crashed attempt first.
+- **`OpenFormStep`** (`steps/open-form.step.ts`) — resolves a per-university `Navigator` from `NavigationRegistry` and calls `assertSessionValid` (throws `SessionExpiredError` if the saved login session died — this is what triggers the "reconnect your university session" notification path).
+- **`FillFieldsStep` / `FillWizardStep`** (`steps/fill-fields.step.ts`, `steps/fill-wizard.step.ts`) — thin adapters that just call `FormFiller.fillFields()` or `FormFiller.processWizard()`; the pipeline-step abstraction exists so `Processor` doesn't need to know deterministic-vs-wizard branching.
+- **`FormFiller.fillFieldBatch()`** (`filler/form.filler.ts:298`) — the core loop: for each `FieldConfig`, resolve its value from the student profile (`FieldMapper.getValue`), resolve a Playwright `Locator` (`resolveFieldLocator`, with a semantic-mapper fallback in `hybrid` mode), then dispatch to a type-specific fill routine (`fillTextControl` / `fillSelectControl` / `fillRadioControl` / checkbox). Required-but-missing fields throw immediately (`missingRequired` → step fails loudly instead of silently submitting an incomplete form).
+- **`resolveFieldLocator()`** (`filler/field.locator.ts`) — locator-resolution strategy: try the schema's CSS selector first (preferring a *visible* match when duplicates exist, since some portals keep a hidden twin input next to a JS-rendered date-picker), then fall back to `getByLabel`/`getByPlaceholder` by the field's human-readable hint.
+- **`WizardNavigator.forEachStep()` / `.clickNext()`** (`filler/wizard.navigator.ts:10,42`) — drives the step loop; `clickNext` computes a DOM "step signature" (URL + active-tab text + a set of known per-step field names + content length) before and after clicking Next, and only considers the step advanced if that signature changed — a real navigation/URL check would never fire on these AJAX portals.
+- **`FormFiller.processWizard()`** (`filler/form.filler.ts:85`) — chooses agent-mode vs. deterministic-mode per university config, and on a deterministic failure, decides whether to retry the remainder of the wizard via `FormAgent` (skipped for file-attachment failures, which need a schema fix, not an AI retry — see the `skipAgentFallback` regex).
+- **`FormAgent.runWizard()` / `.runLoop()`** (`agent/form.agent.ts:50,131`) — per wizard step, builds a scoped goal string ("complete ONLY step N, don't navigate elsewhere") and field hints, then loops `PageObserver.observe()` (DOM → structured text description) → `AgentPlanner` (Gemini call → next `AgentAction`) → `ActionExecutor.execute()` (click/type/upload) for up to `maxSteps` iterations.
+
+**Also present, summarized:** `browser/navigation/*.navigator.ts` (per-university login/pre-wizard navigation quirks behind a shared `NavigationRegistry`), `filler/field.mapper.ts` (profile-path → value resolution, e.g. `mapsTo: "personal.email"`), `filler/file.attacher.ts` + `ocr-passport.uploader.ts` (document upload + passport OCR autofill), `agent/dom/semantic-field.mapper.ts` (LLM-based "which DOM field is this" fallback used in `hybrid` fill mode), `agent/think/agent.planner.ts` + `agent/observe/page.observer.ts` + `agent/act/action.executor.ts` (the three stages of the agent loop), `browser/session.loader.ts` / `session.validator.ts` (storage-state session reuse + expiry detection).
+
+## Concepts
+
+- **Pipeline-of-steps pattern** — `ApplicationPipelineStep` is a one-method interface (`execute(context)`); `Processor` just iterates an array of them. *Why*: lets `Processor` stay agnostic of form-filling internals and lets step-level status be tracked/retried independently in the DB, at the cost of a shared mutable `context` object threaded through every step.
+- **Schema-driven filling vs. agent-driven filling** — two fill strategies coexist rather than one "smart" filler. *Why*: deterministic CSS-selector filling is fast, free, and reliable for stable forms; but the wizard portals have DOM structure that varies by student type/skin and no stable selectors worth hand-maintaining across 7 steps, so an LLM-driven fallback trades speed/cost for resilience. The `fillMode` config (`schema` / `agent` / `hybrid`) makes this a per-university, not global, choice.
+- **DOM-signature diffing instead of navigation events** — `WizardNavigator` never trusts `waitForURL` or `networkidle` alone. *Why*: these are legacy jQuery/EasyUI AJAX apps (My97 date pickers, `.messager-window` modals, `#main_right_content` swapped via AJAX) where the URL never changes between wizard steps, so "did the click work" has to be inferred from content fingerprinting — a workaround for pages that predate SPA routing conventions.
+- **Deterministic-first, agent-as-fallback (not agent-always)** — even on wizard universities with agent capability, the deterministic path runs first and the agent only takes over mid-flight on failure, resuming at the detected current step. *Why*: keeps cost/latency down (Gemini calls are slower and paid) while still getting graceful degradation instead of a hard failure a human has to manually unblock.
+
+## How This Is Tested
+
+There is **no automated test suite for the fill pipeline** — `apps/worker/test/app.e2e-spec.ts` is untouched Nest boilerplate (`GET /` → "Hello World!") and doesn't exercise any of this code. This matches the project's own stated policy in `.claude/rules/testing.md`: *"No E2E test infra in Phase 1 scope — manual QA on core flow acceptable until Phase 2."*
+
+In practice, testing happens through **`apps/worker/scripts/*.mjs`** — standalone Node scripts run manually against real or recorded portal sessions:
+- `capture-*-session.mjs` scripts log into a real university portal once and save the Playwright `storageState` (cookies/localStorage) to disk/base64, so later runs don't need a live login.
+- `debug-<university>-prewizard.mjs` / `debug-lnpu-*.mjs` / `recon-zzu-wizard.mjs` drive a step of the real flow (or a recorded fixture) and print DOM state, useful for diagnosing "why did Next not advance."
+- `debug-agent-smoke.mjs` is the closest thing to a unit test: it asserts a university schema's shape (offline, no network), then optionally (`SMOKE_LIVE=1`) launches Chromium against a static HTML fixture to assert `PageObserver`'s DOM-description output contains expected `required=`, `options=[`, `hint=`, `near=` markers — a regression check on the agent's "what the page looks like" text without needing Gemini or a live site.
+- `dry-run-open-form.mjs` exercises `OpenFormStep`'s navigation resolution against a saved session without filling anything.
+
+So verification is: run the relevant `debug-*`/`capture-*` script against a captured session (or, for a truly new university, a live one), read the printed DOM state / screenshot, and eyeball whether fields resolved and steps advanced — rather than asserting pass/fail in CI.
