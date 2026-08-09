@@ -41,7 +41,7 @@ export function HowItWorksSection() {
           </p>
         </div>
 
-        <div className="relative mx-auto mt-10 h-[420px] max-w-lg overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgba(15,23,42,0.08),0_12px_45px_rgba(15,23,42,0.06)] ring-1 ring-black/5">
+        <div className="relative mx-auto mt-10 h-105 max-w-lg overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgba(15,23,42,0.08),0_12px_45px_rgba(15,23,42,0.06)] ring-1 ring-black/5">
           <div className="flex h-9 items-center gap-1.5 border-b border-slate-100 bg-slate-50 px-4">
             <span className="h-2.5 w-2.5 rounded-full bg-rose-300" />
             <span className="h-2.5 w-2.5 rounded-full bg-amber-300" />

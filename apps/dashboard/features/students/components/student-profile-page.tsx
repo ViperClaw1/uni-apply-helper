@@ -460,7 +460,7 @@ function ContactInfoCard({
                 <span className="mt-0.5 shrink-0 text-slate-400">
                   <Icon />
                 </span>
-                <span className="min-w-0 break-words">{row.value}</span>
+                <span className="min-w-0 wrap-break-word">{row.value}</span>
               </>
             );
 

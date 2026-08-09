@@ -22,6 +22,9 @@ const en = {
     logIn: "Log in",
     getStarted: "Get started — it's free",
     bookDemo: "Book a demo",
+    myApplications: "My applications",
+    openMenu: "Open menu",
+    closeMenu: "Close menu",
   },
   landing: {
     features: {

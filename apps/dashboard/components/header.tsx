@@ -41,9 +41,11 @@ type HeaderProps = {
   nav?: ReactNode;
   actions?: ReactNode;
   variant?: "site" | "page";
+  /** Extra content rendered below the bar, e.g. a small-screen nav panel. Caller owns open/closed state. */
+  mobileMenu?: ReactNode;
 };
 
-export function Header({ eyebrow, title, nav, actions, variant = "page" }: HeaderProps) {
+export function Header({ eyebrow, title, nav, actions, variant = "page", mobileMenu }: HeaderProps) {
   if (variant === "site") {
     return (
       <header className="border-b border-slate-100">
@@ -60,6 +62,8 @@ export function Header({ eyebrow, title, nav, actions, variant = "page" }: Heade
             <LanguageSwitcher />
           </div>
         </div>
+
+        {mobileMenu}
       </header>
     );
   }

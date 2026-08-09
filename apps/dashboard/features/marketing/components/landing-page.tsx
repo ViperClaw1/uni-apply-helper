@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { Header } from "@/components/header";
 import { useT } from "@/lib/i18n/context";
 import { AuthModal } from "@/features/auth/components/auth-modal";
+import type { Account } from "@/features/auth/api/auth.api";
 import { SUPPORTED_UNIVERSITIES } from "../constants/universities";
 import { HowItWorksSection } from "./how-it-works-section";
 
@@ -44,13 +46,16 @@ const AGENCY_TRUST_LOGOS = [
   "StudyPath International",
 ];
 
-export function LandingPage() {
+export function LandingPage({ account }: { account: Account | null }) {
   const t = useT();
   const [mode, setMode] = useState<Mode>("students");
   const [authModal, setAuthModal] = useState<{
     open: boolean;
     initialMode: "login" | "signup";
   }>({ open: false, initialMode: "signup" });
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const closeMobileMenu = () => setMobileMenuOpen(false);
+  const isLoggedInStudent = account?.role === "student";
 
   const nav = (
     <nav className="hidden items-center gap-8 md:flex">
@@ -99,26 +104,137 @@ export function LandingPage() {
 
   const actions = (
     <>
+      {isLoggedInStudent ? (
+        <Link
+          href="/dashboard"
+          className="inline-flex h-10 cursor-pointer items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm"
+        >
+          {t.header.myApplications}
+        </Link>
+      ) : (
+        <>
+          <button
+            type="button"
+            onClick={() => setAuthModal({ open: true, initialMode: "login" })}
+            className="hidden cursor-pointer text-sm font-medium text-slate-600 sm:inline-flex"
+          >
+            {t.header.logIn}
+          </button>
+          <button
+            type="button"
+            onClick={() => setAuthModal({ open: true, initialMode: "signup" })}
+            className="inline-flex h-10 cursor-pointer items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm"
+          >
+            {mode === "students" ? t.header.getStarted : t.header.bookDemo}
+          </button>
+        </>
+      )}
       <button
         type="button"
-        onClick={() => setAuthModal({ open: true, initialMode: "login" })}
-        className="hidden cursor-pointer text-sm font-medium text-slate-600 sm:inline-flex"
+        onClick={() => setMobileMenuOpen((open) => !open)}
+        aria-label={mobileMenuOpen ? t.header.closeMenu : t.header.openMenu}
+        aria-expanded={mobileMenuOpen}
+        className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-50 md:hidden"
       >
-        {t.header.logIn}
-      </button>
-      <button
-        type="button"
-        onClick={() => setAuthModal({ open: true, initialMode: "signup" })}
-        className="inline-flex h-10 cursor-pointer items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm"
-      >
-        {mode === "students" ? t.header.getStarted : t.header.bookDemo}
+        <BurgerIcon open={mobileMenuOpen} />
       </button>
     </>
   );
 
+  const mobileMenu = mobileMenuOpen ? (
+    <div className="border-t border-slate-100 px-6 py-4 md:hidden">
+      <nav className="flex flex-col gap-1">
+        {NAV_ITEMS.map((item) => {
+          const label = t.header[item.labelKey];
+          const itemClassName =
+            "rounded-lg px-2 py-2.5 text-left text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-950";
+
+          if (item.kind === "anchor") {
+            return (
+              <a
+                key={item.labelKey}
+                href={`#${item.anchor}`}
+                onClick={closeMobileMenu}
+                className={itemClassName}
+              >
+                {label}
+              </a>
+            );
+          }
+
+          if (item.kind === "mode") {
+            return (
+              <button
+                key={item.labelKey}
+                type="button"
+                onClick={() => {
+                  setMode(item.mode);
+                  closeMobileMenu();
+                }}
+                className={`cursor-pointer ${itemClassName} ${
+                  mode === item.mode ? "text-blue-600" : ""
+                }`}
+              >
+                {label}
+              </button>
+            );
+          }
+
+          return (
+            <span key={item.labelKey} className={`flex select-none items-center gap-1 ${itemClassName}`}>
+              {label}
+              {item.chevron ? <ChevronDownIcon /> : null}
+            </span>
+          );
+        })}
+      </nav>
+
+      <div className="mt-3 flex flex-col gap-2 border-t border-slate-100 pt-3">
+        {isLoggedInStudent ? (
+          <Link
+            href="/dashboard"
+            onClick={closeMobileMenu}
+            className="inline-flex h-11 items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm"
+          >
+            {t.header.myApplications}
+          </Link>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthModal({ open: true, initialMode: "login" });
+                closeMobileMenu();
+              }}
+              className="inline-flex h-11 cursor-pointer items-center justify-center rounded-xl text-sm font-medium text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
+            >
+              {t.header.logIn}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthModal({ open: true, initialMode: "signup" });
+                closeMobileMenu();
+              }}
+              className="inline-flex h-11 cursor-pointer items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm"
+            >
+              {mode === "students" ? t.header.getStarted : t.header.bookDemo}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  ) : null;
+
   return (
     <div className="flex min-h-screen flex-col bg-white">
-      <Header variant="site" title={t.header.brand} nav={nav} actions={actions} />
+      <Header
+        variant="site"
+        title={t.header.brand}
+        nav={nav}
+        actions={actions}
+        mobileMenu={mobileMenu}
+      />
       <main className="flex-1">
         {mode === "students" ? (
           <>
@@ -442,7 +558,7 @@ function AgencyTrustBullet({ icon, label }: { icon: ReactNode; label: string }) 
   return (
     <div className="flex items-start gap-2.5">
       <span className="mt-0.5 text-blue-600">{icon}</span>
-      <div className="max-w-[9rem] text-xs font-medium text-slate-600">{label}</div>
+      <div className="max-w-36 text-xs font-medium text-slate-600">{label}</div>
     </div>
   );
 }
@@ -552,6 +668,29 @@ function UniversityBadge({ initial, color }: { initial: string; color: string })
     >
       {initial}
     </span>
+  );
+}
+
+function BurgerIcon({ open }: { open: boolean }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
+      {open ? (
+        <path
+          d="M6 6l12 12M18 6 6 18"
+          stroke="currentColor"
+          strokeWidth="1.75"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      ) : (
+        <path
+          d="M4 7h16M4 12h16M4 17h16"
+          stroke="currentColor"
+          strokeWidth="1.75"
+          strokeLinecap="round"
+        />
+      )}
+    </svg>
   );
 }
 

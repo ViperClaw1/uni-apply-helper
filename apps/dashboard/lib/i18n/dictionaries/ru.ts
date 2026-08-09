@@ -24,6 +24,9 @@ const ru: Dictionary = {
     logIn: "Войти",
     getStarted: "Начать — бесплатно",
     bookDemo: "Записаться на демо",
+    myApplications: "Мои заявки",
+    openMenu: "Открыть меню",
+    closeMenu: "Закрыть меню",
   },
   landing: {
     features: {
