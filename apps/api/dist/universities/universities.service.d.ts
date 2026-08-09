@@ -16,13 +16,16 @@ export declare class UniversitiesService {
     private formUrlsMatch;
     findAliases(universityId: string): Promise<string[]>;
     requestRelogin(universityId: string): Promise<{
-        jobId: any;
+        jobId: string | undefined;
         status: string;
         universityId: string;
-        profilePath: any;
+        profilePath: string;
         message: string;
     }>;
-    createAlias(input: CreateUniversityAliasInput): Promise<any>;
+    createAlias(input: CreateUniversityAliasInput): Promise<{
+        universityId: string;
+        alias: string;
+    }>;
     resolve(rawName: string): Promise<ResolvedUniversity>;
     private findExactMatch;
     private getMatchEntries;

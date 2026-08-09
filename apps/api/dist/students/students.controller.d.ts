@@ -4,7 +4,7 @@ export declare class StudentsController {
     private readonly studentsService;
     constructor(studentsService: StudentsService);
     getMyProfile(req: RequestWithAccount): Promise<{
-        student: any;
+        student: import("@uni-apply/shared").StudentProfile | null;
     }>;
     saveMyProfile(req: RequestWithAccount, body: {
         surname?: string;
@@ -28,7 +28,7 @@ export declare class StudentsController {
         beenToChina?: boolean;
         studiedInChina?: boolean;
         desiredField?: string;
-    }): Promise<StudentProfile>;
+    }): Promise<import("@uni-apply/shared").StudentProfile>;
     saveMyEducation(req: RequestWithAccount, body: {
         school?: {
             degree?: string;
@@ -46,20 +46,20 @@ export declare class StudentsController {
         };
         chineseLevel?: string;
         englishLevel?: string;
-    }): Promise<StudentProfile>;
+    }): Promise<import("@uni-apply/shared").StudentProfile>;
     saveMyGuarantor(req: RequestWithAccount, body: {
         name?: string;
         relationship?: string;
         phone?: string;
         email?: string;
         homeAddress?: string;
-    }): Promise<StudentProfile>;
+    }): Promise<import("@uni-apply/shared").StudentProfile>;
     saveMyEmergencyContact(req: RequestWithAccount, body: {
         name?: string;
         relationship?: string;
         phone?: string;
         email?: string;
-    }): Promise<StudentProfile>;
+    }): Promise<import("@uni-apply/shared").StudentProfile>;
     saveMyFamily(req: RequestWithAccount, body: {
         father?: {
             fullName?: string;
@@ -77,16 +77,79 @@ export declare class StudentsController {
             company?: string;
             position?: string;
         };
-    }): Promise<StudentProfile>;
-    findAll(): Promise<any>;
-    findOne(id: string): Promise<any>;
+    }): Promise<import("@uni-apply/shared").StudentProfile>;
+    findAll(): Promise<({
+        applicationTargets: {
+            id: string;
+            universityId: string | null;
+            degree: string | null;
+            major: string | null;
+            universityRaw: string;
+            duration: string | null;
+            fundingSource: string | null;
+            studentId: string;
+        }[];
+    } & {
+        id: string;
+        email: string;
+        createdAt: Date;
+        accountId: string | null;
+        surname: string;
+        givenName: string;
+        sex: string | null;
+        nationality: string | null;
+        cityOfBirth: string | null;
+        dateOfBirth: Date | null;
+        chineseName: string | null;
+        religion: string | null;
+        passportNo: string | null;
+        passportExpiry: Date | null;
+        consulate: string | null;
+        maritalStatus: string | null;
+        phone: string | null;
+        hobby: string | null;
+        permanentAddress: string | null;
+        postCode: string | null;
+        currentInstitution: string | null;
+        beenToChina: boolean;
+        studiedInChina: boolean;
+        desiredField: string | null;
+        onboardingStep: number;
+    })[]>;
+    findOne(id: string): Promise<{
+        id: string;
+        email: string;
+        createdAt: Date;
+        accountId: string | null;
+        surname: string;
+        givenName: string;
+        sex: string | null;
+        nationality: string | null;
+        cityOfBirth: string | null;
+        dateOfBirth: Date | null;
+        chineseName: string | null;
+        religion: string | null;
+        passportNo: string | null;
+        passportExpiry: Date | null;
+        consulate: string | null;
+        maritalStatus: string | null;
+        phone: string | null;
+        hobby: string | null;
+        permanentAddress: string | null;
+        postCode: string | null;
+        currentInstitution: string | null;
+        beenToChina: boolean;
+        studiedInChina: boolean;
+        desiredField: string | null;
+        onboardingStep: number;
+    }>;
     remove(id: string): Promise<void>;
-    getFullProfile(id: string): Promise<StudentProfile>;
+    getFullProfile(id: string): Promise<import("@uni-apply/shared").StudentProfile>;
     setApplicationTargets(id: string, body: {
         formUrls?: string[];
-    }): Promise<StudentProfile>;
+    }): Promise<import("@uni-apply/shared").StudentProfile>;
     resolveApplicationTarget(id: string, body: {
         universityRaw: string;
         universityId: string;
-    }): Promise<StudentProfile>;
+    }): Promise<import("@uni-apply/shared").StudentProfile>;
 }

@@ -10,17 +10,20 @@ export declare class UniversitiesController {
     constructor(universitiesService: UniversitiesService, schemasService: SchemasService, schemaGeneratorService: SchemaGeneratorService);
     findAll(): Promise<import("./types/university-api.types.js").UniversitySummary[]>;
     resolve(name?: string): Promise<import("./types/university-api.types.js").ResolvedUniversity>;
-    resolveByFormUrl(url?: string): Promise<any>;
-    createAlias(body: CreateUniversityAliasInput): Promise<any>;
+    resolveByFormUrl(url?: string): Promise<import("./types/university-api.types.js").UniversitySchemaResponse>;
+    createAlias(body: CreateUniversityAliasInput): Promise<{
+        universityId: string;
+        alias: string;
+    }>;
     seedSchemas(): Promise<import("./types/university-api.types.js").SeedUniversitySchemasResult>;
     generateSchemaDraft(body: GenerateUniversitySchemaInput): Promise<import("./types/schema-generator.types.js").GenerateUniversitySchemaResult>;
-    findOne(id: string): Promise<any>;
+    findOne(id: string): Promise<import("./types/university-api.types.js").UniversitySchemaResponse>;
     findAliases(id: string): Promise<string[]>;
     relogin(id: string): Promise<{
-        jobId: any;
+        jobId: string | undefined;
         status: string;
         universityId: string;
-        profilePath: any;
+        profilePath: string;
         message: string;
     }>;
 }

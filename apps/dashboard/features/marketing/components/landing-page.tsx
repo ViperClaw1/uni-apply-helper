@@ -58,7 +58,7 @@ export function LandingPage({ account }: { account: Account | null }) {
   const isLoggedInStudent = account?.role === "student";
 
   const nav = (
-    <nav className="hidden items-center gap-8 md:flex">
+    <nav className="hidden items-center gap-8 min-[1040px]:flex">
       {NAV_ITEMS.map((item) => {
         const label = t.header[item.labelKey];
 
@@ -134,15 +134,22 @@ export function LandingPage({ account }: { account: Account | null }) {
         onClick={() => setMobileMenuOpen((open) => !open)}
         aria-label={mobileMenuOpen ? t.header.closeMenu : t.header.openMenu}
         aria-expanded={mobileMenuOpen}
-        className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-50 md:hidden"
+        className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-xl text-slate-600 transition-colors hover:bg-slate-50 min-[1040px]:hidden"
       >
         <BurgerIcon open={mobileMenuOpen} />
       </button>
     </>
   );
 
-  const mobileMenu = mobileMenuOpen ? (
-    <div className="border-t border-slate-100 px-6 py-4 md:hidden">
+  const mobileMenu = (
+    <div
+      aria-hidden={!mobileMenuOpen}
+      className={`fixed inset-x-0 top-16 z-40 max-h-[calc(100vh-4rem)] overflow-y-auto border-t border-slate-100 bg-white px-6 py-4 shadow-[0_16px_40px_rgba(15,23,42,0.12)] transition-all duration-200 ease-out min-[1040px]:hidden ${
+        mobileMenuOpen
+          ? "translate-y-0 opacity-100"
+          : "pointer-events-none -translate-y-2 opacity-0"
+      }`}
+    >
       <nav className="flex flex-col gap-1">
         {NAV_ITEMS.map((item) => {
           const label = t.header[item.labelKey];
@@ -224,7 +231,7 @@ export function LandingPage({ account }: { account: Account | null }) {
         )}
       </div>
     </div>
-  ) : null;
+  );
 
   return (
     <div className="flex min-h-screen flex-col bg-white">

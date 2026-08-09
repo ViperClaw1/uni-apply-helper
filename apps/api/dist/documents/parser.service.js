@@ -9,7 +9,6 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 var ParserService_1;
-var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ParserService = void 0;
 const common_1 = require("@nestjs/common");
@@ -311,6 +310,7 @@ let ParserService = ParserService_1 = class ParserService {
 exports.ParserService = ParserService;
 exports.ParserService = ParserService = ParserService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_js_1.PrismaService, typeof (_a = typeof config_1.ConfigService !== "undefined" && config_1.ConfigService) === "function" ? _a : Object])
+    __metadata("design:paramtypes", [prisma_service_js_1.PrismaService,
+        config_1.ConfigService])
 ], ParserService);
 //# sourceMappingURL=parser.service.js.map

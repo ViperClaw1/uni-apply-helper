@@ -8,7 +8,6 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ApiKeyGuard = void 0;
 const common_1 = require("@nestjs/common");
@@ -34,6 +33,6 @@ let ApiKeyGuard = class ApiKeyGuard {
 exports.ApiKeyGuard = ApiKeyGuard;
 exports.ApiKeyGuard = ApiKeyGuard = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [typeof (_a = typeof config_1.ConfigService !== "undefined" && config_1.ConfigService) === "function" ? _a : Object])
+    __metadata("design:paramtypes", [config_1.ConfigService])
 ], ApiKeyGuard);
 //# sourceMappingURL=api-key.guard.js.map
