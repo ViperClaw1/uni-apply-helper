@@ -71,8 +71,9 @@ model Student {
   desiredField       String?
   createdAt          DateTime  @default(now())
 
-  accountId String?  @unique
-  account   Account? @relation(fields: [accountId], references: [id])
+  accountId      String?  @unique
+  account        Account? @relation(fields: [accountId], references: [id])
+  onboardingStep Int      @default(1)
 
   education          Education[]
   workExperience     WorkExperience[]

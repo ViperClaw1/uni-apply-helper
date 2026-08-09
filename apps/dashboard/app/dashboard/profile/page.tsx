@@ -31,6 +31,7 @@ const STEP_LABELS = [
 export default function ProfileWizardPage() {
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [step, setStep] = useState(1);
+  const [furthestStep, setFurthestStep] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -40,6 +41,9 @@ export default function ProfileWizardPage() {
       .then((data) => {
         if (isMounted) {
           setProfile(data);
+          const resumeStep = Math.min(data?.onboardingStep ?? 1, 6);
+          setStep(resumeStep);
+          setFurthestStep(resumeStep);
         }
       })
       .finally(() => {
@@ -55,6 +59,8 @@ export default function ProfileWizardPage() {
 
   function handleStepComplete(updated: StudentProfile) {
     setProfile(updated);
+    const unlocked = Math.min(updated.onboardingStep, 6);
+    setFurthestStep((current) => Math.max(current, unlocked));
     setStep((current) => Math.min(current + 1, 6));
   }
 
@@ -86,9 +92,10 @@ export default function ProfileWizardPage() {
 
       <StepProgress
         current={step}
+        furthestStep={furthestStep}
         labels={STEP_LABELS}
         onStepClick={(target) => {
-          if (target < step) {
+          if (target <= furthestStep) {
             setStep(target);
           }
         }}
@@ -142,10 +149,12 @@ export default function ProfileWizardPage() {
 
 function StepProgress({
   current,
+  furthestStep,
   labels,
   onStepClick,
 }: {
   current: number;
+  furthestStep: number;
   labels: string[];
   onStepClick: (step: number) => void;
 }) {
@@ -153,21 +162,24 @@ function StepProgress({
     <ol className="flex flex-wrap gap-2">
       {labels.map((label, index) => {
         const stepNumber = index + 1;
-        const isCompleted = stepNumber < current;
+        const isAccessible = stepNumber <= furthestStep;
+        const isCompleted = stepNumber < furthestStep;
         const isCurrent = stepNumber === current;
 
         return (
           <li key={label}>
             <button
               type="button"
-              disabled={!isCompleted}
+              disabled={!isAccessible}
               onClick={() => onStepClick(stepNumber)}
               className={`inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors ${
                 isCurrent
                   ? "bg-slate-950 text-white"
                   : isCompleted
                     ? "cursor-pointer bg-slate-100 text-slate-700 hover:bg-slate-200"
-                    : "bg-slate-50 text-slate-400"
+                    : isAccessible
+                      ? "cursor-pointer bg-slate-50 text-slate-500 hover:bg-slate-100"
+                      : "bg-slate-50 text-slate-400"
               }`}
             >
               {stepNumber}. {label}

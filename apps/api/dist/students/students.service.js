@@ -116,6 +116,7 @@ let StudentsService = class StudentsService {
         const formUrlByUniversityId = new Map(universities.map((university) => [university.id, university.formUrl]));
         return {
             id: student.id,
+            onboardingStep: student.onboardingStep,
             personal: {
                 surname: student.surname,
                 givenName: student.givenName,
@@ -264,6 +265,7 @@ let StudentsService = class StudentsService {
             create: { ...data, accountId },
             update: data,
         });
+        await this.advanceOnboardingStep(student.id, student.onboardingStep, 2);
         return this.getFullProfile(student.id);
     }
     async upsertMyEducation(accountId, input) {
@@ -306,6 +308,7 @@ let StudentsService = class StudentsService {
                 })),
             }),
         ]);
+        await this.advanceOnboardingStep(student.id, student.onboardingStep, 3);
         return this.getFullProfile(student.id);
     }
     async upsertMyGuarantor(accountId, input) {
@@ -326,6 +329,7 @@ let StudentsService = class StudentsService {
             create: { ...data, studentId: student.id },
             update: data,
         });
+        await this.advanceOnboardingStep(student.id, student.onboardingStep, 4);
         return this.getFullProfile(student.id);
     }
     async upsertMyEmergencyContact(accountId, input) {
@@ -345,6 +349,7 @@ let StudentsService = class StudentsService {
             create: { ...data, studentId: student.id },
             update: data,
         });
+        await this.advanceOnboardingStep(student.id, student.onboardingStep, 5);
         return this.getFullProfile(student.id);
     }
     async upsertMyFamily(accountId, input) {
@@ -372,6 +377,7 @@ let StudentsService = class StudentsService {
                 })),
             }),
         ]);
+        await this.advanceOnboardingStep(student.id, student.onboardingStep, 6);
         return this.getFullProfile(student.id);
     }
     async requireStudentByAccountId(accountId) {
@@ -382,6 +388,14 @@ let StudentsService = class StudentsService {
             throw new common_1.BadRequestException('Complete your personal info first.');
         }
         return student;
+    }
+    async advanceOnboardingStep(studentId, currentStep, minStep) {
+        if (currentStep < minStep) {
+            await this.prisma.student.update({
+                where: { id: studentId },
+                data: { onboardingStep: minStep },
+            });
+        }
     }
     hasEducationData(entry) {
         return Boolean(entry.degree?.trim() ||

@@ -7,9 +7,6 @@ export declare class WebhookService {
     constructor(studentsService: StudentsService, notificationsService: NotificationsService);
     processFormSubmission(raw: unknown): Promise<{
         id: string;
-        email: string;
-        createdAt: Date;
-        accountId: string | null;
         surname: string;
         givenName: string;
         sex: string | null;
@@ -22,6 +19,7 @@ export declare class WebhookService {
         passportExpiry: Date | null;
         consulate: string | null;
         maritalStatus: string | null;
+        email: string;
         phone: string | null;
         hobby: string | null;
         permanentAddress: string | null;
@@ -30,6 +28,9 @@ export declare class WebhookService {
         beenToChina: boolean;
         studiedInChina: boolean;
         desiredField: string | null;
+        createdAt: Date;
+        onboardingStep: number;
+        accountId: string | null;
     }>;
     private extractPayload;
     private extractValues;

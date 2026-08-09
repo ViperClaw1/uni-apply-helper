@@ -55,6 +55,7 @@ export type FamilyMember = {
 
 export type StudentProfile = {
   id: string;
+  onboardingStep: number;
   personal: {
     surname: string;
     givenName: string;

@@ -73,6 +73,7 @@ model Student {
 
   accountId          String?   @unique
   account            Account?  @relation(fields: [accountId], references: [id])
+  onboardingStep     Int       @default(1)
 
   education          Education[]
   workExperience     WorkExperience[]

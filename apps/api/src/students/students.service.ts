@@ -168,6 +168,7 @@ export class StudentsService {
 
     return {
       id: student.id,
+      onboardingStep: student.onboardingStep,
       personal: {
         surname: student.surname,
         givenName: student.givenName,
@@ -353,6 +354,7 @@ export class StudentsService {
       create: { ...data, accountId },
       update: data,
     });
+    await this.advanceOnboardingStep(student.id, student.onboardingStep, 2);
 
     return this.getFullProfile(student.id);
   }
@@ -408,6 +410,7 @@ export class StudentsService {
         })),
       }),
     ]);
+    await this.advanceOnboardingStep(student.id, student.onboardingStep, 3);
 
     return this.getFullProfile(student.id);
   }
@@ -442,6 +445,7 @@ export class StudentsService {
       create: { ...data, studentId: student.id },
       update: data,
     });
+    await this.advanceOnboardingStep(student.id, student.onboardingStep, 4);
 
     return this.getFullProfile(student.id);
   }
@@ -474,6 +478,7 @@ export class StudentsService {
       create: { ...data, studentId: student.id },
       update: data,
     });
+    await this.advanceOnboardingStep(student.id, student.onboardingStep, 5);
 
     return this.getFullProfile(student.id);
   }
@@ -508,6 +513,7 @@ export class StudentsService {
         })),
       }),
     ]);
+    await this.advanceOnboardingStep(student.id, student.onboardingStep, 6);
 
     return this.getFullProfile(student.id);
   }
@@ -522,6 +528,19 @@ export class StudentsService {
     }
 
     return student;
+  }
+
+  private async advanceOnboardingStep(
+    studentId: string,
+    currentStep: number,
+    minStep: number,
+  ) {
+    if (currentStep < minStep) {
+      await this.prisma.student.update({
+        where: { id: studentId },
+        data: { onboardingStep: minStep },
+      });
+    }
   }
 
   private hasEducationData(entry: EducationLevelInput) {

@@ -81,19 +81,16 @@ export declare class StudentsController {
     findAll(): Promise<({
         applicationTargets: {
             id: string;
-            universityId: string | null;
-            universityRaw: string;
             degree: string | null;
             major: string | null;
+            universityRaw: string;
+            universityId: string | null;
             duration: string | null;
             fundingSource: string | null;
             studentId: string;
         }[];
     } & {
         id: string;
-        email: string;
-        createdAt: Date;
-        accountId: string | null;
         surname: string;
         givenName: string;
         sex: string | null;
@@ -106,6 +103,7 @@ export declare class StudentsController {
         passportExpiry: Date | null;
         consulate: string | null;
         maritalStatus: string | null;
+        email: string;
         phone: string | null;
         hobby: string | null;
         permanentAddress: string | null;
@@ -114,12 +112,12 @@ export declare class StudentsController {
         beenToChina: boolean;
         studiedInChina: boolean;
         desiredField: string | null;
+        createdAt: Date;
+        onboardingStep: number;
+        accountId: string | null;
     })[]>;
     findOne(id: string): Promise<{
         id: string;
-        email: string;
-        createdAt: Date;
-        accountId: string | null;
         surname: string;
         givenName: string;
         sex: string | null;
@@ -132,6 +130,7 @@ export declare class StudentsController {
         passportExpiry: Date | null;
         consulate: string | null;
         maritalStatus: string | null;
+        email: string;
         phone: string | null;
         hobby: string | null;
         permanentAddress: string | null;
@@ -140,6 +139,9 @@ export declare class StudentsController {
         beenToChina: boolean;
         studiedInChina: boolean;
         desiredField: string | null;
+        createdAt: Date;
+        onboardingStep: number;
+        accountId: string | null;
     }>;
     remove(id: string): Promise<void>;
     getFullProfile(id: string): Promise<import("@uni-apply/shared").StudentProfile>;

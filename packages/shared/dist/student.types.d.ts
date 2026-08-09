@@ -1,5 +1,7 @@
 export interface StudentProfile {
     id: string;
+    /** Furthest self-service onboarding wizard step this account may access (1-6). */
+    onboardingStep: number;
     personal: {
         surname: string;
         givenName: string;

@@ -172,7 +172,8 @@ exports.Prisma.StudentScalarFieldEnum = {
   studiedInChina: 'studiedInChina',
   desiredField: 'desiredField',
   createdAt: 'createdAt',
-  accountId: 'accountId'
+  accountId: 'accountId',
+  onboardingStep: 'onboardingStep'
 };
 
 exports.Prisma.EducationScalarFieldEnum = {
