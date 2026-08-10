@@ -22,6 +22,7 @@ const ru: Dictionary = {
     navResources: "Ресурсы",
     navHelp: "Помощь",
     logIn: "Войти",
+    logOut: "Выйти",
     getStarted: "Начать — бесплатно",
     bookDemo: "Записаться на демо",
     myApplications: "Мои заявки",

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Header, Logo } from "@/components/header";
+import { Header, Logo, LogoutButton } from "@/components/header";
 import { useT } from "@/lib/i18n/context";
 import { toTitleCase } from "@/lib/format";
 import { getApplicationBatches } from "@/features/applications/api/applications.api";
@@ -23,7 +23,12 @@ export function MyProfileCard({ student }: { student: StudentProfile | null }) {
           </span>
         }
         title={t.students.myProfile.title}
-        actions={<BackButton />}
+        actions={
+          <>
+            <BackButton />
+            <LogoutButton />
+          </>
+        }
       />
 
       {student ? <ApplicationCards student={student} /> : <EmptyCard />}

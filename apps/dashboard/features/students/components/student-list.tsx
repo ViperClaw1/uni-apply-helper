@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { Header } from "@/components/header";
+import { Header, LogoutButton } from "@/components/header";
 import { useLocale, useT } from "@/lib/i18n/context";
 import { toTitleCase } from "@/lib/format";
 import { deleteStudent, getStudents } from "../api/students.api";
@@ -85,12 +85,15 @@ export function StudentList() {
         eyebrow={t.students.list.eyebrow}
         title={t.students.list.title}
         actions={
-          <Link
-            href="/students/new"
-            className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-medium text-white shadow-sm transition-transform hover:bg-slate-800 active:scale-[0.96]"
-          >
-            {t.students.list.createManually}
-          </Link>
+          <>
+            <Link
+              href="/students/new"
+              className="inline-flex h-11 items-center justify-center rounded-xl bg-slate-950 px-4 text-sm font-medium text-white shadow-sm transition-transform hover:bg-slate-800 active:scale-[0.96]"
+            >
+              {t.students.list.createManually}
+            </Link>
+            <LogoutButton />
+          </>
         }
       />
 

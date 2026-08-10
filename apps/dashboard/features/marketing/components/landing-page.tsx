@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
-import { Header } from "@/components/header";
+import { Header, LogoutButton } from "@/components/header";
 import { useT } from "@/lib/i18n/context";
 import { AuthModal } from "@/features/auth/components/auth-modal";
 import type { Account } from "@/features/auth/api/auth.api";
@@ -104,13 +104,18 @@ export function LandingPage({ account }: { account: Account | null }) {
 
   const actions = (
     <>
-      {isLoggedInStudent ? (
-        <Link
-          href="/dashboard"
-          className="inline-flex h-10 cursor-pointer items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm"
-        >
-          {t.header.myApplications}
-        </Link>
+      {account ? (
+        <>
+          {isLoggedInStudent ? (
+            <Link
+              href="/dashboard"
+              className="inline-flex h-10 cursor-pointer items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm"
+            >
+              {t.header.myApplications}
+            </Link>
+          ) : null}
+          <LogoutButton className="hidden h-10 cursor-pointer items-center justify-center rounded-xl px-4 text-sm font-medium text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-slate-50 sm:inline-flex" />
+        </>
       ) : (
         <>
           <button
@@ -197,14 +202,22 @@ export function LandingPage({ account }: { account: Account | null }) {
       </nav>
 
       <div className="mt-3 flex flex-col gap-2 border-t border-slate-100 pt-3">
-        {isLoggedInStudent ? (
-          <Link
-            href="/dashboard"
-            onClick={closeMobileMenu}
-            className="inline-flex h-11 items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm"
-          >
-            {t.header.myApplications}
-          </Link>
+        {account ? (
+          <>
+            {isLoggedInStudent ? (
+              <Link
+                href="/dashboard"
+                onClick={closeMobileMenu}
+                className="inline-flex h-11 items-center justify-center rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm"
+              >
+                {t.header.myApplications}
+              </Link>
+            ) : null}
+            <LogoutButton
+              onClick={closeMobileMenu}
+              className="inline-flex h-11 cursor-pointer items-center justify-center rounded-xl text-sm font-medium text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
+            />
+          </>
         ) : (
           <>
             <button

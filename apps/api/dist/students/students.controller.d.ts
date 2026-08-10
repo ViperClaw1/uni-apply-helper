@@ -82,9 +82,9 @@ export declare class StudentsController {
         applicationTargets: {
             id: string;
             universityId: string | null;
+            universityRaw: string;
             degree: string | null;
             major: string | null;
-            universityRaw: string;
             duration: string | null;
             fundingSource: string | null;
             studentId: string;

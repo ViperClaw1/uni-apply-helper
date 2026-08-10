@@ -20,6 +20,7 @@ const en = {
     navResources: "Resources",
     navHelp: "Help",
     logIn: "Log in",
+    logOut: "Log out",
     getStarted: "Get started — it's free",
     bookDemo: "Book a demo",
     myApplications: "My applications",

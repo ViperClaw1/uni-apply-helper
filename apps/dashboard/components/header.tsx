@@ -1,7 +1,9 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { useLocale } from "@/lib/i18n/context";
+import { useRouter } from "next/navigation";
+import { useState, type ReactNode } from "react";
+import { logout } from "@/features/auth/api/auth.api";
+import { useLocale, useT } from "@/lib/i18n/context";
 
 export function Logo() {
   return (
@@ -32,6 +34,43 @@ export function LanguageSwitcher() {
         </button>
       ))}
     </div>
+  );
+}
+
+export function LogoutButton({
+  className,
+  onClick,
+}: {
+  className?: string;
+  onClick?: () => void;
+}) {
+  const t = useT();
+  const router = useRouter();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  async function handleLogout() {
+    onClick?.();
+    setIsLoggingOut(true);
+    try {
+      await logout();
+    } finally {
+      router.push("/");
+      router.refresh();
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleLogout}
+      disabled={isLoggingOut}
+      className={
+        className ??
+        "inline-flex h-10 cursor-pointer items-center justify-center rounded-xl px-4 text-sm font-medium text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-slate-50 disabled:cursor-default disabled:opacity-60"
+      }
+    >
+      {t.header.logOut}
+    </button>
   );
 }
 
