@@ -287,7 +287,8 @@ function ReviewTab({
             {readiness.map((item) => (
               <li key={item.category} className="flex items-center justify-between text-sm">
                 <span className="text-slate-700">{categoryLabel(item.category)}</span>
-                <span className={`font-medium ${statusColor(item.status)}`}>
+                <span className={`flex items-center gap-1.5 font-medium ${statusColor(item.status)}`}>
+                  <ReadinessStatusIcon status={item.status} />
                   {statusLabel(item)}
                 </span>
               </li>
@@ -331,9 +332,16 @@ function ReviewTab({
         </h2>
 
         {student.applicationTargets.length === 0 ? (
-          <p className="mt-3 text-sm text-slate-400">
-            {t.students.profilePage.noneSelected}
-          </p>
+          <div className="mt-3 flex items-center justify-between gap-3 text-sm text-slate-400">
+            <span>{t.students.profilePage.noneSelected}</span>
+            <button
+              type="button"
+              onClick={() => onJumpToTab("applications")}
+              className="inline-flex h-8 shrink-0 cursor-pointer items-center rounded-lg px-3 text-xs font-semibold text-blue-700 ring-1 ring-blue-200 transition-colors hover:bg-blue-50"
+            >
+              {t.students.detail.applicationsTable.continueLabel}
+            </button>
+          </div>
         ) : (
           <div className="mt-3 overflow-x-auto">
             <table className="w-full text-left text-sm">
@@ -406,8 +414,8 @@ function InfoTab({
   const labels = t.profileWizard.stepLabels;
 
   return (
-    <div className="flex flex-col gap-6">
-      <InfoSection title={labels[0]}>
+    <div className="flex flex-col gap-4">
+      <InfoSection title={labels[0]} defaultOpen>
         <PersonalStep initial={toPersonalInput(student)} studentId={studentId} onNext={onUpdated} />
       </InfoSection>
       <InfoSection title={labels[1]}>
@@ -430,12 +438,40 @@ function InfoTab({
   );
 }
 
-function InfoSection({ title, children }: { title: string; children: React.ReactNode }) {
+function InfoSection({
+  title,
+  defaultOpen = false,
+  children,
+}: {
+  title: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
   return (
-    <section className="rounded-2xl bg-white p-6 shadow-[0_1px_2px_rgba(15,23,42,0.08),0_8px_30px_rgba(15,23,42,0.04)] ring-1 ring-black/5">
-      <h2 className="mb-4 text-base font-semibold text-slate-950">{title}</h2>
-      {children}
-    </section>
+    <details
+      open={defaultOpen}
+      className="group rounded-2xl bg-white shadow-[0_1px_2px_rgba(15,23,42,0.08),0_8px_30px_rgba(15,23,42,0.04)] ring-1 ring-black/5"
+    >
+      <summary className="flex cursor-pointer list-none items-center justify-between px-6 py-4 text-base font-semibold text-slate-950">
+        {title}
+        <ChevronIcon className="text-slate-400 transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="border-t border-slate-100 p-6">{children}</div>
+    </details>
+  );
+}
+
+function ChevronIcon({ className }: { className?: string }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden className={className}>
+      <path
+        d="m6 9 6 6 6-6"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
@@ -514,6 +550,38 @@ function formatStudentName(
     .join(" ");
 
   return name || fallback;
+}
+
+function ReadinessStatusIcon({ status }: { status: import("../lib/profile-readiness").ReadinessStatus }) {
+  if (status === "done") {
+    return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.75" />
+        <path d="m8 12.5 2.5 2.5L16 9.5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+
+  if (status === "not_uploaded") {
+    return (
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.75" />
+        <path d="M9 9l6 6M15 9l-6 6" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 9v4.5M12 17h.01M10.3 4.3 2.8 17.2A2 2 0 0 0 4.5 20h15a2 2 0 0 0 1.7-2.8L13.7 4.3a2 2 0 0 0-3.4 0Z"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
 
 function EditIcon() {

@@ -440,7 +440,7 @@ const en = {
       "Generate, check the student's name in the text, and approve before submitting applications.",
     generating: "Generating…",
     generatePrefix: "Generate · ",
-    noTargets: "No universities with a linked universityId — generation unavailable.",
+    noTargets: "Add a university first to generate a letter.",
     generateFailed: "Failed to generate the letter. Check GEMINI_API_KEY on the API.",
     approveFailed: "Failed to approve the letter.",
     unapproveFailed: "Failed to remove the approval.",

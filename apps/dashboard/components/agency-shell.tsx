@@ -49,18 +49,20 @@ export function AgencyShell({
             const isActive = tab === active;
 
             return (
-              <Link
-                key={tab}
-                href={href}
-                className={`flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
-                  isActive
-                    ? "bg-slate-950 text-white"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
-                }`}
-              >
-                <Icon />
-                {t.agencyShell.nav[tab]}
-              </Link>
+              <div key={tab}>
+                {tab === "team" ? <div className="my-2 border-t border-slate-100" /> : null}
+                <Link
+                  href={href}
+                  className={`flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
+                    isActive
+                      ? "bg-slate-950 text-white"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
+                  }`}
+                >
+                  <Icon />
+                  {t.agencyShell.nav[tab]}
+                </Link>
+              </div>
             );
           })}
         </nav>
