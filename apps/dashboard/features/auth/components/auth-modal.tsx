@@ -25,7 +25,7 @@ const INITIAL_FIELDS = {
   password: "",
   confirmPassword: "",
   legalName: "",
-  country: COUNTRIES[0]?.code ?? "",
+  country: "",
   taxId: "",
 };
 
@@ -147,7 +147,7 @@ export function AuthModal({ open, initialMode, initialRole, onClose }: AuthModal
   async function handleSignupStep2Submit(event: FormEvent) {
     event.preventDefault();
 
-    if (!fields.legalName.trim() || !fields.taxId.trim()) {
+    if (!fields.legalName.trim() || !fields.country || !fields.taxId.trim()) {
       setError(t.auth.errors.legalNameRequired);
       return;
     }
@@ -249,9 +249,13 @@ export function AuthModal({ open, initialMode, initialRole, onClose }: AuthModal
                   <label className="text-xs font-medium text-slate-600">{t.auth.businessCountry}</label>
                   <select
                     value={fields.country}
+                    required
                     onChange={(event) => updateField("country", event.target.value)}
                     className="h-10 rounded-lg border border-slate-200 px-3 text-sm text-slate-800"
                   >
+                    <option value="" disabled hidden>
+                      {t.auth.businessCountryPlaceholder}
+                    </option>
                     {COUNTRIES.map((country) => (
                       <option key={country.code} value={country.code}>
                         {flagEmoji(country.code)} {country.name}
@@ -345,21 +349,67 @@ function Field({
   required?: boolean;
   error?: string | null;
 }) {
+  const t = useT();
+  const [showPassword, setShowPassword] = useState(false);
+  const isPassword = type === "password";
+  const inputType = isPassword ? (showPassword ? "text" : "password") : type;
+
   return (
     <div className="flex flex-col gap-1">
       <label className="text-xs font-medium text-slate-600">{label}</label>
-      <input
-        type={type}
-        value={value}
-        placeholder={placeholder}
-        required={required}
-        onChange={(event) => onChange(event.target.value)}
-        className={`h-10 rounded-lg border px-3 text-sm text-slate-800 outline-none placeholder:text-slate-400 ${
-          error ? "border-rose-300 focus:border-rose-400" : "border-slate-200 focus:border-blue-400"
-        }`}
-      />
+      <div className="relative">
+        <input
+          type={inputType}
+          value={value}
+          placeholder={placeholder}
+          required={required}
+          onChange={(event) => onChange(event.target.value)}
+          className={`h-10 w-full rounded-lg border px-3 text-sm text-slate-800 outline-none placeholder:text-slate-400 ${
+            isPassword ? "pr-10" : ""
+          } ${error ? "border-rose-300 focus:border-rose-400" : "border-slate-200 focus:border-blue-400"}`}
+        />
+        {isPassword ? (
+          <button
+            type="button"
+            onClick={() => setShowPassword((current) => !current)}
+            aria-label={showPassword ? t.auth.hidePassword : t.auth.showPassword}
+            className="absolute inset-y-0 right-0 flex w-10 cursor-pointer items-center justify-center text-slate-400 hover:text-slate-600"
+          >
+            {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+          </button>
+        ) : null}
+      </div>
       {error ? <p className="text-xs text-rose-600">{error}</p> : null}
     </div>
+  );
+}
+
+function EyeIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.75" />
+    </svg>
+  );
+}
+
+function EyeOffIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M3 3l18 18M10.6 10.6a3 3 0 0 0 4.24 4.24M6.6 6.7C4.5 8.1 2.9 10.1 2 12c0 0 3.5 7 10 7 2.1 0 3.9-.5 5.4-1.3M17.4 17.3C19.5 15.9 21.1 13.9 22 12c0 0-1.1-2.2-3.1-4.1M12 5c6.5 0 10 7 10 7"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
