@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import {
   saveMyFamily,
+  updateStudentFamily,
   type FamilyRelativeInput,
   type MyFamilyInput,
 } from "@/features/students/api/students.api";
@@ -25,12 +26,14 @@ const NATIONALITY_OPTIONS = COUNTRIES.map((country) => ({
 
 export function FamilyStep({
   initial,
+  studentId,
   onNext,
   onBack,
 }: {
   initial: MyFamilyInput;
+  studentId?: string;
   onNext: (profile: StudentProfile) => void;
-  onBack: () => void;
+  onBack?: () => void;
 }) {
   const t = useT();
   const [fields, setFields] = useState<MyFamilyInput>(initial);
@@ -54,7 +57,9 @@ export function FamilyStep({
     setError(null);
 
     try {
-      const profile = await saveMyFamily(fields);
+      const profile = studentId
+        ? await updateStudentFamily(studentId, fields)
+        : await saveMyFamily(fields);
       onNext(profile);
     } catch (submitError) {
       setError(extractErrorMessage(submitError, t.common.somethingWentWrong));

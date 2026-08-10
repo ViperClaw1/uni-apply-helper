@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import {
   saveMyEmergencyContact,
+  updateStudentEmergencyContact,
   type MyEmergencyContactInput,
 } from "@/features/students/api/students.api";
 import type { StudentProfile } from "@/features/students/types/student.types";
@@ -17,12 +18,14 @@ import {
 
 export function EmergencyContactStep({
   initial,
+  studentId,
   onNext,
   onBack,
 }: {
   initial: MyEmergencyContactInput;
+  studentId?: string;
   onNext: (profile: StudentProfile) => void;
-  onBack: () => void;
+  onBack?: () => void;
 }) {
   const t = useT();
   const [fields, setFields] = useState<MyEmergencyContactInput>(initial);
@@ -42,7 +45,9 @@ export function EmergencyContactStep({
     setError(null);
 
     try {
-      const profile = await saveMyEmergencyContact(fields);
+      const profile = studentId
+        ? await updateStudentEmergencyContact(studentId, fields)
+        : await saveMyEmergencyContact(fields);
       onNext(profile);
     } catch (submitError) {
       setError(extractErrorMessage(submitError, t.common.somethingWentWrong));

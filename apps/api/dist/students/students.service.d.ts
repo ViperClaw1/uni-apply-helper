@@ -16,6 +16,52 @@ type EducationLevelInput = {
     periodStartYear?: number;
     periodEndYear?: number;
 };
+type ProfileUpdateInput = {
+    surname?: string;
+    givenName?: string;
+    email?: string;
+    phone?: string;
+    nationality?: string;
+    dateOfBirth?: string;
+    passportNo?: string;
+    sex?: string;
+    cityOfBirth?: string;
+    chineseName?: string;
+    religion?: string;
+    passportExpiry?: string;
+    consulate?: string;
+    maritalStatus?: string;
+    hobby?: string;
+    permanentAddress?: string;
+    postCode?: string;
+    currentInstitution?: string;
+    beenToChina?: boolean;
+    studiedInChina?: boolean;
+    desiredField?: string;
+};
+type EducationUpdateInput = {
+    school?: EducationLevelInput;
+    higher?: EducationLevelInput;
+    chineseLevel?: string;
+    englishLevel?: string;
+};
+type GuarantorUpdateInput = {
+    name?: string;
+    relationship?: string;
+    phone?: string;
+    email?: string;
+    homeAddress?: string;
+};
+type EmergencyContactUpdateInput = {
+    name?: string;
+    relationship?: string;
+    phone?: string;
+    email?: string;
+};
+type FamilyUpdateInput = {
+    father?: FamilyRelativeInput;
+    mother?: FamilyRelativeInput;
+};
 export declare class StudentsService {
     private readonly prisma;
     private readonly universitiesService;
@@ -146,52 +192,21 @@ export declare class StudentsService {
         onboardingStep: number;
     }>;
     findByAccountId(accountId: string): Promise<StudentProfile | null>;
-    upsertMyProfile(accountId: string, input: {
-        surname?: string;
-        givenName?: string;
-        email?: string;
-        phone?: string;
-        nationality?: string;
-        dateOfBirth?: string;
-        passportNo?: string;
-        sex?: string;
-        cityOfBirth?: string;
-        chineseName?: string;
-        religion?: string;
-        passportExpiry?: string;
-        consulate?: string;
-        maritalStatus?: string;
-        hobby?: string;
-        permanentAddress?: string;
-        postCode?: string;
-        currentInstitution?: string;
-        beenToChina?: boolean;
-        studiedInChina?: boolean;
-        desiredField?: string;
-    }): Promise<StudentProfile>;
-    upsertMyEducation(accountId: string, input: {
-        school?: EducationLevelInput;
-        higher?: EducationLevelInput;
-        chineseLevel?: string;
-        englishLevel?: string;
-    }): Promise<StudentProfile>;
-    upsertMyGuarantor(accountId: string, input: {
-        name?: string;
-        relationship?: string;
-        phone?: string;
-        email?: string;
-        homeAddress?: string;
-    }): Promise<StudentProfile>;
-    upsertMyEmergencyContact(accountId: string, input: {
-        name?: string;
-        relationship?: string;
-        phone?: string;
-        email?: string;
-    }): Promise<StudentProfile>;
-    upsertMyFamily(accountId: string, input: {
-        father?: FamilyRelativeInput;
-        mother?: FamilyRelativeInput;
-    }): Promise<StudentProfile>;
+    upsertMyProfile(accountId: string, input: ProfileUpdateInput): Promise<StudentProfile>;
+    updateProfile(studentId: string, input: ProfileUpdateInput): Promise<StudentProfile>;
+    private buildProfileData;
+    upsertMyEducation(accountId: string, input: EducationUpdateInput): Promise<StudentProfile>;
+    updateEducation(studentId: string, input: EducationUpdateInput): Promise<StudentProfile>;
+    private applyEducation;
+    upsertMyGuarantor(accountId: string, input: GuarantorUpdateInput): Promise<StudentProfile>;
+    updateGuarantor(studentId: string, input: GuarantorUpdateInput): Promise<StudentProfile>;
+    private applyGuarantor;
+    upsertMyEmergencyContact(accountId: string, input: EmergencyContactUpdateInput): Promise<StudentProfile>;
+    updateEmergencyContact(studentId: string, input: EmergencyContactUpdateInput): Promise<StudentProfile>;
+    private applyEmergencyContact;
+    upsertMyFamily(accountId: string, input: FamilyUpdateInput): Promise<StudentProfile>;
+    updateFamily(studentId: string, input: FamilyUpdateInput): Promise<StudentProfile>;
+    private applyFamily;
     private requireStudentByAccountId;
     private advanceOnboardingStep;
     private hasEducationData;

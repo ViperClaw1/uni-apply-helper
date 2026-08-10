@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import {
   saveMyEducation,
+  updateStudentEducation,
   type EducationLevelInput,
   type MyEducationInput,
 } from "@/features/students/api/students.api";
@@ -19,12 +20,14 @@ import {
 
 export function EducationStep({
   initial,
+  studentId,
   onNext,
   onBack,
 }: {
   initial: MyEducationInput;
+  studentId?: string;
   onNext: (profile: StudentProfile) => void;
-  onBack: () => void;
+  onBack?: () => void;
 }) {
   const t = useT();
   const [fields, setFields] = useState<MyEducationInput>(initial);
@@ -48,7 +51,9 @@ export function EducationStep({
     setError(null);
 
     try {
-      const profile = await saveMyEducation(fields);
+      const profile = studentId
+        ? await updateStudentEducation(studentId, fields)
+        : await saveMyEducation(fields);
       onNext(profile);
     } catch (submitError) {
       setError(extractErrorMessage(submitError, t.common.somethingWentWrong));

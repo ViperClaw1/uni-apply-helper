@@ -254,13 +254,32 @@ let StudentsService = class StudentsService {
         return this.getFullProfile(student.id);
     }
     async upsertMyProfile(accountId, input) {
+        const data = this.buildProfileData(input);
+        const student = await this.prisma.student.upsert({
+            where: { accountId },
+            create: { ...data, accountId },
+            update: data,
+        });
+        await this.advanceOnboardingStep(student.id, student.onboardingStep, 2);
+        return this.getFullProfile(student.id);
+    }
+    async updateProfile(studentId, input) {
+        const data = this.buildProfileData(input);
+        const student = await this.prisma.student.update({
+            where: { id: studentId },
+            data,
+        });
+        await this.advanceOnboardingStep(student.id, student.onboardingStep, 2);
+        return this.getFullProfile(student.id);
+    }
+    buildProfileData(input) {
         const surname = input.surname?.trim();
         const givenName = input.givenName?.trim();
         const email = input.email?.trim();
         if (!surname || !givenName || !email) {
             throw new common_1.BadRequestException('surname, givenName and email are required.');
         }
-        const data = {
+        return {
             surname,
             givenName,
             email,
@@ -283,16 +302,16 @@ let StudentsService = class StudentsService {
             studiedInChina: input.studiedInChina ?? false,
             desiredField: input.desiredField?.trim() || null,
         };
-        const student = await this.prisma.student.upsert({
-            where: { accountId },
-            create: { ...data, accountId },
-            update: data,
-        });
-        await this.advanceOnboardingStep(student.id, student.onboardingStep, 2);
-        return this.getFullProfile(student.id);
     }
     async upsertMyEducation(accountId, input) {
         const student = await this.requireStudentByAccountId(accountId);
+        return this.applyEducation(student, input);
+    }
+    async updateEducation(studentId, input) {
+        const student = await this.findOne(studentId);
+        return this.applyEducation(student, input);
+    }
+    async applyEducation(student, input) {
         const educationCreates = [
             input.school && this.hasEducationData(input.school)
                 ? { level: 'school', ...this.toEducationCreateData(input.school) }
@@ -336,6 +355,13 @@ let StudentsService = class StudentsService {
     }
     async upsertMyGuarantor(accountId, input) {
         const student = await this.requireStudentByAccountId(accountId);
+        return this.applyGuarantor(student, input);
+    }
+    async updateGuarantor(studentId, input) {
+        const student = await this.findOne(studentId);
+        return this.applyGuarantor(student, input);
+    }
+    async applyGuarantor(student, input) {
         const name = input.name?.trim();
         if (!name) {
             throw new common_1.BadRequestException('name is required.');
@@ -357,6 +383,13 @@ let StudentsService = class StudentsService {
     }
     async upsertMyEmergencyContact(accountId, input) {
         const student = await this.requireStudentByAccountId(accountId);
+        return this.applyEmergencyContact(student, input);
+    }
+    async updateEmergencyContact(studentId, input) {
+        const student = await this.findOne(studentId);
+        return this.applyEmergencyContact(student, input);
+    }
+    async applyEmergencyContact(student, input) {
         const name = input.name?.trim();
         if (!name) {
             throw new common_1.BadRequestException('name is required.');
@@ -377,6 +410,13 @@ let StudentsService = class StudentsService {
     }
     async upsertMyFamily(accountId, input) {
         const student = await this.requireStudentByAccountId(accountId);
+        return this.applyFamily(student, input);
+    }
+    async updateFamily(studentId, input) {
+        const student = await this.findOne(studentId);
+        return this.applyFamily(student, input);
+    }
+    async applyFamily(student, input) {
         const familyCreates = [
             input.father?.fullName?.trim()
                 ? {

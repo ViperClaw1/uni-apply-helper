@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import {
   saveMyGuarantor,
+  updateStudentGuarantor,
   type MyGuarantorInput,
 } from "@/features/students/api/students.api";
 import type { StudentProfile } from "@/features/students/types/student.types";
@@ -17,12 +18,14 @@ import {
 
 export function GuarantorStep({
   initial,
+  studentId,
   onNext,
   onBack,
 }: {
   initial: MyGuarantorInput;
+  studentId?: string;
   onNext: (profile: StudentProfile) => void;
-  onBack: () => void;
+  onBack?: () => void;
 }) {
   const t = useT();
   const [fields, setFields] = useState<MyGuarantorInput>(initial);
@@ -42,7 +45,9 @@ export function GuarantorStep({
     setError(null);
 
     try {
-      const profile = await saveMyGuarantor(fields);
+      const profile = studentId
+        ? await updateStudentGuarantor(studentId, fields)
+        : await saveMyGuarantor(fields);
       onNext(profile);
     } catch (submitError) {
       setError(extractErrorMessage(submitError, t.common.somethingWentWrong));

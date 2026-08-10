@@ -55,6 +55,21 @@ let StudentsController = class StudentsController {
     getFullProfile(id) {
         return this.studentsService.getFullProfile(id);
     }
+    updateProfile(id, body) {
+        return this.studentsService.updateProfile(id, body);
+    }
+    updateEducation(id, body) {
+        return this.studentsService.updateEducation(id, body);
+    }
+    updateGuarantor(id, body) {
+        return this.studentsService.updateGuarantor(id, body);
+    }
+    updateEmergencyContact(id, body) {
+        return this.studentsService.updateEmergencyContact(id, body);
+    }
+    updateFamily(id, body) {
+        return this.studentsService.updateFamily(id, body);
+    }
     setApplicationTargets(id, body) {
         return this.studentsService.setApplicationTargetsByFormUrls(id, body);
     }
@@ -151,6 +166,46 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], StudentsController.prototype, "getFullProfile", null);
+__decorate([
+    (0, common_1.Put)(':id/profile'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], StudentsController.prototype, "updateProfile", null);
+__decorate([
+    (0, common_1.Put)(':id/education'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], StudentsController.prototype, "updateEducation", null);
+__decorate([
+    (0, common_1.Put)(':id/guarantor'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], StudentsController.prototype, "updateGuarantor", null);
+__decorate([
+    (0, common_1.Put)(':id/emergency-contact'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], StudentsController.prototype, "updateEmergencyContact", null);
+__decorate([
+    (0, common_1.Put)(':id/family'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], StudentsController.prototype, "updateFamily", null);
 __decorate([
     (0, common_1.Put)(':id/application-targets'),
     __param(0, (0, common_1.Param)('id')),

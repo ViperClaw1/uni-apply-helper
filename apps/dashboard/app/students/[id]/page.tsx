@@ -1,5 +1,10 @@
-import { StudentProfilePage } from "@/features/students/components/student-profile-page";
+import { AgencyShell } from "@/components/agency-shell";
+import { StudentDetailPage } from "@/features/students/components/student-detail-page";
 
 export default function Page() {
-  return <StudentProfilePage />;
+  return (
+    <AgencyShell active="students">
+      <StudentDetailPage />
+    </AgencyShell>
+  );
 }

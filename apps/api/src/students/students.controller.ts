@@ -181,6 +181,118 @@ export class StudentsController {
     return this.studentsService.getFullProfile(id);
   }
 
+  @Put(':id/profile')
+  updateProfile(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      surname?: string;
+      givenName?: string;
+      email?: string;
+      phone?: string;
+      nationality?: string;
+      dateOfBirth?: string;
+      passportNo?: string;
+      sex?: string;
+      cityOfBirth?: string;
+      chineseName?: string;
+      religion?: string;
+      passportExpiry?: string;
+      consulate?: string;
+      maritalStatus?: string;
+      hobby?: string;
+      permanentAddress?: string;
+      postCode?: string;
+      currentInstitution?: string;
+      beenToChina?: boolean;
+      studiedInChina?: boolean;
+      desiredField?: string;
+    },
+  ) {
+    return this.studentsService.updateProfile(id, body);
+  }
+
+  @Put(':id/education')
+  updateEducation(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      school?: {
+        degree?: string;
+        institution?: string;
+        major?: string;
+        periodStartYear?: number;
+        periodEndYear?: number;
+      };
+      higher?: {
+        degree?: string;
+        institution?: string;
+        major?: string;
+        periodStartYear?: number;
+        periodEndYear?: number;
+      };
+      chineseLevel?: string;
+      englishLevel?: string;
+    },
+  ) {
+    return this.studentsService.updateEducation(id, body);
+  }
+
+  @Put(':id/guarantor')
+  updateGuarantor(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      name?: string;
+      relationship?: string;
+      phone?: string;
+      email?: string;
+      homeAddress?: string;
+    },
+  ) {
+    return this.studentsService.updateGuarantor(id, body);
+  }
+
+  @Put(':id/emergency-contact')
+  updateEmergencyContact(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      name?: string;
+      relationship?: string;
+      phone?: string;
+      email?: string;
+    },
+  ) {
+    return this.studentsService.updateEmergencyContact(id, body);
+  }
+
+  @Put(':id/family')
+  updateFamily(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      father?: {
+        fullName?: string;
+        nationality?: string;
+        phone?: string;
+        email?: string;
+        company?: string;
+        position?: string;
+      };
+      mother?: {
+        fullName?: string;
+        nationality?: string;
+        phone?: string;
+        email?: string;
+        company?: string;
+        position?: string;
+      };
+    },
+  ) {
+    return this.studentsService.updateFamily(id, body);
+  }
+
   @Put(':id/application-targets')
   setApplicationTargets(
     @Param('id') id: string,

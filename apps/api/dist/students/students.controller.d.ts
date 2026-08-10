@@ -177,6 +177,78 @@ export declare class StudentsController {
     }>;
     remove(id: string): Promise<void>;
     getFullProfile(id: string): Promise<import("@uni-apply/shared").StudentProfile>;
+    updateProfile(id: string, body: {
+        surname?: string;
+        givenName?: string;
+        email?: string;
+        phone?: string;
+        nationality?: string;
+        dateOfBirth?: string;
+        passportNo?: string;
+        sex?: string;
+        cityOfBirth?: string;
+        chineseName?: string;
+        religion?: string;
+        passportExpiry?: string;
+        consulate?: string;
+        maritalStatus?: string;
+        hobby?: string;
+        permanentAddress?: string;
+        postCode?: string;
+        currentInstitution?: string;
+        beenToChina?: boolean;
+        studiedInChina?: boolean;
+        desiredField?: string;
+    }): Promise<import("@uni-apply/shared").StudentProfile>;
+    updateEducation(id: string, body: {
+        school?: {
+            degree?: string;
+            institution?: string;
+            major?: string;
+            periodStartYear?: number;
+            periodEndYear?: number;
+        };
+        higher?: {
+            degree?: string;
+            institution?: string;
+            major?: string;
+            periodStartYear?: number;
+            periodEndYear?: number;
+        };
+        chineseLevel?: string;
+        englishLevel?: string;
+    }): Promise<import("@uni-apply/shared").StudentProfile>;
+    updateGuarantor(id: string, body: {
+        name?: string;
+        relationship?: string;
+        phone?: string;
+        email?: string;
+        homeAddress?: string;
+    }): Promise<import("@uni-apply/shared").StudentProfile>;
+    updateEmergencyContact(id: string, body: {
+        name?: string;
+        relationship?: string;
+        phone?: string;
+        email?: string;
+    }): Promise<import("@uni-apply/shared").StudentProfile>;
+    updateFamily(id: string, body: {
+        father?: {
+            fullName?: string;
+            nationality?: string;
+            phone?: string;
+            email?: string;
+            company?: string;
+            position?: string;
+        };
+        mother?: {
+            fullName?: string;
+            nationality?: string;
+            phone?: string;
+            email?: string;
+            company?: string;
+            position?: string;
+        };
+    }): Promise<import("@uni-apply/shared").StudentProfile>;
     setApplicationTargets(id: string, body: {
         formUrls?: string[];
     }): Promise<import("@uni-apply/shared").StudentProfile>;

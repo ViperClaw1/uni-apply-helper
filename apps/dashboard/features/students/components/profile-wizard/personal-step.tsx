@@ -5,6 +5,7 @@ import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 import {
   saveMyProfile,
+  updateStudentProfile,
   type MyProfileInput,
 } from "@/features/students/api/students.api";
 import { COUNTRIES, flagEmoji } from "@/features/auth/lib/countries";
@@ -27,9 +28,11 @@ const NATIONALITY_OPTIONS = COUNTRIES.map((country) => ({
 
 export function PersonalStep({
   initial,
+  studentId,
   onNext,
 }: {
   initial: MyProfileInput;
+  studentId?: string;
   onNext: (profile: StudentProfile) => void;
 }) {
   const t = useT();
@@ -65,7 +68,9 @@ export function PersonalStep({
     setError(null);
 
     try {
-      const profile = await saveMyProfile(fields);
+      const profile = studentId
+        ? await updateStudentProfile(studentId, fields)
+        : await saveMyProfile(fields);
       onNext(profile);
     } catch (submitError) {
       setError(extractErrorMessage(submitError, t.common.somethingWentWrong));

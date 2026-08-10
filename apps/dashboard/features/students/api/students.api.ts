@@ -120,6 +120,61 @@ export async function saveMyFamily(input: MyFamilyInput) {
   return response.data;
 }
 
+export async function updateStudentProfile(
+  studentId: string,
+  input: MyProfileInput,
+) {
+  const response = await apiClient.put<StudentProfile>(
+    `/students/${studentId}/profile`,
+    input,
+  );
+  return response.data;
+}
+
+export async function updateStudentEducation(
+  studentId: string,
+  input: MyEducationInput,
+) {
+  const response = await apiClient.put<StudentProfile>(
+    `/students/${studentId}/education`,
+    input,
+  );
+  return response.data;
+}
+
+export async function updateStudentGuarantor(
+  studentId: string,
+  input: MyGuarantorInput,
+) {
+  const response = await apiClient.put<StudentProfile>(
+    `/students/${studentId}/guarantor`,
+    input,
+  );
+  return response.data;
+}
+
+export async function updateStudentEmergencyContact(
+  studentId: string,
+  input: MyEmergencyContactInput,
+) {
+  const response = await apiClient.put<StudentProfile>(
+    `/students/${studentId}/emergency-contact`,
+    input,
+  );
+  return response.data;
+}
+
+export async function updateStudentFamily(
+  studentId: string,
+  input: MyFamilyInput,
+) {
+  const response = await apiClient.put<StudentProfile>(
+    `/students/${studentId}/family`,
+    input,
+  );
+  return response.data;
+}
+
 export async function getStudents() {
   const response = await apiClient.get<StudentListItem[]>("/students");
 

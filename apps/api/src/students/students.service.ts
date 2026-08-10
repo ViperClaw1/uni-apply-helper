@@ -59,6 +59,57 @@ type EducationLevelInput = {
   periodEndYear?: number;
 };
 
+type ProfileUpdateInput = {
+  surname?: string;
+  givenName?: string;
+  email?: string;
+  phone?: string;
+  nationality?: string;
+  dateOfBirth?: string;
+  passportNo?: string;
+  sex?: string;
+  cityOfBirth?: string;
+  chineseName?: string;
+  religion?: string;
+  passportExpiry?: string;
+  consulate?: string;
+  maritalStatus?: string;
+  hobby?: string;
+  permanentAddress?: string;
+  postCode?: string;
+  currentInstitution?: string;
+  beenToChina?: boolean;
+  studiedInChina?: boolean;
+  desiredField?: string;
+};
+
+type EducationUpdateInput = {
+  school?: EducationLevelInput;
+  higher?: EducationLevelInput;
+  chineseLevel?: string;
+  englishLevel?: string;
+};
+
+type GuarantorUpdateInput = {
+  name?: string;
+  relationship?: string;
+  phone?: string;
+  email?: string;
+  homeAddress?: string;
+};
+
+type EmergencyContactUpdateInput = {
+  name?: string;
+  relationship?: string;
+  phone?: string;
+  email?: string;
+};
+
+type FamilyUpdateInput = {
+  father?: FamilyRelativeInput;
+  mother?: FamilyRelativeInput;
+};
+
 @Injectable()
 export class StudentsService {
   constructor(
@@ -325,30 +376,36 @@ export class StudentsService {
 
   async upsertMyProfile(
     accountId: string,
-    input: {
-      surname?: string;
-      givenName?: string;
-      email?: string;
-      phone?: string;
-      nationality?: string;
-      dateOfBirth?: string;
-      passportNo?: string;
-      sex?: string;
-      cityOfBirth?: string;
-      chineseName?: string;
-      religion?: string;
-      passportExpiry?: string;
-      consulate?: string;
-      maritalStatus?: string;
-      hobby?: string;
-      permanentAddress?: string;
-      postCode?: string;
-      currentInstitution?: string;
-      beenToChina?: boolean;
-      studiedInChina?: boolean;
-      desiredField?: string;
-    },
+    input: ProfileUpdateInput,
   ): Promise<StudentProfile> {
+    const data = this.buildProfileData(input);
+
+    const student = await this.prisma.student.upsert({
+      where: { accountId },
+      create: { ...data, accountId },
+      update: data,
+    });
+    await this.advanceOnboardingStep(student.id, student.onboardingStep, 2);
+
+    return this.getFullProfile(student.id);
+  }
+
+  async updateProfile(
+    studentId: string,
+    input: ProfileUpdateInput,
+  ): Promise<StudentProfile> {
+    const data = this.buildProfileData(input);
+
+    const student = await this.prisma.student.update({
+      where: { id: studentId },
+      data,
+    });
+    await this.advanceOnboardingStep(student.id, student.onboardingStep, 2);
+
+    return this.getFullProfile(student.id);
+  }
+
+  private buildProfileData(input: ProfileUpdateInput) {
     const surname = input.surname?.trim();
     const givenName = input.givenName?.trim();
     const email = input.email?.trim();
@@ -359,7 +416,7 @@ export class StudentsService {
       );
     }
 
-    const data = {
+    return {
       surname,
       givenName,
       email,
@@ -382,28 +439,28 @@ export class StudentsService {
       studiedInChina: input.studiedInChina ?? false,
       desiredField: input.desiredField?.trim() || null,
     };
-
-    const student = await this.prisma.student.upsert({
-      where: { accountId },
-      create: { ...data, accountId },
-      update: data,
-    });
-    await this.advanceOnboardingStep(student.id, student.onboardingStep, 2);
-
-    return this.getFullProfile(student.id);
   }
 
   async upsertMyEducation(
     accountId: string,
-    input: {
-      school?: EducationLevelInput;
-      higher?: EducationLevelInput;
-      chineseLevel?: string;
-      englishLevel?: string;
-    },
+    input: EducationUpdateInput,
   ): Promise<StudentProfile> {
     const student = await this.requireStudentByAccountId(accountId);
+    return this.applyEducation(student, input);
+  }
 
+  async updateEducation(
+    studentId: string,
+    input: EducationUpdateInput,
+  ): Promise<StudentProfile> {
+    const student = await this.findOne(studentId);
+    return this.applyEducation(student, input);
+  }
+
+  private async applyEducation(
+    student: { id: string; onboardingStep: number },
+    input: EducationUpdateInput,
+  ): Promise<StudentProfile> {
     const educationCreates = [
       input.school && this.hasEducationData(input.school)
         ? { level: 'school', ...this.toEducationCreateData(input.school) }
@@ -451,15 +508,24 @@ export class StudentsService {
 
   async upsertMyGuarantor(
     accountId: string,
-    input: {
-      name?: string;
-      relationship?: string;
-      phone?: string;
-      email?: string;
-      homeAddress?: string;
-    },
+    input: GuarantorUpdateInput,
   ): Promise<StudentProfile> {
     const student = await this.requireStudentByAccountId(accountId);
+    return this.applyGuarantor(student, input);
+  }
+
+  async updateGuarantor(
+    studentId: string,
+    input: GuarantorUpdateInput,
+  ): Promise<StudentProfile> {
+    const student = await this.findOne(studentId);
+    return this.applyGuarantor(student, input);
+  }
+
+  private async applyGuarantor(
+    student: { id: string; onboardingStep: number },
+    input: GuarantorUpdateInput,
+  ): Promise<StudentProfile> {
     const name = input.name?.trim();
 
     if (!name) {
@@ -486,14 +552,24 @@ export class StudentsService {
 
   async upsertMyEmergencyContact(
     accountId: string,
-    input: {
-      name?: string;
-      relationship?: string;
-      phone?: string;
-      email?: string;
-    },
+    input: EmergencyContactUpdateInput,
   ): Promise<StudentProfile> {
     const student = await this.requireStudentByAccountId(accountId);
+    return this.applyEmergencyContact(student, input);
+  }
+
+  async updateEmergencyContact(
+    studentId: string,
+    input: EmergencyContactUpdateInput,
+  ): Promise<StudentProfile> {
+    const student = await this.findOne(studentId);
+    return this.applyEmergencyContact(student, input);
+  }
+
+  private async applyEmergencyContact(
+    student: { id: string; onboardingStep: number },
+    input: EmergencyContactUpdateInput,
+  ): Promise<StudentProfile> {
     const name = input.name?.trim();
 
     if (!name) {
@@ -519,10 +595,24 @@ export class StudentsService {
 
   async upsertMyFamily(
     accountId: string,
-    input: { father?: FamilyRelativeInput; mother?: FamilyRelativeInput },
+    input: FamilyUpdateInput,
   ): Promise<StudentProfile> {
     const student = await this.requireStudentByAccountId(accountId);
+    return this.applyFamily(student, input);
+  }
 
+  async updateFamily(
+    studentId: string,
+    input: FamilyUpdateInput,
+  ): Promise<StudentProfile> {
+    const student = await this.findOne(studentId);
+    return this.applyFamily(student, input);
+  }
+
+  private async applyFamily(
+    student: { id: string; onboardingStep: number },
+    input: FamilyUpdateInput,
+  ): Promise<StudentProfile> {
     const familyCreates = [
       input.father?.fullName?.trim()
         ? {
