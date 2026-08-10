@@ -266,11 +266,45 @@ export class StudentsService {
     };
   }
 
-  async findAll() {
-    return this.prisma.student.findMany({
-      orderBy: { createdAt: 'desc' },
-      include: { applicationTargets: true },
+  async create(input: {
+    surname?: string;
+    givenName?: string;
+    email?: string;
+    phone?: string;
+  }) {
+    const surname = input.surname?.trim();
+    const givenName = input.givenName?.trim();
+    const email = input.email?.trim();
+
+    if (!surname || !givenName || !email) {
+      throw new BadRequestException(
+        'surname, givenName and email are required.',
+      );
+    }
+
+    return this.prisma.student.create({
+      data: {
+        surname,
+        givenName,
+        email,
+        phone: input.phone?.trim() || null,
+      },
     });
+  }
+
+  async findAll() {
+    const students = await this.prisma.student.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        applicationTargets: true,
+        documents: { where: { type: 'photo' }, orderBy: { sortOrder: 'asc' } },
+      },
+    });
+
+    return students.map(({ documents, ...student }) => ({
+      ...student,
+      photoUrl: documents[0]?.fileUrl,
+    }));
   }
 
   async findOne(id: string) {

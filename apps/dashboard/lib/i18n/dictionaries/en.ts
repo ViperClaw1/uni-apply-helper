@@ -183,11 +183,15 @@ const en = {
       viewDetails: "View details",
     },
     newStudent: {
-      eyebrow: "Outside MVP scope",
-      title: "Manual student creation is currently disabled",
-      description:
-        "The current API has no `POST /students`, so the first MVP only works with students who already came in through the Google Form.",
+      eyebrow: "New student",
+      title: "Create student manually",
       backToList: "Back to the list",
+      surname: "Surname",
+      givenName: "Given name",
+      email: "Email",
+      phone: "Phone",
+      create: "Create student",
+      creating: "Creating…",
     },
     profilePage: {
       loadFailed: "Failed to load the student profile.",

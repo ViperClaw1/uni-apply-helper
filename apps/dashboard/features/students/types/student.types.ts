@@ -15,6 +15,7 @@ export type StudentListItem = {
   givenName: string;
   email: string;
   createdAt: string;
+  photoUrl?: string;
   applicationTargets: ApplicationTarget[];
 };
 

@@ -78,7 +78,8 @@ export declare class StudentsController {
             position?: string;
         };
     }): Promise<import("@uni-apply/shared").StudentProfile>;
-    findAll(): Promise<({
+    findAll(): Promise<{
+        photoUrl: string;
         applicationTargets: {
             id: string;
             universityId: string | null;
@@ -89,7 +90,6 @@ export declare class StudentsController {
             fundingSource: string | null;
             studentId: string;
         }[];
-    } & {
         id: string;
         email: string;
         createdAt: Date;
@@ -115,7 +115,39 @@ export declare class StudentsController {
         studiedInChina: boolean;
         desiredField: string | null;
         onboardingStep: number;
-    })[]>;
+    }[]>;
+    create(body: {
+        surname?: string;
+        givenName?: string;
+        email?: string;
+        phone?: string;
+    }): Promise<{
+        id: string;
+        email: string;
+        createdAt: Date;
+        accountId: string | null;
+        surname: string;
+        givenName: string;
+        sex: string | null;
+        nationality: string | null;
+        cityOfBirth: string | null;
+        dateOfBirth: Date | null;
+        chineseName: string | null;
+        religion: string | null;
+        passportNo: string | null;
+        passportExpiry: Date | null;
+        consulate: string | null;
+        maritalStatus: string | null;
+        phone: string | null;
+        hobby: string | null;
+        permanentAddress: string | null;
+        postCode: string | null;
+        currentInstitution: string | null;
+        beenToChina: boolean;
+        studiedInChina: boolean;
+        desiredField: string | null;
+        onboardingStep: number;
+    }>;
     findOne(id: string): Promise<{
         id: string;
         email: string;

@@ -138,6 +138,19 @@ export async function deleteStudent(studentId: string) {
   await apiClient.delete(`/students/${studentId}`);
 }
 
+export type CreateStudentInput = {
+  surname: string;
+  givenName: string;
+  email: string;
+  phone?: string;
+};
+
+export async function createStudent(input: CreateStudentInput) {
+  const response = await apiClient.post<{ id: string }>("/students", input);
+
+  return response.data;
+}
+
 export async function setStudentApplicationTargets(
   studentId: string,
   formUrls: string[],

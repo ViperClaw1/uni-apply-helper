@@ -190,11 +190,15 @@ const ru: Dictionary = {
       viewDetails: "Посмотреть детали",
     },
     newStudent: {
-      eyebrow: "За пределами MVP",
-      title: "Ручное создание студента пока отключено",
-      description:
-        "В текущем API нет `POST /students`, поэтому первый MVP работает со студентами, которые уже пришли из Google Form.",
+      eyebrow: "Новый студент",
+      title: "Создать студента вручную",
       backToList: "Вернуться к списку",
+      surname: "Фамилия",
+      givenName: "Имя",
+      email: "Email",
+      phone: "Телефон",
+      create: "Создать студента",
+      creating: "Создание…",
     },
     profilePage: {
       loadFailed: "Не удалось загрузить карточку студента.",

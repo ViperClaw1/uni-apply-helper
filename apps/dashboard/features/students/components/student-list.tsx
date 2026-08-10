@@ -2,14 +2,15 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { Header, LogoutButton } from "@/components/header";
+import { Header, Logo, LogoutButton } from "@/components/header";
 import { useLocale, useT } from "@/lib/i18n/context";
 import { toTitleCase } from "@/lib/format";
 import { deleteStudent, getStudents } from "../api/students.api";
 import type { StudentListItem } from "../types/student.types";
 import { ConfirmDialog } from "./confirm-dialog";
+import { PhotoAvatar } from "./photo-avatar";
 
-export function StudentList() {
+export function StudentList({ companyName }: { companyName?: string } = {}) {
   const t = useT();
   const { locale } = useLocale();
   const [students, setStudents] = useState<StudentListItem[]>([]);
@@ -82,7 +83,12 @@ export function StudentList() {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-6 py-8">
       <Header
-        eyebrow={t.students.list.eyebrow}
+        eyebrow={
+          <span className="flex items-center gap-1.5">
+            <Logo />
+            {companyName || t.students.list.eyebrow}
+          </span>
+        }
         title={t.students.list.title}
         actions={
           <>
@@ -125,35 +131,41 @@ export function StudentList() {
               >
                 <Link
                   href={`/students/${student.id}`}
-                  className="min-w-0 flex-1 active:scale-[0.99]"
+                  className="flex min-w-0 flex-1 items-start gap-3 active:scale-[0.99]"
                 >
-                  <div className="text-base font-semibold text-slate-950">
-                    {formatStudentName(student, t.common.nameNotSet)}
-                  </div>
-                  <div className="mt-1 flex items-center gap-1.5 text-sm text-slate-500">
-                    <span className="shrink-0 text-slate-400">
-                      <MailIcon />
-                    </span>
-                    <span className="truncate">
-                      {student.email || t.common.emailNotProvided}
-                    </span>
-                  </div>
-                  {targets.length > 0 ? (
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {targets.map((name, index) => (
-                        <span
-                          key={`${name}-${index}`}
-                          className="inline-flex h-6 items-center rounded-full bg-slate-100 px-2.5 text-xs font-medium text-slate-700 ring-1 ring-slate-200/70"
-                        >
-                          {name}
-                        </span>
-                      ))}
+                  <PhotoAvatar
+                    url={student.photoUrl}
+                    name={formatStudentName(student, t.common.nameNotSet)}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-base font-semibold text-slate-950">
+                      {formatStudentName(student, t.common.nameNotSet)}
                     </div>
-                  ) : (
-                    <div className="mt-3 text-sm text-slate-400">
-                      {t.students.list.noUniversities}
+                    <div className="mt-1 flex items-center gap-1.5 text-sm text-slate-500">
+                      <span className="shrink-0 text-slate-400">
+                        <MailIcon />
+                      </span>
+                      <span className="truncate">
+                        {student.email || t.common.emailNotProvided}
+                      </span>
                     </div>
-                  )}
+                    {targets.length > 0 ? (
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {targets.map((name, index) => (
+                          <span
+                            key={`${name}-${index}`}
+                            className="inline-flex h-6 items-center rounded-full bg-slate-100 px-2.5 text-xs font-medium text-slate-700 ring-1 ring-slate-200/70"
+                          >
+                            {name}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="mt-3 text-sm text-slate-400">
+                        {t.students.list.noUniversities}
+                      </div>
+                    )}
+                  </div>
                 </Link>
 
                 <div className="flex shrink-0 flex-col items-end gap-2">

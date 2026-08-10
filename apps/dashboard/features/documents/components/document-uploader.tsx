@@ -17,6 +17,8 @@ import { DocumentFileCard } from "./document-file-card";
 
 type UploadStatus = "idle" | "uploading" | "done" | "error";
 
+const EMPTY_DOCUMENTS: StudentDocument[] = [];
+
 type DocumentUploaderProps = {
   studentId: string;
   type: string;
@@ -35,7 +37,7 @@ export function DocumentUploader({
   accept,
   parse,
   multiple = false,
-  existingDocuments = [],
+  existingDocuments = EMPTY_DOCUMENTS,
   onUploaded,
 }: DocumentUploaderProps) {
   const t = useT();

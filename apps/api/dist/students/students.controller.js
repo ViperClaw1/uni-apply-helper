@@ -43,6 +43,9 @@ let StudentsController = class StudentsController {
     findAll() {
         return this.studentsService.findAll();
     }
+    create(body) {
+        return this.studentsService.create(body);
+    }
     findOne(id) {
         return this.studentsService.findOne(id);
     }
@@ -119,6 +122,13 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], StudentsController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Post)(),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", void 0)
+], StudentsController.prototype, "create", null);
 __decorate([
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),

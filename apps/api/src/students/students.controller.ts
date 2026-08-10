@@ -152,6 +152,19 @@ export class StudentsController {
     return this.studentsService.findAll();
   }
 
+  @Post()
+  create(
+    @Body()
+    body: {
+      surname?: string;
+      givenName?: string;
+      email?: string;
+      phone?: string;
+    },
+  ) {
+    return this.studentsService.create(body);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.studentsService.findOne(id);

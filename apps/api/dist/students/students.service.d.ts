@@ -48,18 +48,12 @@ export declare class StudentsService {
         onboardingStep: number;
     }>;
     getFullProfile(studentId: string): Promise<StudentProfile>;
-    findAll(): Promise<({
-        applicationTargets: {
-            id: string;
-            universityId: string | null;
-            universityRaw: string;
-            degree: string | null;
-            major: string | null;
-            duration: string | null;
-            fundingSource: string | null;
-            studentId: string;
-        }[];
-    } & {
+    create(input: {
+        surname?: string;
+        givenName?: string;
+        email?: string;
+        phone?: string;
+    }): Promise<{
         id: string;
         email: string;
         createdAt: Date;
@@ -85,7 +79,45 @@ export declare class StudentsService {
         studiedInChina: boolean;
         desiredField: string | null;
         onboardingStep: number;
-    })[]>;
+    }>;
+    findAll(): Promise<{
+        photoUrl: string;
+        applicationTargets: {
+            id: string;
+            universityId: string | null;
+            universityRaw: string;
+            degree: string | null;
+            major: string | null;
+            duration: string | null;
+            fundingSource: string | null;
+            studentId: string;
+        }[];
+        id: string;
+        email: string;
+        createdAt: Date;
+        accountId: string | null;
+        surname: string;
+        givenName: string;
+        sex: string | null;
+        nationality: string | null;
+        cityOfBirth: string | null;
+        dateOfBirth: Date | null;
+        chineseName: string | null;
+        religion: string | null;
+        passportNo: string | null;
+        passportExpiry: Date | null;
+        consulate: string | null;
+        maritalStatus: string | null;
+        phone: string | null;
+        hobby: string | null;
+        permanentAddress: string | null;
+        postCode: string | null;
+        currentInstitution: string | null;
+        beenToChina: boolean;
+        studiedInChina: boolean;
+        desiredField: string | null;
+        onboardingStep: number;
+    }[]>;
     findOne(id: string): Promise<{
         id: string;
         email: string;

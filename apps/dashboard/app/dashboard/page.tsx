@@ -6,7 +6,7 @@ export default async function DashboardPage() {
   const account = await getCurrentAccount();
 
   if (account?.role !== "student") {
-    return <StudentList />;
+    return <StudentList companyName={account?.agencyProfile?.legalName} />;
   }
 
   const student = await getMyStudentProfile();
