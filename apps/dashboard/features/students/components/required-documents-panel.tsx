@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useT } from "@/lib/i18n/context";
+import { Skeleton } from "@/components/skeleton";
 import { getUniversity } from "@/features/universities/api/universities.api";
 import { useDocumentTypeLabel } from "@/features/documents/constants/document-types";
 import type { StudentDocument } from "@/features/documents/types/document.types";
@@ -20,8 +21,13 @@ export function RequiredDocumentsPanel({ targets, documentsByType }: RequiredDoc
     .filter((id): id is string => Boolean(id));
   const universityIdsKey = universityIds.join(",");
   const [requiredTypes, setRequiredTypes] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (universityIds.length === 0) {
+      return;
+    }
+
     let isMounted = true;
 
     Promise.all(universityIds.map((id) => getUniversity(id)))
@@ -42,6 +48,11 @@ export function RequiredDocumentsPanel({ targets, documentsByType }: RequiredDoc
         if (isMounted) {
           setRequiredTypes([]);
         }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       });
 
     return () => {
@@ -49,6 +60,24 @@ export function RequiredDocumentsPanel({ targets, documentsByType }: RequiredDoc
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [universityIdsKey]);
+
+  const showSkeleton = isLoading && universityIds.length > 0;
+
+  if (showSkeleton) {
+    return (
+      <div className="mb-4 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.08),0_8px_30px_rgba(15,23,42,0.04)] ring-1 ring-black/5">
+        <Skeleton className="h-4 w-40" />
+        <div className="mt-3 flex flex-col gap-2">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="flex items-center justify-between">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-16" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (requiredTypes.length === 0) {
     return null;

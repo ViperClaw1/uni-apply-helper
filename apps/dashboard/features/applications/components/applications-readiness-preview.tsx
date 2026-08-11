@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useT } from "@/lib/i18n/context";
+import { Skeleton } from "@/components/skeleton";
 import { getApplicationsReadiness } from "../api/applications.api";
 import type { ApplicationReadiness, ApplicationReadinessStatus } from "../types/application.types";
 
@@ -20,6 +21,7 @@ export function ApplicationsReadinessPreview({
   const p = t.applications.readinessPreview;
   const [items, setItems] = useState<ApplicationReadiness[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
@@ -38,6 +40,11 @@ export function ApplicationsReadinessPreview({
         if (isMounted) {
           setError(p.loadFailed);
         }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       });
 
     return () => {
@@ -45,6 +52,22 @@ export function ApplicationsReadinessPreview({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [studentId, refreshKey]);
+
+  if (isLoading) {
+    return (
+      <div className="mb-4 rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.08),0_8px_30px_rgba(15,23,42,0.04)] ring-1 ring-black/5">
+        <Skeleton className="h-4 w-32" />
+        <div className="mt-3 flex flex-col gap-2">
+          {Array.from({ length: 2 }).map((_, index) => (
+            <div key={index} className="flex items-center justify-between">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-4 w-16" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   if (error) {
     return (

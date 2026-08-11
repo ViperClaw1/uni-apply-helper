@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useT } from "@/lib/i18n/context";
 import { toTitleCase } from "@/lib/format";
+import { Skeleton, SkeletonCard } from "@/components/skeleton";
 import { ApplicationsReadinessPreview } from "@/features/applications/components/applications-readiness-preview";
 import { BatchPanel } from "@/features/applications/components/batch-panel";
 import { DEFAULT_DOCUMENT_TYPES, useDocumentTypeLabel } from "@/features/documents/constants/document-types";
@@ -57,7 +58,7 @@ export function StudentDetailPage() {
   } = useStudentProfileData(studentId);
 
   if (isLoading) {
-    return <PageShell title={t.common.loading} />;
+    return <StudentDetailPageSkeleton />;
   }
 
   if (error || !student) {
@@ -167,8 +168,12 @@ export function StudentDetailPage() {
         ))}
       </nav>
 
-      <div className="mt-6">
-        {activeTab === "overview" ? (
+      {/* All five panels stay mounted (grid-stacked in the same cell, toggled by opacity) instead
+          of mounting/unmounting on tab click — each tab's own fetched data (universities list,
+          motivation letters, readiness preview, …) is fetched once and kept, and switching tabs
+          is a crossfade instead of a fresh mount+loading flash every time. */}
+      <div className="mt-6 grid">
+        <TabPanel active={activeTab === "overview"}>
           <OverviewTab
             readiness={readiness}
             documentsPresent={documentsPresent}
@@ -177,13 +182,13 @@ export function StudentDetailPage() {
             latestBatch={latestBatch}
             onJumpToTab={setActiveTab}
           />
-        ) : null}
+        </TabPanel>
 
-        {activeTab === "profile" ? (
+        <TabPanel active={activeTab === "profile"}>
           <ProfileTab studentId={studentId} student={student} onUpdated={setStudent} />
-        ) : null}
+        </TabPanel>
 
-        {activeTab === "documents" ? (
+        <TabPanel active={activeTab === "documents"}>
           <div>
             <RequiredDocumentsPanel
               targets={resolvedTargets}
@@ -206,9 +211,9 @@ export function StudentDetailPage() {
               ))}
             </div>
           </div>
-        ) : null}
+        </TabPanel>
 
-        {activeTab === "universities" ? (
+        <TabPanel active={activeTab === "universities"}>
           <UniversitiesTab
             studentId={studentId}
             student={student}
@@ -216,9 +221,9 @@ export function StudentDetailPage() {
             highlightUniversityId={highlightUniversityId}
             onTargetsChange={handleTargetsChange}
           />
-        ) : null}
+        </TabPanel>
 
-        {activeTab === "applications" ? (
+        <TabPanel active={activeTab === "applications"}>
           <div>
             {resolvedTargets.length > 0 ? (
               <ApplicationsReadinessPreview
@@ -255,9 +260,24 @@ export function StudentDetailPage() {
                     : `${t.students.profilePage.submitButtonPrefix}${readyCount ?? pendingTargets.length}${t.students.profilePage.submitButtonSuffix}`}
             </button>
           </div>
-        ) : null}
+        </TabPanel>
       </div>
     </main>
+  );
+}
+
+function TabPanel({ active, children }: { active: boolean; children: React.ReactNode }) {
+  return (
+    <div
+      className={`col-start-1 row-start-1 transition-all duration-300 ease-out ${
+        active
+          ? "z-10 opacity-100 translate-y-0"
+          : "pointer-events-none opacity-0 -translate-y-1"
+      }`}
+      inert={!active}
+    >
+      {children}
+    </div>
   );
 }
 
@@ -413,6 +433,50 @@ function ApplyIcon() {
         strokeLinejoin="round"
       />
     </svg>
+  );
+}
+
+function StudentDetailPageSkeleton() {
+  return (
+    <main className="page-transition mx-auto flex min-h-screen w-full max-w-6xl flex-col px-6 py-8">
+      <section className="rounded-3xl bg-white p-6 shadow-[0_1px_2px_rgba(15,23,42,0.08),0_12px_45px_rgba(15,23,42,0.05)] ring-1 ring-black/5">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0 flex-1">
+            <Skeleton className="h-8 w-56" />
+            <Skeleton className="mt-3 h-4 w-40" />
+            <div className="mt-4 flex items-center gap-3">
+              <Skeleton className="h-2 w-full max-w-xs" />
+              <Skeleton className="h-4 w-9 shrink-0" />
+            </div>
+          </div>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-24" />
+            <Skeleton className="h-10 w-36" />
+            <Skeleton className="h-10 w-32" />
+          </div>
+        </div>
+      </section>
+
+      <div className="mt-6 flex gap-4 border-b border-slate-200 pb-3">
+        {Array.from({ length: 5 }).map((_, index) => (
+          <Skeleton key={index} className="h-5 w-20" />
+        ))}
+      </div>
+
+      <div className="mt-6 flex flex-col gap-6">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <SkeletonCard key={index} />
+          ))}
+        </div>
+        <div className="rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.08),0_8px_30px_rgba(15,23,42,0.04)] ring-1 ring-black/5">
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="mt-3 h-4 w-3/4" />
+          <Skeleton className="mt-4 h-10 w-40" />
+        </div>
+      </div>
+    </main>
   );
 }
 

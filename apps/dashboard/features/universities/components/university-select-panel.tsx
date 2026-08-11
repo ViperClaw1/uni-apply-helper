@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useT } from "@/lib/i18n/context";
+import { Skeleton } from "@/components/skeleton";
 import { useDocumentTypeLabel } from "@/features/documents/constants/document-types";
 import type { StudentDocument } from "@/features/documents/types/document.types";
 import { setStudentApplicationTargets } from "@/features/students/api/students.api";
@@ -164,7 +165,14 @@ export function UniversitySelectPanel({
       ) : null}
 
       {isLoading ? (
-        <p className="mt-4 text-sm text-slate-400">{t.common.loading}</p>
+        <ul className="mt-4 divide-y divide-slate-100">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <li key={index} className="flex items-center gap-3 py-2">
+              <Skeleton className="h-4 w-4 shrink-0 rounded" />
+              <Skeleton className="h-4 w-40" />
+            </li>
+          ))}
+        </ul>
       ) : loadError ? (
         <div className="mt-4 rounded-xl bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 ring-1 ring-rose-100">
           {loadError}
