@@ -35,6 +35,11 @@ export class ApplicationsController {
     return this.applicationsService.findByStudent(studentId);
   }
 
+  @Get('students/:studentId/applications/readiness')
+  previewReadiness(@Param('studentId') studentId: string) {
+    return this.applicationsService.previewReadiness(studentId);
+  }
+
   @Get('applications/batches/:id')
   findBatch(@Param('id') id: string) {
     return this.applicationsService.findBatch(id);
@@ -62,6 +67,17 @@ export class ApplicationsController {
   @Post('applications/:id/submit')
   @UseGuards(ApiKeyGuard)
   submitApplication(
+    @Param('id') id: string,
+    @Body() body: SubmitApplicationInput,
+  ) {
+    return this.applicationsService.submitApplication(id, body);
+  }
+
+  // Same transition as above, triggered by the consultant from the dashboard instead of the
+  // extension — kept as a separate route so the extension's shared API key never has to ship
+  // to the browser. Unguarded like every other agency-facing :id route in this controller.
+  @Post('applications/:id/consultant-submit')
+  consultantSubmitApplication(
     @Param('id') id: string,
     @Body() body: SubmitApplicationInput,
   ) {

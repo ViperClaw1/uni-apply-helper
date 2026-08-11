@@ -30,6 +30,9 @@ let ApplicationsController = class ApplicationsController {
     findByStudent(studentId) {
         return this.applicationsService.findByStudent(studentId);
     }
+    previewReadiness(studentId) {
+        return this.applicationsService.previewReadiness(studentId);
+    }
     findBatch(id) {
         return this.applicationsService.findBatch(id);
     }
@@ -43,6 +46,9 @@ let ApplicationsController = class ApplicationsController {
         return this.applicationsService.markApplicationReady(id);
     }
     submitApplication(id, body) {
+        return this.applicationsService.submitApplication(id, body);
+    }
+    consultantSubmitApplication(id, body) {
         return this.applicationsService.submitApplication(id, body);
     }
     updateApplication(id, body) {
@@ -74,6 +80,13 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", void 0)
 ], ApplicationsController.prototype, "findByStudent", null);
+__decorate([
+    (0, common_1.Get)('students/:studentId/applications/readiness'),
+    __param(0, (0, common_1.Param)('studentId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], ApplicationsController.prototype, "previewReadiness", null);
 __decorate([
     (0, common_1.Get)('applications/batches/:id'),
     __param(0, (0, common_1.Param)('id')),
@@ -113,6 +126,14 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", void 0)
 ], ApplicationsController.prototype, "submitApplication", null);
+__decorate([
+    (0, common_1.Post)('applications/:id/consultant-submit'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], ApplicationsController.prototype, "consultantSubmitApplication", null);
 __decorate([
     (0, common_1.Patch)('applications/:id'),
     __param(0, (0, common_1.Param)('id')),

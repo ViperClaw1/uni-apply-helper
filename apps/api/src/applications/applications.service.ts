@@ -14,6 +14,7 @@ import type { UniversityMatchCandidate } from '../universities/types/university-
 import type {
   ActiveApplicationResponse,
   ApplicationBatchResponse,
+  ApplicationReadinessResponse,
   ApplicationResponse,
   ApplicationStatus,
   ApplicationStepResponse,
@@ -479,25 +480,17 @@ export class ApplicationsService {
       }
 
       const university = resolved.university;
-      const missingDocuments = university.requiredDocuments.filter(
-        (documentType) => !hasDocument(profile.documents, documentType),
+      const { missing, approvedLetterId } = await this.evaluateTargetReadiness(
+        university,
+        profile,
       );
-      const approvedLetter = university.requiresEssay
-        ? await this.findApprovedLetter(profile.id, university.id)
-        : null;
-      const missing = [
-        ...missingDocuments,
-        university.requiresEssay && !approvedLetter
-          ? 'approved motivation letter'
-          : null,
-      ].filter((item): item is string => item !== null);
 
       applications.push({
         universityId: university.id,
         status: missing.length > 0 ? 'blocked' : 'ready_for_submission',
         blockedReason:
           missing.length > 0 ? `Missing requirements: ${missing.join(', ')}` : undefined,
-        motivationLetterId: approvedLetter?.id,
+        motivationLetterId: approvedLetterId,
       });
 
       if (missing.length > 0) {
@@ -511,6 +504,72 @@ export class ApplicationsService {
     }
 
     return { applications, unresolvedTargets };
+  }
+
+  /** Pure readiness check for one resolved target — no notifications, no persistence. */
+  private async evaluateTargetReadiness(
+    university: NonNullable<
+      Awaited<ReturnType<ApplicationsService['resolveTarget']>>['university']
+    >,
+    profile: StudentProfile,
+  ): Promise<{ missing: string[]; approvedLetterId?: string }> {
+    const missingDocuments = university.requiredDocuments.filter(
+      (documentType) => !hasDocument(profile.documents, documentType),
+    );
+    const approvedLetter = university.requiresEssay
+      ? await this.findApprovedLetter(profile.id, university.id)
+      : null;
+    const missing = [
+      ...missingDocuments,
+      university.requiresEssay && !approvedLetter ? 'approved motivation letter' : null,
+    ].filter((item): item is string => item !== null);
+
+    return { missing, approvedLetterId: approvedLetter?.id };
+  }
+
+  /** Read-only preview of what `createBatch` would do — used by the UI before the agent hits Start. */
+  async previewReadiness(studentId: string): Promise<ApplicationReadinessResponse[]> {
+    const profile = await this.studentsService.getFullProfile(studentId);
+    const submittedUniversityIds = await this.findSubmittedUniversityIds(studentId);
+    const results: ApplicationReadinessResponse[] = [];
+
+    for (const target of profile.applicationTargets) {
+      if (target.universityId && submittedUniversityIds.has(target.universityId)) {
+        results.push({
+          universityId: target.universityId,
+          universityRaw: target.universityRaw,
+          status: 'submitted',
+          missingDocuments: [],
+        });
+        continue;
+      }
+
+      const resolved = await this.resolveTarget(target);
+
+      if (!resolved.university) {
+        results.push({
+          universityRaw: target.universityRaw,
+          status: 'unresolved',
+          missingDocuments: [],
+          blockedReason: 'University link not resolved yet.',
+        });
+        continue;
+      }
+
+      const university = resolved.university;
+      const { missing } = await this.evaluateTargetReadiness(university, profile);
+
+      results.push({
+        universityId: university.id,
+        universityRaw: target.universityRaw,
+        status: missing.length > 0 ? 'blocked' : 'ready',
+        missingDocuments: missing,
+        blockedReason:
+          missing.length > 0 ? `Missing requirements: ${missing.join(', ')}` : undefined,
+      });
+    }
+
+    return results;
   }
 
   private async resolveTarget(target: ApplicationTarget) {

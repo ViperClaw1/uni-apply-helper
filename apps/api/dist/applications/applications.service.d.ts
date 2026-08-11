@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { QueueService } from '../queue/queue.service.js';
 import { StudentsService } from '../students/students.service.js';
 import { UniversitiesService } from '../universities/universities.service.js';
-import type { ActiveApplicationResponse, ApplicationBatchResponse, ApplicationResponse, ApplicationStepResponse, CreateApplicationBatchInput, SubmitApplicationInput, UpdateApplicationInput } from './types/application-api.types.js';
+import type { ActiveApplicationResponse, ApplicationBatchResponse, ApplicationReadinessResponse, ApplicationResponse, ApplicationStepResponse, CreateApplicationBatchInput, SubmitApplicationInput, UpdateApplicationInput } from './types/application-api.types.js';
 export declare class ApplicationsService {
     private readonly prisma;
     private readonly studentsService;
@@ -26,6 +26,8 @@ export declare class ApplicationsService {
     }): Promise<ApplicationStepResponse>;
     private readonly batchInclude;
     private prepareApplications;
+    private evaluateTargetReadiness;
+    previewReadiness(studentId: string): Promise<ApplicationReadinessResponse[]>;
     private resolveTarget;
     private findApprovedLetter;
     private findSubmittedUniversityIds;

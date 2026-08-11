@@ -127,7 +127,32 @@ export declare class StudentsService {
         onboardingStep: number;
     }>;
     findAll(): Promise<{
-        photoUrl: string;
+        id: string;
+        createdAt: Date;
+        photoUrl: string | undefined;
+        personal: {
+            surname: string;
+            givenName: string;
+            email: string;
+            phone: string | undefined;
+            nationality: string | undefined;
+            dateOfBirth: string | undefined;
+            passportNo: string | undefined;
+            permanentAddress: string | undefined;
+        };
+        education: {
+            level: string | undefined;
+            institution: string | undefined;
+            periodStart: string | undefined;
+            periodEnd: string | undefined;
+        }[];
+        languages: {
+            language: string;
+            score: string | undefined;
+        }[];
+        documents: {
+            type: string;
+        }[];
         applicationTargets: {
             id: string;
             universityId: string | null;
@@ -138,31 +163,14 @@ export declare class StudentsService {
             fundingSource: string | null;
             studentId: string;
         }[];
-        id: string;
-        email: string;
-        createdAt: Date;
-        accountId: string | null;
-        surname: string;
-        givenName: string;
-        sex: string | null;
-        nationality: string | null;
-        cityOfBirth: string | null;
-        dateOfBirth: Date | null;
-        chineseName: string | null;
-        religion: string | null;
-        passportNo: string | null;
-        passportExpiry: Date | null;
-        consulate: string | null;
-        maritalStatus: string | null;
-        phone: string | null;
-        hobby: string | null;
-        permanentAddress: string | null;
-        postCode: string | null;
-        currentInstitution: string | null;
-        beenToChina: boolean;
-        studiedInChina: boolean;
-        desiredField: string | null;
-        onboardingStep: number;
+        latestBatch: {
+            id: string;
+            failed: number;
+            status: string;
+            total: number;
+            submitted: number;
+            blocked: number;
+        };
     }[]>;
     findOne(id: string): Promise<{
         id: string;

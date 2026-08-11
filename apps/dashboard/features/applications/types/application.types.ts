@@ -48,3 +48,13 @@ export type ApplicationBatch = {
   createdAt: string;
   applications: ApplicationItem[];
 };
+
+export type ApplicationReadinessStatus = "ready" | "blocked" | "submitted" | "unresolved";
+
+export type ApplicationReadiness = {
+  universityId?: string;
+  universityRaw: string;
+  status: ApplicationReadinessStatus;
+  missingDocuments: string[];
+  blockedReason?: string;
+};

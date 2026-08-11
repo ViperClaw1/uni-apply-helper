@@ -2,7 +2,9 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import { useLocale, useT } from "@/lib/i18n/context";
+import { ConfirmDialog } from "@/features/students/components/confirm-dialog";
 import { isMissingApprovedMotivationLetter } from "@/features/letters/lib/letter-utils";
+import { submitApplication } from "../api/applications.api";
 import {
   formatErrorMessage,
   getStepLabel,
@@ -40,6 +42,9 @@ export function BatchPanel({
     null,
   );
   const [openError, setOpenError] = useState<string | null>(null);
+  const [submittingId, setSubmittingId] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [confirmTarget, setConfirmTarget] = useState<ApplicationItem | null>(null);
 
   const { submitted, pending } = useMemo(() => {
     const applications = batch?.applications ?? [];
@@ -76,6 +81,25 @@ export function BatchPanel({
       setOpenError(t.applications.batch.openFormFailed);
     } finally {
       setOpeningApplicationId(null);
+    }
+  }
+
+  async function handleConfirmSubmit() {
+    if (!confirmTarget || submittingId) {
+      return;
+    }
+
+    setSubmittingId(confirmTarget.id);
+    setSubmitError(null);
+
+    try {
+      await submitApplication(confirmTarget.id);
+      setConfirmTarget(null);
+      await onApplicationsChange?.();
+    } catch {
+      setSubmitError(t.applications.batch.submitFailed);
+    } finally {
+      setSubmittingId(null);
     }
   }
 
@@ -117,6 +141,8 @@ export function BatchPanel({
                   application={application}
                   openingApplicationId={openingApplicationId}
                   onOpenForm={handleOpenForm}
+                  submittingId={submittingId}
+                  onRequestSubmit={setConfirmTarget}
                 />
               ))}
             </ApplicationGroup>
@@ -134,6 +160,8 @@ export function BatchPanel({
                   application={application}
                   openingApplicationId={openingApplicationId}
                   onOpenForm={handleOpenForm}
+                  submittingId={submittingId}
+                  onRequestSubmit={setConfirmTarget}
                 />
               ))}
             </ApplicationGroup>
@@ -142,6 +170,20 @@ export function BatchPanel({
       ) : null}
 
       {openError ? <ErrorBadge message={openError} className="mt-4" /> : null}
+      {submitError ? <ErrorBadge message={submitError} className="mt-4" /> : null}
+
+      <ConfirmDialog
+        open={confirmTarget !== null}
+        title={t.applications.batch.submitConfirmTitle}
+        description={t.applications.batch.submitConfirmDescription}
+        confirmLabel={t.applications.batch.submitConfirmButton}
+        pendingLabel={t.applications.batch.submitting}
+        isPending={submittingId !== null}
+        onConfirm={() => {
+          handleConfirmSubmit().catch(() => undefined);
+        }}
+        onCancel={() => setConfirmTarget(null)}
+      />
     </div>
   );
 }
@@ -179,10 +221,14 @@ function ApplicationRow({
   application,
   openingApplicationId,
   onOpenForm,
+  submittingId,
+  onRequestSubmit,
 }: {
   application: ApplicationItem;
   openingApplicationId: string | null;
   onOpenForm: (application: ApplicationItem) => void | Promise<void>;
+  submittingId: string | null;
+  onRequestSubmit: (application: ApplicationItem) => void;
 }) {
   const t = useT();
 
@@ -220,6 +266,18 @@ function ApplicationRow({
               {openingApplicationId === application.id
                 ? t.applications.batch.opening
                 : t.applications.batch.openForm}
+            </button>
+          ) : null}
+          {application.status === "ready_for_submission" ? (
+            <button
+              type="button"
+              disabled={submittingId === application.id}
+              onClick={() => onRequestSubmit(application)}
+              className="mt-2 ml-2 inline-flex h-8 cursor-pointer items-center rounded-lg bg-slate-950 px-3 text-xs font-semibold text-white transition-colors hover:bg-slate-800 disabled:pointer-events-none disabled:opacity-60"
+            >
+              {submittingId === application.id
+                ? t.applications.batch.submitting
+                : t.applications.batch.submitApplication}
             </button>
           ) : null}
         </div>

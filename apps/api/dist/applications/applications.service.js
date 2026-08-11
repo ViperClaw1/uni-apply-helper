@@ -301,21 +301,12 @@ let ApplicationsService = class ApplicationsService {
                 continue;
             }
             const university = resolved.university;
-            const missingDocuments = university.requiredDocuments.filter((documentType) => !(0, shared_1.hasDocument)(profile.documents, documentType));
-            const approvedLetter = university.requiresEssay
-                ? await this.findApprovedLetter(profile.id, university.id)
-                : null;
-            const missing = [
-                ...missingDocuments,
-                university.requiresEssay && !approvedLetter
-                    ? 'approved motivation letter'
-                    : null,
-            ].filter((item) => item !== null);
+            const { missing, approvedLetterId } = await this.evaluateTargetReadiness(university, profile);
             applications.push({
                 universityId: university.id,
                 status: missing.length > 0 ? 'blocked' : 'ready_for_submission',
                 blockedReason: missing.length > 0 ? `Missing requirements: ${missing.join(', ')}` : undefined,
-                motivationLetterId: approvedLetter?.id,
+                motivationLetterId: approvedLetterId,
             });
             if (missing.length > 0) {
                 const studentName = this.getStudentName(profile);
@@ -323,6 +314,53 @@ let ApplicationsService = class ApplicationsService {
             }
         }
         return { applications, unresolvedTargets };
+    }
+    async evaluateTargetReadiness(university, profile) {
+        const missingDocuments = university.requiredDocuments.filter((documentType) => !(0, shared_1.hasDocument)(profile.documents, documentType));
+        const approvedLetter = university.requiresEssay
+            ? await this.findApprovedLetter(profile.id, university.id)
+            : null;
+        const missing = [
+            ...missingDocuments,
+            university.requiresEssay && !approvedLetter ? 'approved motivation letter' : null,
+        ].filter((item) => item !== null);
+        return { missing, approvedLetterId: approvedLetter?.id };
+    }
+    async previewReadiness(studentId) {
+        const profile = await this.studentsService.getFullProfile(studentId);
+        const submittedUniversityIds = await this.findSubmittedUniversityIds(studentId);
+        const results = [];
+        for (const target of profile.applicationTargets) {
+            if (target.universityId && submittedUniversityIds.has(target.universityId)) {
+                results.push({
+                    universityId: target.universityId,
+                    universityRaw: target.universityRaw,
+                    status: 'submitted',
+                    missingDocuments: [],
+                });
+                continue;
+            }
+            const resolved = await this.resolveTarget(target);
+            if (!resolved.university) {
+                results.push({
+                    universityRaw: target.universityRaw,
+                    status: 'unresolved',
+                    missingDocuments: [],
+                    blockedReason: 'University link not resolved yet.',
+                });
+                continue;
+            }
+            const university = resolved.university;
+            const { missing } = await this.evaluateTargetReadiness(university, profile);
+            results.push({
+                universityId: university.id,
+                universityRaw: target.universityRaw,
+                status: missing.length > 0 ? 'blocked' : 'ready',
+                missingDocuments: missing,
+                blockedReason: missing.length > 0 ? `Missing requirements: ${missing.join(', ')}` : undefined,
+            });
+        }
+        return results;
     }
     async resolveTarget(target) {
         if (target.universityId) {

@@ -9,14 +9,34 @@ export type ApplicationTarget = {
   fundingSource?: string;
 };
 
+export type StudentListBatchSummary = {
+  id: string;
+  status: string;
+  total: number;
+  submitted: number;
+  blocked: number;
+  failed: number;
+};
+
 export type StudentListItem = {
   id: string;
-  surname: string;
-  givenName: string;
-  email: string;
   createdAt: string;
   photoUrl?: string;
+  personal: {
+    surname: string;
+    givenName: string;
+    email: string;
+    phone?: string;
+    nationality?: string;
+    dateOfBirth?: string;
+    passportNo?: string;
+    permanentAddress?: string;
+  };
+  education: EducationEntry[];
+  languages: LanguageSkill[];
+  documents: { type: string }[];
   applicationTargets: ApplicationTarget[];
+  latestBatch?: StudentListBatchSummary;
 };
 
 export type ContactInfo = {

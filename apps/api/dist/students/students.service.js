@@ -233,12 +233,53 @@ let StudentsService = class StudentsService {
             orderBy: { createdAt: 'desc' },
             include: {
                 applicationTargets: true,
-                documents: { where: { type: 'photo' }, orderBy: { sortOrder: 'asc' } },
+                documents: { orderBy: { sortOrder: 'asc' } },
+                education: true,
+                languageSkills: true,
+                batches: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 1,
+                    select: {
+                        id: true,
+                        status: true,
+                        total: true,
+                        submitted: true,
+                        blocked: true,
+                        failed: true,
+                    },
+                },
             },
         });
-        return students.map(({ documents, ...student }) => ({
-            ...student,
-            photoUrl: documents[0]?.fileUrl,
+        return students.map((student) => ({
+            id: student.id,
+            createdAt: student.createdAt,
+            photoUrl: student.documents.find((document) => document.type === 'photo')
+                ?.fileUrl,
+            personal: {
+                surname: student.surname,
+                givenName: student.givenName,
+                email: student.email,
+                phone: student.phone ?? undefined,
+                nationality: student.nationality ?? undefined,
+                dateOfBirth: student.dateOfBirth?.toISOString(),
+                passportNo: student.passportNo ?? undefined,
+                permanentAddress: student.permanentAddress ?? undefined,
+            },
+            education: student.education.map((education) => ({
+                level: education.level === 'school' || education.level === 'higher'
+                    ? education.level
+                    : undefined,
+                institution: education.institution ?? undefined,
+                periodStart: education.periodStart?.toISOString(),
+                periodEnd: education.periodEnd?.toISOString(),
+            })),
+            languages: student.languageSkills.map((languageSkill) => ({
+                language: languageSkill.language,
+                score: languageSkill.score ?? undefined,
+            })),
+            documents: student.documents.map((document) => ({ type: document.type })),
+            applicationTargets: student.applicationTargets,
+            latestBatch: student.batches[0],
         }));
     }
     async findOne(id) {

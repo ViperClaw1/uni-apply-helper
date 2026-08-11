@@ -58,6 +58,14 @@ export type ActiveApplicationResponse = {
 export type SubmitApplicationInput = {
     submittedAt?: string;
 };
+export type ApplicationReadinessStatus = 'ready' | 'blocked' | 'submitted' | 'unresolved';
+export type ApplicationReadinessResponse = {
+    universityId?: string;
+    universityRaw: string;
+    status: ApplicationReadinessStatus;
+    missingDocuments: string[];
+    blockedReason?: string;
+};
 export type ApplicationBatchResponse = {
     id: string;
     studentId: string;

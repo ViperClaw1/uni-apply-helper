@@ -1,6 +1,10 @@
 import type { StudentDocument } from "@/features/documents/types/document.types";
 import type { StudentProfile } from "../types/student.types";
 
+/** Only the fields readiness actually reads — lets list rows reuse this without fetching a full profile. */
+export type ReadinessProfileInput = Pick<StudentProfile, "personal" | "education" | "languages">;
+export type ReadinessDocumentInput = Pick<StudentDocument, "type">;
+
 export type ReadinessStatus = "done" | "missing" | "not_uploaded";
 
 export type CategoryReadiness = {
@@ -21,11 +25,11 @@ const PERSONAL_FIELDS: (keyof StudentProfile["personal"])[] = [
   "permanentAddress",
 ];
 
-const REQUIRED_DOCUMENT_TYPES = ["photo", "passport", "transcript", "financial"];
+export const REQUIRED_DOCUMENT_TYPES = ["photo", "passport", "transcript", "financial"];
 
 export function computeProfileReadiness(
-  student: StudentProfile,
-  documents: StudentDocument[],
+  student: ReadinessProfileInput,
+  documents: ReadinessDocumentInput[],
 ): { categories: CategoryReadiness[]; overallPercent: number } {
   const personal = computePersonalReadiness(student);
   const education = computeEducationReadiness(student);
@@ -42,7 +46,7 @@ export function computeProfileReadiness(
   return { categories, overallPercent };
 }
 
-function computePersonalReadiness(student: StudentProfile): CategoryReadiness {
+function computePersonalReadiness(student: ReadinessProfileInput): CategoryReadiness {
   const filled = PERSONAL_FIELDS.filter((field) =>
     Boolean(student.personal[field]),
   ).length;
@@ -56,7 +60,7 @@ function computePersonalReadiness(student: StudentProfile): CategoryReadiness {
   };
 }
 
-function computeEducationReadiness(student: StudentProfile): CategoryReadiness {
+function computeEducationReadiness(student: ReadinessProfileInput): CategoryReadiness {
   const entry =
     student.education.find((item) => item.level === "higher") ??
     student.education.find((item) => item.level === "school");
@@ -77,7 +81,7 @@ function computeEducationReadiness(student: StudentProfile): CategoryReadiness {
   };
 }
 
-function computeDocumentsReadiness(documents: StudentDocument[]): CategoryReadiness {
+function computeDocumentsReadiness(documents: ReadinessDocumentInput[]): CategoryReadiness {
   const presentTypes = new Set(documents.map((document) => document.type));
   const present = REQUIRED_DOCUMENT_TYPES.filter((type) =>
     presentTypes.has(type),
@@ -92,7 +96,7 @@ function computeDocumentsReadiness(documents: StudentDocument[]): CategoryReadin
   };
 }
 
-function computeLanguageReadiness(student: StudentProfile): CategoryReadiness {
+function computeLanguageReadiness(student: ReadinessProfileInput): CategoryReadiness {
   if (student.languages.length === 0) {
     return { category: "language", status: "not_uploaded", missingCount: 1, fraction: 0 };
   }

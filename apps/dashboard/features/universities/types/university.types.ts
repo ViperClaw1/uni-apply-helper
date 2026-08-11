@@ -5,3 +5,7 @@ export type UniversitySummary = {
   requiresEssay: boolean;
   aliases: string[];
 };
+
+export type UniversityDetail = UniversitySummary & {
+  requiredDocuments: string[];
+};

@@ -9,6 +9,7 @@ type ConfirmDialogProps = {
   description: string;
   confirmLabel?: string;
   cancelLabel?: string;
+  pendingLabel?: string;
   isPending?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
@@ -20,6 +21,7 @@ export function ConfirmDialog({
   description,
   confirmLabel,
   cancelLabel,
+  pendingLabel,
   isPending = false,
   onConfirm,
   onCancel,
@@ -27,6 +29,7 @@ export function ConfirmDialog({
   const t = useT();
   const resolvedConfirmLabel = confirmLabel ?? t.common.delete;
   const resolvedCancelLabel = cancelLabel ?? t.common.cancel;
+  const resolvedPendingLabel = pendingLabel ?? t.students.list.deleting;
   useEffect(() => {
     if (!open) {
       return;
@@ -95,7 +98,7 @@ export function ConfirmDialog({
             onClick={onConfirm}
             className="inline-flex h-10 cursor-pointer items-center justify-center rounded-xl bg-rose-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-rose-500 disabled:pointer-events-none disabled:opacity-60"
           >
-            {isPending ? t.students.list.deleting : resolvedConfirmLabel}
+            {isPending ? resolvedPendingLabel : resolvedConfirmLabel}
           </button>
         </div>
       </div>
