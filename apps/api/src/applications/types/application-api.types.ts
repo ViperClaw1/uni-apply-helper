@@ -3,9 +3,14 @@ export type ApplicationStatus =
   | 'ready_for_submission'
   | 'blocked'
   | 'submitted'
-  | 'failed';
+  | 'failed'
+  /** Worker paused it on a dead university session — resumes automatically once the session is renewed. */
+  | 'waiting_for_login'
+  /** Worker paused it on a CAPTCHA/2FA/unknown challenge page — same manual-resolve flow as waiting_for_login. */
+  | 'attention_required';
 
-export type ApplicationBatchStatus = 'queued' | 'processing' | 'completed' | 'failed';
+export type ApplicationBatchStatus =
+  'queued' | 'processing' | 'completed' | 'failed';
 
 export type CreateApplicationBatchInput = {
   studentId: string;
@@ -72,7 +77,8 @@ export type SubmitApplicationInput = {
   submittedAt?: string;
 };
 
-export type ApplicationReadinessStatus = 'ready' | 'blocked' | 'submitted' | 'unresolved';
+export type ApplicationReadinessStatus =
+  'ready' | 'blocked' | 'submitted' | 'unresolved';
 
 export type ApplicationReadinessResponse = {
   universityId?: string;
@@ -94,3 +100,16 @@ export type ApplicationBatchResponse = {
   applications: ApplicationResponse[];
 };
 
+/** Row shape for the agency-wide "All Applications" screen — one row per application, across every student. */
+export type ApplicationListItemResponse = {
+  id: string;
+  batchId: string;
+  studentId: string;
+  studentName: string;
+  universityId: string;
+  universityDisplayName?: string;
+  status: string;
+  blockedReason?: string;
+  submittedAt?: string;
+  createdAt: string;
+};

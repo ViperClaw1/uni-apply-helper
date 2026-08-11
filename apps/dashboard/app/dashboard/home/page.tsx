@@ -1,4 +1,5 @@
-import { AgencyShell, ComingSoon } from "@/components/agency-shell";
+import { AgencyShell } from "@/components/agency-shell";
+import { AgencyDashboard } from "@/features/dashboard/components/agency-dashboard";
 import { getCurrentAccount } from "@/lib/server-api";
 
 export default async function HomePage() {
@@ -6,7 +7,7 @@ export default async function HomePage() {
 
   return (
     <AgencyShell active="home" companyName={account?.agencyProfile?.legalName}>
-      <ComingSoon />
+      <AgencyDashboard />
     </AgencyShell>
   );
 }

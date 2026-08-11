@@ -41,3 +41,15 @@ export type SeedUniversitySchemasResult = {
   aliases: number;
 };
 
+/** Derived from BrowserSession — 'login_required' means no session has ever been captured. */
+export type UniversitySessionStatus =
+  'active' | 'expired' | 'login_required' | 'attention_required' | 'checking';
+
+export type UniversitySessionSummary = {
+  universityId: string;
+  displayName: string;
+  status: UniversitySessionStatus;
+  lastCheckedAt?: string;
+  /** Total applications submitted/in-flight for this university — helps prioritize which session to renew first. */
+  applications: number;
+};

@@ -11,6 +11,7 @@ import { getLoginUrl } from '../browser/session.validator.js';
 import { isLoginPage } from '../browser/zzu-session.loader.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { ApplicationResumeService } from '../queue/application-resume.service.js';
 import { getRedisConnection } from '../queue/redis.config.js';
 import { UniversitySchemaService } from '../university-schema/university-schema.service.js';
 
@@ -28,6 +29,7 @@ export class ReloginProcessor implements OnModuleInit, OnModuleDestroy {
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
     private readonly universitySchemaService: UniversitySchemaService,
+    private readonly applicationResumeService: ApplicationResumeService,
   ) {}
 
   onModuleInit() {
@@ -47,7 +49,9 @@ export class ReloginProcessor implements OnModuleInit, OnModuleDestroy {
   }
 
   private async process(job: Job<BrowserReloginJobData>) {
-    const university = await this.universitySchemaService.get(job.data.universityId);
+    const university = await this.universitySchemaService.get(
+      job.data.universityId,
+    );
 
     const profileDir = this.browserService.getProfileDir(university.id);
     const loginUrl = getLoginUrl(university.formUrl);
@@ -70,9 +74,15 @@ export class ReloginProcessor implements OnModuleInit, OnModuleDestroy {
 
         while (Date.now() < deadline) {
           if (!(await isLoginPage(page))) {
-            await this.recordCaptured(university.id, university.session?.sessionTtlHours);
+            await this.recordCaptured(
+              university.id,
+              university.session?.sessionTtlHours,
+            );
             await this.notificationsService.notifyReloginCompleted(
               university.displayName,
+              university.id,
+            );
+            await this.applicationResumeService.resumePausedApplications(
               university.id,
             );
             return;
@@ -88,7 +98,10 @@ export class ReloginProcessor implements OnModuleInit, OnModuleDestroy {
     );
   }
 
-  private async recordCaptured(universityId: string, sessionTtlHours?: number): Promise<void> {
+  private async recordCaptured(
+    universityId: string,
+    sessionTtlHours?: number,
+  ): Promise<void> {
     const now = new Date();
     const expiresAt = sessionTtlHours
       ? new Date(now.getTime() + sessionTtlHours * 3_600_000)

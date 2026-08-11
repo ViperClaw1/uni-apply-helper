@@ -8,6 +8,7 @@ import { QUEUES, groupDocumentUrls } from '@uni-apply/shared';
 import type { StudentProfile, UniversitySchema } from '@uni-apply/shared';
 import { Job, Worker } from 'bullmq';
 import { BrowserService } from './browser/browser.service.js';
+import { AttentionRequiredError } from './errors/attention-required.error.js';
 import { SessionExpiredError } from './errors/session-expired.error.js';
 import { NotificationsService } from './notifications/notifications.service.js';
 import { PrismaService } from './prisma/prisma.service.js';
@@ -72,7 +73,8 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
   onModuleInit() {
     // Playwright+Gemini jobs routinely run 5–15+ min. BullMQ default lockDuration
     // is 30s — if the worker process dies/redeploys mid-job, Redis marks it stalled.
-    const lockDuration = Number(process.env.BULLMQ_LOCK_DURATION_MS) || 15 * 60_000;
+    const lockDuration =
+      Number(process.env.BULLMQ_LOCK_DURATION_MS) || 15 * 60_000;
 
     this.worker = new Worker<ApplicationProcessJobData>(
       QUEUES.APPLICATION_PROCESS,
@@ -220,7 +222,9 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
       },
     });
     const profile = this.toStudentProfile(application.batch.student);
-    const university = await this.universitySchemaService.get(application.universityId);
+    const university = await this.universitySchemaService.get(
+      application.universityId,
+    );
     const motivationLetterContent = application.motivationLetterId
       ? await this.getGeneratedDocumentContent(application.motivationLetterId)
       : undefined;
@@ -292,11 +296,6 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
               'failed',
             ));
 
-          const message =
-            shotUrl && !fromMessage
-              ? `${baseMessage} Screenshot: ${shotUrl}`
-              : baseMessage;
-
           if (shotUrl) {
             await this.prisma.application
               .update({
@@ -306,12 +305,61 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
               .catch(() => undefined);
           }
 
+          // Preserve the error type — the outer catch branches on instanceof to tell an infra
+          // block (session/CAPTCHA) apart from a real automation failure, and wrapping it below
+          // would erase that.
+          if (
+            innerError instanceof SessionExpiredError ||
+            innerError instanceof AttentionRequiredError
+          ) {
+            throw innerError;
+          }
+
+          const message =
+            shotUrl && !fromMessage
+              ? `${baseMessage} Screenshot: ${shotUrl}`
+              : baseMessage;
+
           throw message === baseMessage
             ? innerError
             : new Error(message, { cause: innerError });
         }
       });
     } catch (error) {
+      if (
+        error instanceof SessionExpiredError ||
+        error instanceof AttentionRequiredError
+      ) {
+        // Infra block, not an automation bug — pause the application instead of failing it, and
+        // don't rethrow: retrying against a session nobody has fixed yet just burns job attempts.
+        // ApplicationResumeService re-enqueues it once the university session comes back.
+        const status =
+          error instanceof AttentionRequiredError
+            ? 'attention_required'
+            : 'waiting_for_login';
+
+        await this.prisma.application.update({
+          where: { id: application.id },
+          data: { status, errorMessage: error.message },
+        });
+        await this.recalculateBatchCounters(application.batchId);
+
+        if (error instanceof AttentionRequiredError) {
+          await this.notificationsService.notifyAttentionRequired(
+            university.displayName,
+            university.id,
+            error.reason,
+          );
+        } else {
+          await this.notificationsService.notifySessionExpired(
+            university.displayName,
+            university.id,
+          );
+        }
+
+        return;
+      }
+
       const message = error instanceof Error ? error.message : 'Unknown error';
 
       await this.prisma.application.update({
@@ -330,18 +378,11 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
       const isFinalAttempt = attemptNumber >= maxAttempts;
 
       if (isFinalAttempt) {
-        if (error instanceof SessionExpiredError) {
-          await this.notificationsService.notifySessionExpired(
-            university.displayName,
-            university.id,
-          );
-        } else {
-          await this.notificationsService.notifyFailed(
-            university.displayName,
-            studentName,
-            message,
-          );
-        }
+        await this.notificationsService.notifyFailed(
+          university.displayName,
+          studentName,
+          message,
+        );
       }
 
       throw error;
@@ -391,7 +432,8 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
         where: { id: record.id },
         data: {
           status: 'failed',
-          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          errorMessage:
+            error instanceof Error ? error.message : 'Unknown error',
           completedAt: new Date(),
         },
       });
@@ -433,7 +475,9 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  private async getGeneratedDocumentContent(id: string): Promise<string | undefined> {
+  private async getGeneratedDocumentContent(
+    id: string,
+  ): Promise<string | undefined> {
     const document = await this.prisma.generatedDocument.findUnique({
       where: { id },
       select: { content: true },
@@ -477,16 +521,16 @@ export class Processor implements OnModuleInit, OnModuleDestroy {
           return rank(a.level) - rank(b.level);
         })
         .map((education: any) => ({
-        level:
-          education.level === 'school' || education.level === 'higher'
-            ? education.level
-            : undefined,
-        degree: education.degree ?? undefined,
-        institution: education.institution ?? undefined,
-        major: education.major ?? undefined,
-        periodStart: toDateOnly(education.periodStart),
-        periodEnd: toDateOnly(education.periodEnd),
-      })),
+          level:
+            education.level === 'school' || education.level === 'higher'
+              ? education.level
+              : undefined,
+          degree: education.degree ?? undefined,
+          institution: education.institution ?? undefined,
+          major: education.major ?? undefined,
+          periodStart: toDateOnly(education.periodStart),
+          periodEnd: toDateOnly(education.periodEnd),
+        })),
       workExperience: student.workExperience.map((workExperience: any) => ({
         company: workExperience.company,
         position: workExperience.position ?? undefined,
@@ -562,4 +606,3 @@ function toDateOnly(value?: Date | string | null): string | undefined {
   const iso = trimmed.match(/^(\d{4}-\d{2}-\d{2})/);
   return iso?.[1] ?? trimmed;
 }
-

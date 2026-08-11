@@ -29,6 +29,7 @@ import { WizardNavigator } from './filler/wizard.navigator.js';
 import { GeocodingService } from './geocoding/geocoding.service.js';
 import { NotificationsService } from './notifications/notifications.service.js';
 import { Processor } from './processor.js';
+import { ApplicationResumeService } from './queue/application-resume.service.js';
 import { ReloginProcessor } from './relogin/relogin.processor.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { ScreenshotService } from './screenshot/screenshot.service.js';
@@ -68,6 +69,7 @@ import { UniversitySchemaService } from './university-schema/university-schema.s
     LogResultStep,
     NotificationsService,
     Processor,
+    ApplicationResumeService,
     ReloginProcessor,
     UniversitySchemaService,
     SessionHealthCheckProcessor,

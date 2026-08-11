@@ -1,0 +1,47 @@
+# Deep Dive: Agency Dashboard Shell & Student Status System
+
+**Generated**: 2026-08-11
+**Files**: `agency-shell.tsx`, `student-detail-page.tsx`, `use-student-profile-data.ts`, `student-status.ts`, `profile-readiness.ts`
+
+**Note**: [`deep-dive/student-profile-application-flow-2026-08-11.md`](./student-profile-application-flow-2026-08-11.md) covers the same hook/readiness code from an earlier commit — its tab list ("Review, Info, Documents, Applications, Notes, History") and `ApplicationTargetsPanel` reference are now stale; the current tabs are `overview/profile/documents/universities/applications`. This doc reflects the current state and adds the sidebar shell + status-bucketing layer that didn't exist yet when that one was written.
+
+---
+
+## Overview
+
+Two things landed together across the last five commits: a persistent left-nav shell (`AgencyShell`) wrapping every `/dashboard/*` route, and a status-bucketing layer (`student-status.ts`) that turns a student's raw profile/documents/batch data into one of four labels (`needs_attention` / `ready` / `in_progress` / `submitted`) shown as filter tabs on the student list. Neither introduces new server state — both are presentation-layer derivations over data the hook (`useStudentProfileData`) already fetches.
+
+---
+
+## Key Components
+
+- `AgencyShell` ([agency-shell.tsx](apps/dashboard/components/agency-shell.tsx)): fixed 240px sidebar (logo, 7 nav links, language switcher, logout) + `<main>` slot. Each `app/dashboard/*/page.tsx` wraps its content in this instead of duplicating nav markup.
+- `computeStudentStatus` ([student-status.ts:26](apps/dashboard/features/students/lib/student-status.ts#L26)): pure function, batch state always wins over profile completeness — see Concepts below.
+- `computeProfileReadiness` ([profile-readiness.ts:30](apps/dashboard/features/students/lib/profile-readiness.ts#L30)): scores personal/education/documents/language into a 0–100% completion number; `student-status.ts` only calls this when there's no batch yet.
+- `useStudentProfileData` ([use-student-profile-data.ts:16](apps/dashboard/features/students/hooks/use-student-profile-data.ts#L16)): single hook backing the whole detail page — fetches profile+documents+batches in parallel, polls the active batch every 5s, derives `resolvedTargets`/`pendingTargets`/`documentsByType`.
+- `StudentDetailPage` ([student-detail-page.tsx:32](apps/dashboard/features/students/components/student-detail-page.tsx#L32)): tab shell (overview/profile/documents/universities/applications), owns only `activeTab` UI state, everything else comes from the hook above.
+
+**Also in scope, not deep-dived** (ask if you want these covered): `student-list.tsx` (roster table — reuses `computeStudentStatus`/`computeProfileReadiness` per row, adds the KPI filter tabs), `student-kpi-tiles.tsx`, `header.tsx` (language switcher redesign), `students.service.ts` / `students.controller.ts` (backend side of the same data).
+
+---
+
+## Concepts & Decisions
+
+### Status as a priority cascade, not a lookup table
+
+- **What**: `computeStudentStatus` checks `latestBatch` first — blocked application → `needs_attention` regardless of profile completeness; batch fully submitted → `submitted`; batch partial → `in_progress`. Only when there's *no* batch does it fall back to `computeProfileReadiness`.
+- **Why used here**: A student can have a perfect profile but a stuck application (blocked by the university form), or an incomplete profile but nothing submitted yet — these need different UI treatment (badge color, KPI bucket), and neither "profile %" alone nor "batch status" alone captures it. Cascading rather than combining into a scoring formula keeps each rule legible and independently testable (see the `__selfCheckComputeStudentStatus` asserts in the same file — no test runner wired up for this app, so it's a plain function you can eyeball or run manually).
+
+### Readiness recomputed, never stored
+
+- **What**: `overallPercent` isn't a DB column — it's recomputed from `student` + `documents` on every render, in both the list (`student-list.tsx`) and the detail page.
+- **Why used here**: Storing it would drift the moment a document is deleted or a field edited elsewhere, requiring an explicit recompute-and-persist step. Deriving it keeps one source of truth; the cost (repeated array scans over small per-student lists) is negligible at this scale.
+
+### Shell as a wrapper component, not a layout.tsx
+
+- **What**: `AgencyShell` is a regular component each page imports and wraps its content in (`<AgencyShell active="students">...</AgencyShell>`), rather than a Next.js `app/dashboard/layout.tsx` that would apply automatically.
+- **Why used here**: Lets each page pass its own `active` tab explicitly instead of the shell inferring it from the route — simpler than a route→tab mapping, at the cost of every page needing to remember to wrap itself (nothing enforces it structurally).
+
+---
+
+*Generated by AntiVibe · `/antivibe full` for the extended version with resources and line-by-line walkthrough.*

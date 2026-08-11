@@ -21,6 +21,8 @@ export function getStatusClassName(status: string) {
     queued: "bg-yellow-100 text-yellow-800 ring-yellow-200",
     ready_for_submission: "bg-violet-100 text-violet-800 ring-violet-200",
     submitted: "bg-emerald-100 text-emerald-800 ring-emerald-200",
+    waiting_for_login: "bg-amber-100 text-amber-800 ring-amber-200",
+    attention_required: "bg-amber-100 text-amber-800 ring-amber-200",
   };
 
   return classes[status] ?? "bg-slate-100 text-slate-700 ring-slate-200";

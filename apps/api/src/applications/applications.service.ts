@@ -14,6 +14,7 @@ import type { UniversityMatchCandidate } from '../universities/types/university-
 import type {
   ActiveApplicationResponse,
   ApplicationBatchResponse,
+  ApplicationListItemResponse,
   ApplicationReadinessResponse,
   ApplicationResponse,
   ApplicationStatus,
@@ -112,8 +113,7 @@ export class ApplicationsService {
     );
     const selectedTargets = resolvedTargets.filter(
       (target) =>
-        target.universityId &&
-        !submittedUniversityIds.has(target.universityId),
+        target.universityId && !submittedUniversityIds.has(target.universityId),
     );
 
     if (selectedTargets.length === 0) {
@@ -130,8 +130,9 @@ export class ApplicationsService {
     const prepared = await this.prepareApplications(batchProfile);
     const unresolvedCount = prepared.unresolvedTargets.length;
     const blockedCount =
-      prepared.applications.filter((application) => application.status === 'blocked')
-        .length + unresolvedCount;
+      prepared.applications.filter(
+        (application) => application.status === 'blocked',
+      ).length + unresolvedCount;
 
     const batch = await this.prisma.applicationBatch.create({
       data: {
@@ -167,7 +168,10 @@ export class ApplicationsService {
       include: this.batchInclude,
     });
 
-    await this.notifyUnresolvedTargets(batchProfile, prepared.unresolvedTargets);
+    await this.notifyUnresolvedTargets(
+      batchProfile,
+      prepared.unresolvedTargets,
+    );
     await this.notificationsService.notifyBatchCreated(batch, batchProfile);
 
     const readyApplications = batch.applications.filter(
@@ -186,6 +190,60 @@ export class ApplicationsService {
     );
 
     return this.toBatchResponse(batch);
+  }
+
+  /** Agency-wide "All Applications" screen — every application across every student, newest first. */
+  async findAll(): Promise<ApplicationListItemResponse[]> {
+    const applications = await this.prisma.application.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        batch: {
+          select: {
+            studentId: true,
+            student: { select: { givenName: true, surname: true } },
+          },
+        },
+      },
+    });
+
+    const universityNames = await this.getUniversityDisplayNames(
+      applications.map((application) => application.universityId),
+    );
+
+    return applications.map((application) => ({
+      id: application.id,
+      batchId: application.batchId,
+      studentId: application.batch.studentId,
+      studentName:
+        [application.batch.student.givenName, application.batch.student.surname]
+          .filter(Boolean)
+          .join(' ') || application.batch.studentId,
+      universityId: application.universityId,
+      universityDisplayName: universityNames.get(application.universityId),
+      status: application.status,
+      blockedReason: application.blockedReason ?? undefined,
+      submittedAt: application.submittedAt?.toISOString(),
+      createdAt: application.createdAt.toISOString(),
+    }));
+  }
+
+  private async getUniversityDisplayNames(
+    universityIds: string[],
+  ): Promise<Map<string, string>> {
+    const uniqueIds = [...new Set(universityIds)];
+
+    const entries = await Promise.all(
+      uniqueIds.map(async (id) => {
+        try {
+          const university = await this.universitiesService.findOne(id);
+          return [id, university.displayName] as const;
+        } catch {
+          return [id, id] as const;
+        }
+      }),
+    );
+
+    return new Map(entries);
   }
 
   async findByStudent(studentId: string): Promise<ApplicationBatchResponse[]> {
@@ -489,7 +547,9 @@ export class ApplicationsService {
         universityId: university.id,
         status: missing.length > 0 ? 'blocked' : 'ready_for_submission',
         blockedReason:
-          missing.length > 0 ? `Missing requirements: ${missing.join(', ')}` : undefined,
+          missing.length > 0
+            ? `Missing requirements: ${missing.join(', ')}`
+            : undefined,
         motivationLetterId: approvedLetterId,
       });
 
@@ -521,20 +581,28 @@ export class ApplicationsService {
       : null;
     const missing = [
       ...missingDocuments,
-      university.requiresEssay && !approvedLetter ? 'approved motivation letter' : null,
+      university.requiresEssay && !approvedLetter
+        ? 'approved motivation letter'
+        : null,
     ].filter((item): item is string => item !== null);
 
     return { missing, approvedLetterId: approvedLetter?.id };
   }
 
   /** Read-only preview of what `createBatch` would do — used by the UI before the agent hits Start. */
-  async previewReadiness(studentId: string): Promise<ApplicationReadinessResponse[]> {
+  async previewReadiness(
+    studentId: string,
+  ): Promise<ApplicationReadinessResponse[]> {
     const profile = await this.studentsService.getFullProfile(studentId);
-    const submittedUniversityIds = await this.findSubmittedUniversityIds(studentId);
+    const submittedUniversityIds =
+      await this.findSubmittedUniversityIds(studentId);
     const results: ApplicationReadinessResponse[] = [];
 
     for (const target of profile.applicationTargets) {
-      if (target.universityId && submittedUniversityIds.has(target.universityId)) {
+      if (
+        target.universityId &&
+        submittedUniversityIds.has(target.universityId)
+      ) {
         results.push({
           universityId: target.universityId,
           universityRaw: target.universityRaw,
@@ -557,7 +625,10 @@ export class ApplicationsService {
       }
 
       const university = resolved.university;
-      const { missing } = await this.evaluateTargetReadiness(university, profile);
+      const { missing } = await this.evaluateTargetReadiness(
+        university,
+        profile,
+      );
 
       results.push({
         universityId: university.id,
@@ -565,7 +636,9 @@ export class ApplicationsService {
         status: missing.length > 0 ? 'blocked' : 'ready',
         missingDocuments: missing,
         blockedReason:
-          missing.length > 0 ? `Missing requirements: ${missing.join(', ')}` : undefined,
+          missing.length > 0
+            ? `Missing requirements: ${missing.join(', ')}`
+            : undefined,
       });
     }
 

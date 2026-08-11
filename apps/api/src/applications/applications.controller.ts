@@ -25,6 +25,11 @@ export class ApplicationsController {
     return this.applicationsService.createBatch(body);
   }
 
+  @Get('applications')
+  findAll() {
+    return this.applicationsService.findAll();
+  }
+
   @Post('students/:studentId/applications/batches')
   createBatchForStudent(@Param('studentId') studentId: string) {
     return this.applicationsService.createBatch({ studentId });
@@ -47,10 +52,7 @@ export class ApplicationsController {
 
   @Get('applications/active')
   @UseGuards(ApiKeyGuard)
-  findActive(
-    @Query('url') url: string,
-    @Query('studentId') studentId: string,
-  ) {
+  findActive(@Query('url') url: string, @Query('studentId') studentId: string) {
     return this.applicationsService.findActiveByUrl(url, studentId);
   }
 

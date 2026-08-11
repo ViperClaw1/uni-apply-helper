@@ -1,6 +1,11 @@
 import type { SessionConfig, UniversitySchema } from '@uni-apply/shared';
 import type { Page } from 'playwright';
+import { AttentionRequiredError } from '../errors/attention-required.error.js';
 import { SessionExpiredError } from '../errors/session-expired.error.js';
+import {
+  describeAttentionReason,
+  detectAttentionRequired,
+} from './attention-detector.js';
 import { isCsrfBlocked, isZzuFormUrl } from './zzu-session.loader.js';
 
 const DEFAULT_LOGIN_PATTERN =
@@ -12,6 +17,20 @@ export async function assertSessionValid(
 ): Promise<void> {
   const session = university.session;
   const url = page.url();
+
+  // Checked first — a CAPTCHA/2FA prompt can sit in front of an otherwise-valid session, and
+  // conflating it with "session expired" would send the agent into a pointless re-login loop.
+  const attentionReason = await detectAttentionRequired(
+    page,
+    session?.attentionIndicators,
+  );
+  if (attentionReason) {
+    throw new AttentionRequiredError(
+      `Automation blocked by ${describeAttentionReason(attentionReason)} for ${university.displayName}`,
+      attentionReason,
+      university.id,
+    );
+  }
 
   if (session?.loginUrlPattern) {
     const pattern = new RegExp(session.loginUrlPattern, 'i');
@@ -92,7 +111,10 @@ export async function isLoginPage(page: Page): Promise<boolean> {
   const cucasLogin = await page
     .locator('#login_submit, form#myform[action*="do_login"]')
     .count();
-  if (cucasLogin > 0 && (await page.locator('input[name="password"]').count()) > 0) {
+  if (
+    cucasLogin > 0 &&
+    (await page.locator('input[name="password"]').count()) > 0
+  ) {
     return true;
   }
 
@@ -105,10 +127,7 @@ export async function isLoginPage(page: Page): Promise<boolean> {
   return username > 0 && password > 0;
 }
 
-export function getLoginUrl(
-  formUrl: string,
-  session?: SessionConfig,
-): string {
+export function getLoginUrl(formUrl: string, session?: SessionConfig): string {
   if (session?.loginUrlPattern || isZzuFormUrl(formUrl)) {
     if (/chiwest\.cn|cucas\.cn|apply\.sdu\.edu\.cn/i.test(formUrl)) {
       return `${new URL(formUrl).origin}/en/student/login`;

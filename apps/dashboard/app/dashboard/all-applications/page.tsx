@@ -1,4 +1,5 @@
-import { AgencyShell, ComingSoon } from "@/components/agency-shell";
+import { AgencyShell } from "@/components/agency-shell";
+import { AllApplicationsTable } from "@/features/applications/components/all-applications-table";
 import { getCurrentAccount } from "@/lib/server-api";
 
 export default async function AllApplicationsPage() {
@@ -6,7 +7,7 @@ export default async function AllApplicationsPage() {
 
   return (
     <AgencyShell active="applications" companyName={account?.agencyProfile?.legalName}>
-      <ComingSoon />
+      <AllApplicationsTable />
     </AgencyShell>
   );
 }

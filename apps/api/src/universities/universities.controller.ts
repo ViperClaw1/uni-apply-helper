@@ -45,6 +45,11 @@ export class UniversitiesController {
     return this.universitiesService.resolveByFormUrl(url);
   }
 
+  @Get('sessions')
+  listSessions() {
+    return this.universitiesService.listSessions();
+  }
+
   @Post('aliases')
   createAlias(@Body() body: CreateUniversityAliasInput) {
     if (!body.alias?.trim()) {
@@ -83,4 +88,3 @@ export class UniversitiesController {
     return this.universitiesService.requestRelogin(id);
   }
 }
-

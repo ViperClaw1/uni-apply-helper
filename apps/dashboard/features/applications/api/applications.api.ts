@@ -2,8 +2,15 @@ import { apiClient } from "@/lib/api-client";
 import type {
   ApplicationBatch,
   ApplicationItem,
+  ApplicationListItem,
   ApplicationReadiness,
 } from "../types/application.types";
+
+export async function getAllApplications() {
+  const response = await apiClient.get<ApplicationListItem[]>("/applications");
+
+  return response.data;
+}
 
 export async function createApplicationBatch(studentId: string) {
   const response = await apiClient.post<ApplicationBatch>(

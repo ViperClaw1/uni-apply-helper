@@ -18,6 +18,8 @@ import type {
   CreateUniversityAliasInput,
   ResolvedUniversity,
   UniversitySchemaResponse,
+  UniversitySessionStatus,
+  UniversitySessionSummary,
   UniversitySummary,
 } from './types/university-api.types.js';
 
@@ -62,7 +64,9 @@ export class UniversitiesService {
       aliases: aliasesByUniversityId.get(university.id) ?? [],
     }));
 
-    const existingIds = new Set(databaseSummaries.map((university) => university.id));
+    const existingIds = new Set(
+      databaseSummaries.map((university) => university.id),
+    );
     const fileSummaries = (await this.schemasService.findAllFromFiles())
       .filter((university) => !existingIds.has(university.id))
       .map((university) => ({
@@ -104,7 +108,8 @@ export class UniversitiesService {
     const base = await this.findOne(universityId);
 
     try {
-      const fileSchema = await this.schemasService.findByUniversityId(universityId);
+      const fileSchema =
+        await this.schemasService.findByUniversityId(universityId);
 
       return {
         ...base,
@@ -117,7 +122,9 @@ export class UniversitiesService {
     }
   }
 
-  async findByFormUrl(pageUrl: string): Promise<UniversitySchemaResponse | null> {
+  async findByFormUrl(
+    pageUrl: string,
+  ): Promise<UniversitySchemaResponse | null> {
     let normalizedPageUrl: { originPath: string; hostname: string };
 
     try {
@@ -169,7 +176,10 @@ export class UniversitiesService {
     return university;
   }
 
-  private normalizePageUrl(url: string): { originPath: string; hostname: string } {
+  private normalizePageUrl(url: string): {
+    originPath: string;
+    hostname: string;
+  } {
     const parsed = new URL(url);
 
     return {
@@ -202,6 +212,55 @@ export class UniversitiesService {
     const university = await this.findOne(universityId);
 
     return university.aliases;
+  }
+
+  /** Dashboard's "University Sessions" panel — session freshness never leaves this method as raw cookies/tokens, only a status label. */
+  async listSessions(): Promise<UniversitySessionSummary[]> {
+    const universities = await this.findAll();
+    const sessions = await this.prisma.browserSession.findMany();
+    const sessionByUniversityId = new Map(
+      sessions.map((session) => [session.universityId, session]),
+    );
+
+    const applicationCounts = await this.prisma.application.groupBy({
+      by: ['universityId'],
+      _count: { _all: true },
+    });
+    const applicationCountByUniversityId = new Map(
+      applicationCounts.map((row) => [row.universityId, row._count._all]),
+    );
+
+    return universities.map((university) => {
+      const session = sessionByUniversityId.get(university.id);
+
+      return {
+        universityId: university.id,
+        displayName: university.displayName,
+        status: this.toSessionStatus(session),
+        lastCheckedAt: session?.lastValidatedAt?.toISOString(),
+        applications: applicationCountByUniversityId.get(university.id) ?? 0,
+      };
+    });
+  }
+
+  private toSessionStatus(session?: {
+    status: string;
+    capturedAt: Date | null;
+  }): UniversitySessionStatus {
+    if (!session || session.status === 'unknown') {
+      return 'login_required';
+    }
+
+    if (session.status === 'attention_required') {
+      return 'attention_required';
+    }
+
+    if (session.status === 'expired') {
+      return session.capturedAt ? 'expired' : 'login_required';
+    }
+
+    // 'fresh' | 'stale' — both still authenticate; 'stale' just means nearing expiry.
+    return 'active';
   }
 
   async requestRelogin(universityId: string) {
@@ -274,7 +333,8 @@ export class UniversitiesService {
       };
     }
 
-    const fileMatch = await this.schemasService.resolveFromFiles(normalizedName);
+    const fileMatch =
+      await this.schemasService.resolveFromFiles(normalizedName);
 
     return {
       rawName,

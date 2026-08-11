@@ -40,7 +40,11 @@ export class NotificationsService {
     await this.send(message.join('\n'));
   }
 
-  async notifyFailed(universityName: string, studentName: string, error: string) {
+  async notifyFailed(
+    universityName: string,
+    studentName: string,
+    error: string,
+  ) {
     await this.send(
       [
         '<b>Ошибка подачи</b>',
@@ -58,6 +62,21 @@ export class NotificationsService {
         `Вуз: ${this.escapeHtml(universityName)}`,
         `Переавторизация: PATCH /universities/${this.escapeHtml(universityId)}/relogin`,
         'Или локально: pnpm --filter worker capture:zzu-session',
+      ].join('\n'),
+    );
+  }
+
+  async notifyAttentionRequired(
+    universityName: string,
+    universityId: string,
+    reason: string,
+  ) {
+    await this.send(
+      [
+        '<b>Требуется внимание (CAPTCHA/2FA)</b>',
+        `Вуз: ${this.escapeHtml(universityName)}`,
+        `Причина: ${this.escapeHtml(reason)}`,
+        `Разрешить вручную: PATCH /universities/${this.escapeHtml(universityId)}/relogin`,
       ].join('\n'),
     );
   }
@@ -114,4 +133,3 @@ export class NotificationsService {
       .replace(/>/g, '&gt;');
   }
 }
-
