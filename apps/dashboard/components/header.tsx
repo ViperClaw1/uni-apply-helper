@@ -15,25 +15,48 @@ export function Logo() {
 
 export function LanguageSwitcher() {
   const { locale, setLocale } = useLocale();
+  const isRu = locale === "ru";
 
   return (
-    <div className="inline-flex items-center rounded-lg bg-slate-100 p-0.5 text-xs font-semibold">
-      {(["en", "ru"] as const).map((code) => (
-        <button
-          key={code}
-          type="button"
-          onClick={() => setLocale(code)}
-          aria-pressed={locale === code}
-          className={`cursor-pointer rounded-md px-2 py-1 uppercase transition-colors ${
-            locale === code
-              ? "bg-white text-slate-950 shadow-sm"
-              : "text-slate-500 hover:text-slate-800"
+    <div className="inline-flex items-center gap-2">
+      <GlobeIcon className="shrink-0 text-slate-400" />
+      <div className="relative inline-flex h-8 w-[72px] shrink-0 rounded-full bg-slate-100 p-1">
+        <span
+          aria-hidden
+          className={`absolute left-1 top-1 h-6 w-8 rounded-full bg-white shadow-sm transition-transform duration-200 ease-out ${
+            isRu ? "translate-x-8" : "translate-x-0"
           }`}
-        >
-          {code}
-        </button>
-      ))}
+        />
+        {(["en", "ru"] as const).map((code) => (
+          <button
+            key={code}
+            type="button"
+            onClick={() => setLocale(code)}
+            aria-pressed={locale === code}
+            className={`relative z-10 w-8 cursor-pointer rounded-full text-[11px] font-semibold uppercase transition-colors active:scale-95 ${
+              locale === code ? "text-slate-950" : "text-slate-500 hover:text-slate-700"
+            }`}
+          >
+            {code}
+          </button>
+        ))}
+      </div>
     </div>
+  );
+}
+
+function GlobeIcon({ className }: { className?: string }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden className={className}>
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.75" />
+      <path
+        d="M3 12h18M12 3c2.5 2.5 4 5.5 4 9s-1.5 6.5-4 9c-2.5-2.5-4-5.5-4-9s1.5-6.5 4-9Z"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 

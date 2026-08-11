@@ -109,6 +109,13 @@ export function StudentDetailPage() {
 
           <div className="flex shrink-0 flex-wrap gap-2">
             <Link
+              href="/dashboard"
+              className="inline-flex h-10 items-center gap-1.5 rounded-xl px-4 text-sm font-medium text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-slate-50"
+            >
+              <BackIcon />
+              {t.students.profilePage.backToStudents}
+            </Link>
+            <Link
               href={`/students/${studentId}/edit`}
               className="inline-flex h-10 items-center gap-1.5 rounded-xl px-4 text-sm font-medium text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-slate-50"
             >
@@ -338,6 +345,20 @@ function formatStudentName(
     .join(" ");
 
   return name || fallback;
+}
+
+function BackIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M19 12H5m0 0 6-6m-6 6 6 6"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
 
 function EditIcon() {
