@@ -166,7 +166,7 @@ async function navigateToZzuApplication(page, formUrl, profile, universityId = '
         const shotPath = `nav-stuck-${universityId}-${Date.now()}.png`;
         await page.screenshot({ path: shotPath, fullPage: true }).catch(() => undefined);
         const diagnostics = await (0, zzu_pre_wizard_js_1.describeNavigationState)(page).catch(() => 'diagnostics unavailable');
-        throw new Error('17gz wizard Step 1 (Basic Info) not reached after navigation. ' +
+        throw new Error('17gz wizard not reached after navigation (expected any wizard step). ' +
             `URL: ${page.url()}. Screenshot: ${shotPath}. ${diagnostics}` +
             ((0, zzu_pre_wizard_js_1.getLastStudentTypePickDiag)()
                 ? ` pickDiag=${JSON.stringify((0, zzu_pre_wizard_js_1.getLastStudentTypePickDiag)())}`

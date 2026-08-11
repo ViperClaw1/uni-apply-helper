@@ -10,6 +10,7 @@ exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const action_executor_js_1 = require("./agent/act/action.executor.js");
+const dialog_dismisser_js_1 = require("./agent/act/dialog.dismisser.js");
 const semantic_field_mapper_js_1 = require("./agent/dom/semantic-field.mapper.js");
 const form_agent_js_1 = require("./agent/form.agent.js");
 const gemini_client_js_1 = require("./agent/gemini/gemini.client.js");
@@ -40,6 +41,8 @@ const processor_js_1 = require("./processor.js");
 const relogin_processor_js_1 = require("./relogin/relogin.processor.js");
 const prisma_module_js_1 = require("./prisma/prisma.module.js");
 const screenshot_service_js_1 = require("./screenshot/screenshot.service.js");
+const session_health_check_processor_js_1 = require("./session-health/session-health-check.processor.js");
+const university_schema_service_js_1 = require("./university-schema/university-schema.service.js");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -59,6 +62,7 @@ exports.AppModule = AppModule = __decorate([
             page_observer_js_1.PageObserver,
             agent_planner_js_1.AgentPlanner,
             action_executor_js_1.ActionExecutor,
+            dialog_dismisser_js_1.DialogDismisser,
             semantic_field_mapper_js_1.SemanticFieldMapper,
             form_agent_js_1.FormAgent,
             field_mapper_js_1.FieldMapper,
@@ -77,6 +81,8 @@ exports.AppModule = AppModule = __decorate([
             notifications_service_js_1.NotificationsService,
             processor_js_1.Processor,
             relogin_processor_js_1.ReloginProcessor,
+            university_schema_service_js_1.UniversitySchemaService,
+            session_health_check_processor_js_1.SessionHealthCheckProcessor,
         ],
     })
 ], AppModule);

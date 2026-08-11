@@ -18,7 +18,8 @@ let WizardNavigator = class WizardNavigator {
         this.screenshotService = screenshotService;
     }
     async forEachStep(page, wizard, handler, options) {
-        for (let step = 1; step <= wizard.totalSteps; step += 1) {
+        const start = Math.min(Math.max(options?.startStep ?? 1, 1), wizard.totalSteps);
+        for (let step = start; step <= wizard.totalSteps; step += 1) {
             await handler(step);
             if (step < wizard.totalSteps) {
                 const nextMarker = options?.markerForStep?.(step + 1);
@@ -71,7 +72,7 @@ let WizardNavigator = class WizardNavigator {
                     .join('|');
                 const markers = [
                     document.querySelector('input[name="apply.lastName"]') && 's1',
-                    document.querySelector('input[name="apply.fieldEnglish"], input[name="apply.studyStartDate"]') && 's2',
+                    document.querySelector('input[name="apply.fieldEnglish"], input[name="apply.studyStartDate"], select[name="apply.languageSkillId"], input[name="apply.guarantorEnname"]') && 's2',
                     document.querySelector('input[name="sh.studyPlace"], input[name="sh.startDate"]') && 's3',
                     document.querySelector('input[name="apply.emergencyName"]') && 's4',
                     document.querySelector('input[name="apply.homeMobile"]') && 's5',
@@ -90,6 +91,10 @@ let WizardNavigator = class WizardNavigator {
                 .catch(() => false),
         ]);
         await this.waitForProcessingDone(page, 30_000);
+        let dialogPeek = '';
+        if (!advanced) {
+            dialogPeek = await this.peekMessagerText(page);
+        }
         await this.dismissBlockingDialogs(page);
         await this.closeDatePickers(page);
         await page.waitForTimeout(500);
@@ -103,15 +108,38 @@ let WizardNavigator = class WizardNavigator {
                     : undefined;
                 throw new Error('Wizard step did not advance after Next (DOM/URL unchanged). ' +
                     `Still on fields: [${afterSig.split('|').slice(0, 12).join(', ')}]` +
+                    (dialogPeek ? ` Dialog: ${dialogPeek}` : '') +
                     (validation ? ` Validation: ${validation}` : '') +
                     (screenshotUrl ? ` Screenshot: ${screenshotUrl}` : ''));
             }
         }
     }
+    async peekMessagerText(page) {
+        return page
+            .evaluate(() => {
+            const wins = [
+                ...document.querySelectorAll('.messager-body, .messager-window .panel-body, .messager-window'),
+            ];
+            for (const win of wins) {
+                const style = getComputedStyle(win);
+                if (style.display === 'none' || style.visibility === 'hidden') {
+                    continue;
+                }
+                const t = (win.textContent || '').replace(/\s+/g, ' ').trim();
+                if (!t ||
+                    /It'?s processing|please wait|请求正在处理/i.test(t)) {
+                    continue;
+                }
+                return t.slice(0, 300);
+            }
+            return '';
+        })
+            .catch(() => '');
+    }
     async collectValidationHints(page) {
         return page.evaluate(() => {
             const texts = [];
-            for (const el of document.querySelectorAll('span.error:not(:empty), label.error:not(:empty), .error:not(:empty), .tip-error, .validate-error, .messager-body')) {
+            for (const el of document.querySelectorAll('span.error:not(:empty), label.error:not(:empty), .error:not(:empty), .tip-error, .validate-error, .messager-body, .validatebox-tip, .tooltip-content, .tooltip')) {
                 const t = (el.textContent || '').replace(/\s+/g, ' ').trim();
                 if (!t ||
                     t.length >= 120 ||
@@ -122,11 +150,26 @@ let WizardNavigator = class WizardNavigator {
                     texts.push(t);
                 }
             }
+            const invalid = [
+                ...document.querySelectorAll('.validatebox-invalid, input.validatebox-invalid, select.validatebox-invalid, textarea.validatebox-invalid'),
+            ]
+                .map((el) => el.name || el.id || '?')
+                .filter(Boolean)
+                .slice(0, 12);
+            if (invalid.length) {
+                texts.push(`invalid: ${invalid.join(', ')}`);
+            }
             const emptyRequired = [];
             for (const el of document.querySelectorAll('input[validate*="required"], select[validate*="required"], textarea[validate*="required"], input[data-options*="required:true"], select[data-options*="required:true"]')) {
                 const input = el;
                 if (input.type === 'hidden')
                     continue;
+                const style = getComputedStyle(input);
+                if (style.display === 'none' ||
+                    style.visibility === 'hidden' ||
+                    input.offsetParent === null) {
+                    continue;
+                }
                 if (input.type === 'checkbox') {
                     if (!input.checked) {
                         emptyRequired.push(input.name || input.id || '?');
@@ -174,7 +217,7 @@ let WizardNavigator = class WizardNavigator {
                 .join('|');
             const markers = [
                 document.querySelector('input[name="apply.lastName"]') && 's1',
-                document.querySelector('input[name="apply.fieldEnglish"], input[name="apply.studyStartDate"]') && 's2',
+                document.querySelector('input[name="apply.fieldEnglish"], input[name="apply.studyStartDate"], select[name="apply.languageSkillId"], input[name="apply.guarantorEnname"]') && 's2',
                 document.querySelector('input[name="sh.studyPlace"], input[name="sh.startDate"]') &&
                     's3',
                 document.querySelector('input[name="apply.emergencyName"]') && 's4',
@@ -331,7 +374,7 @@ let WizardNavigator = class WizardNavigator {
                 .join('|');
             const markers = [
                 document.querySelector('input[name="apply.lastName"]') && 's1',
-                document.querySelector('input[name="apply.fieldEnglish"], input[name="apply.studyStartDate"]') && 's2',
+                document.querySelector('input[name="apply.fieldEnglish"], input[name="apply.studyStartDate"], select[name="apply.languageSkillId"], input[name="apply.guarantorEnname"]') && 's2',
                 document.querySelector('input[name="sh.studyPlace"], input[name="sh.startDate"]') && 's3',
                 document.querySelector('input[name="apply.emergencyName"]') &&
                     's4',
@@ -483,6 +526,21 @@ let WizardNavigator = class WizardNavigator {
             .catch(() => false);
     }
     async closeDatePickers(page) {
+        await page.evaluate(() => {
+            const roots = [
+                ...document.querySelectorAll('.WdateDiv, #_my97DP, div[id*="dp"], .datebox-calendar-panel'),
+            ];
+            for (const root of roots) {
+                const style = getComputedStyle(root);
+                if (style.display === 'none' || style.visibility === 'hidden') {
+                    continue;
+                }
+                const ok = [
+                    ...root.querySelectorAll('#dpOkInput, input[value="OK"], input[value="Ok"], input[value="确定"], button'),
+                ].find((el) => /^(OK|Ok|确定)$/i.test((el.value || el.textContent || '').trim()));
+                ok?.click();
+            }
+        });
         await page.keyboard.press('Escape').catch(() => undefined);
         await page.evaluate(() => {
             for (const el of document.querySelectorAll('.WdateDiv, #_my97DP, div[id*="dp"], .datebox-calendar-panel')) {

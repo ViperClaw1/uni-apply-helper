@@ -7,8 +7,10 @@ export declare class WizardNavigator {
     forEachStep(page: Page, wizard: WizardConfig, handler: (step: number) => Promise<void>, options?: {
         markerForStep?: (step: number) => string | undefined;
         applicationId?: string;
+        startStep?: number;
     }): Promise<void>;
     clickNext(page: Page, selector: string, nextStepMarker?: string, applicationId?: string, fromStep?: number): Promise<void>;
+    private peekMessagerText;
     private collectValidationHints;
     private getStepSignature;
     private resolveNextButton;

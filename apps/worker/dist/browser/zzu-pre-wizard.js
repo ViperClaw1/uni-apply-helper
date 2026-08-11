@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.waitForUiReady = waitForUiReady;
 exports.dismissBlockingDialogs = dismissBlockingDialogs;
 exports.detectPreWizardScreen = detectPreWizardScreen;
+exports.detectCurrentWizardStep = detectCurrentWizardStep;
 exports.isMainWizard = isMainWizard;
 exports.getLastStudentTypePickDiag = getLastStudentTypePickDiag;
 exports.fillPreWizardScreen = fillPreWizardScreen;
@@ -96,10 +97,23 @@ async function dismissBlockingDialogs(page) {
     }
 }
 async function detectPreWizardScreen(page) {
+    if (await isMainWizard(page)) {
+        return null;
+    }
     if ((await page.locator('select[name="collegeId"]').count()) > 0) {
         return 'program_selection';
     }
     const bodyText = await page.locator('body').innerText().catch(() => '');
+    const hasAgreeUi = (await page
+        .getByRole('button', { name: /agree and continue|同意并继续/i })
+        .count()
+        .catch(() => 0)) > 0 ||
+        (await page.locator('[name="agree"], input[type="checkbox"]').count()) > 0;
+    if (hasAgreeUi &&
+        /application notes|application instructions|申请须知|申请人保证|I hereby affirm/i.test(bodyText) &&
+        !/please choose your program|please choose your type/i.test(bodyText)) {
+        return 'application_notes';
+    }
     if (/please choose your type\s*:/i.test(bodyText) ||
         /请选择招生类别|请选择.*类别|请选择学生|报考类别/.test(bodyText)) {
         return 'student_type';
@@ -122,16 +136,19 @@ async function detectPreWizardScreen(page) {
     if (visibleProgram > 0) {
         return 'program_type';
     }
-    const anyRadios = page.locator('input[type="radio"]');
-    const anyCount = await anyRadios.count();
-    for (let i = 0; i < anyCount; i += 1) {
-        const radio = anyRadios.nth(i);
-        if (!(await radio.isVisible().catch(() => false))) {
-            continue;
-        }
-        const name = await radio.getAttribute('name').catch(() => null);
-        if (name !== 'projectTypeId') {
-            return 'student_type';
+    if (/please choose your type|招生类别|学生类别|报考类别/i.test(bodyText) &&
+        visibleProgram === 0) {
+        const anyRadios = page.locator('input[type="radio"]');
+        const anyCount = await anyRadios.count();
+        for (let i = 0; i < anyCount; i += 1) {
+            const radio = anyRadios.nth(i);
+            if (!(await radio.isVisible().catch(() => false))) {
+                continue;
+            }
+            const name = await radio.getAttribute('name').catch(() => null);
+            if (name && name !== 'projectTypeId' && !name.startsWith('apply')) {
+                return 'student_type';
+            }
         }
     }
     if (/application notes|application instructions|申请须知|申请人保证/i.test(bodyText)) {
@@ -139,22 +156,119 @@ async function detectPreWizardScreen(page) {
     }
     return null;
 }
-async function isMainWizard(page) {
-    const selectors = [
-        'input[name="apply.lastName"]',
-        'input[name="apply.givenName"]',
-        'input[name="apply.passportNo"]',
-    ];
-    for (const selector of selectors) {
-        const locator = page.locator(selector).first();
-        if ((await locator.count()) === 0) {
-            continue;
-        }
-        if (await locator.isVisible().catch(() => false)) {
-            return true;
-        }
+async function detectCurrentWizardStep(page) {
+    if (!(await isMainWizard(page))) {
+        return null;
     }
-    return false;
+    return page.evaluate(() => {
+        const visible = (sel) => {
+            const el = document.querySelector(sel);
+            if (!el) {
+                return false;
+            }
+            const style = getComputedStyle(el);
+            if (style.display === 'none' || style.visibility === 'hidden') {
+                return false;
+            }
+            return el.offsetParent !== null || style.position === 'fixed';
+        };
+        const active = document
+            .querySelector('.list_title li.on, .list_title li.cur, .wizard li.active, li.current, .process li.on, .process_li_cur, li[class*="cur"]')
+            ?.textContent?.replace(/\s+/g, ' ')
+            .trim() ?? '';
+        if (/Basic Info|基本信息/i.test(active))
+            return 1;
+        if (/Study Plan|学习计划/i.test(active))
+            return 2;
+        if (/Education|Employment|教育|工作/i.test(active))
+            return 3;
+        if (/Additional|其他|补充/i.test(active))
+            return 4;
+        if (/Contact Info|联系/i.test(active))
+            return 5;
+        if (/Upload|Document|材料|上传/i.test(active))
+            return 6;
+        if (/Preview|Submit|预览|提交/i.test(active))
+            return 7;
+        if (document.querySelector('input[value="Add Document"], [attachTypeId] input[type="file"]') &&
+            !visible('input[name="apply.homeMobile"]')) {
+            return 6;
+        }
+        if (visible('input[name="apply.homeMobile"]') ||
+            visible('input[name="apply.homePhone"]')) {
+            return 5;
+        }
+        if (visible('input[name="applyEx.hasCriminalRecord"]') ||
+            visible('input[name="apply.selfSupporter"]') ||
+            visible('input[name="fm.name"]')) {
+            return 4;
+        }
+        if (visible('input[name="sh.studyPlace"]') ||
+            visible('input[name="sh.startDate"]') ||
+            visible('input[name="applyEx.haveStudiedInChina"]')) {
+            return 3;
+        }
+        if (visible('input[name="apply.fieldEnglish"]') ||
+            visible('input[name="apply.studyStartDate"]') ||
+            visible('select[name="apply.languageSkillId"]')) {
+            return 2;
+        }
+        if (visible('input[name="apply.lastName"]') ||
+            visible('input[name="apply.passportNo"]')) {
+            return 1;
+        }
+        return null;
+    });
+}
+async function isMainWizard(page) {
+    return page.evaluate(() => {
+        const visible = (el) => {
+            if (!el) {
+                return false;
+            }
+            const html = el;
+            if (html.offsetParent === null && html.tagName !== 'BODY') {
+                const style = getComputedStyle(html);
+                if (style.display === 'none' || style.visibility === 'hidden') {
+                    return false;
+                }
+            }
+            const style = getComputedStyle(html);
+            return style.display !== 'none' && style.visibility !== 'hidden';
+        };
+        const step1 = [
+            'input[name="apply.lastName"]',
+            'input[name="apply.givenName"]',
+            'input[name="apply.passportNo"]',
+        ].some((sel) => visible(document.querySelector(sel)));
+        const step2 = [
+            'input[name="apply.fieldEnglish"]',
+            'input[name="apply.studyStartDate"]',
+            'select[name="apply.languageSkillId"]',
+            'input[name="apply.guarantorEnname"]',
+        ].some((sel) => visible(document.querySelector(sel)));
+        const step3 = [
+            'input[name="sh.studyPlace"]',
+            'input[name="sh.startDate"]',
+            'input[name="applyEx.haveStudiedInChina"]',
+            'select[name="sh.educationId"]',
+        ].some((sel) => visible(document.querySelector(sel)));
+        const step4 = [
+            'input[name="apply.emergencyName"]',
+            'input[name="applyEx.hasCriminalRecord"]',
+        ].some((sel) => visible(document.querySelector(sel)));
+        const step5 = ['input[name="apply.homeMobile"], input[name="apply.homePhone"]'].some((sel) => visible(document.querySelector(sel)));
+        const step6 = Boolean(document.querySelector('input[value="Add Document"], [attachTypeId] input[type="file"]'));
+        const wizardChrome = /Step\s*[1234567]|Basic Info|Study Plan|Education & Employment|Contact Info|Preview and Submit/i.test(document.body?.innerText?.slice(0, 2500) ?? '');
+        return (step1 ||
+            step2 ||
+            step3 ||
+            step4 ||
+            step5 ||
+            step6 ||
+            (wizardChrome &&
+                Boolean(document.querySelector('.list_title li.on, .list_title li.cur, .process li.on, .wizard li.active'))));
+    });
 }
 async function getPreWizardSignature(page, screen) {
     const names = await page.evaluate(() => [...document.querySelectorAll('input[name], select[name], textarea[name]')]
@@ -278,14 +392,68 @@ async function pickProjectTypeRadio(page, programHint) {
     return target.isChecked().catch(() => false);
 }
 async function checkAgree(page) {
-    const agree = page.locator('[name="agree"]');
-    if ((await agree.count()) === 0) {
-        return;
+    const byName = page.locator('input[type="checkbox"][name="agree"], [name="agree"]');
+    if ((await byName.count()) > 0) {
+        const el = byName.first();
+        const checked = await el.isChecked().catch(() => false);
+        if (!checked) {
+            await el.check({ force: true }).catch(() => el.click({ force: true }));
+        }
+        if (await el.isChecked().catch(() => false)) {
+            return;
+        }
     }
-    const checked = await agree.isChecked().catch(() => false);
-    if (!checked) {
-        await agree.click({ force: true }).catch(() => undefined);
+    const byLabel = page.getByRole('checkbox', {
+        name: /carefully read|fully understand|agree to abide|申请须知|我已仔细阅读/i,
+    });
+    if ((await byLabel.count()) > 0) {
+        const el = byLabel.first();
+        const checked = await el.isChecked().catch(() => false);
+        if (!checked) {
+            await el.check({ force: true }).catch(() => el.click({ force: true }));
+        }
+        if (await el.isChecked().catch(() => false)) {
+            return;
+        }
     }
+    const label = page.locator('label').filter({
+        hasText: /carefully read|fully understand|agree to abide|我已仔细阅读/i,
+    });
+    if ((await label.count()) > 0) {
+        await label.first().click({ force: true }).catch(() => undefined);
+        const anyChecked = await page
+            .locator('input[type="checkbox"]:checked')
+            .count()
+            .catch(() => 0);
+        if (anyChecked > 0) {
+            return;
+        }
+    }
+    await page
+        .evaluate(() => {
+        const boxes = [
+            ...document.querySelectorAll('input[type="checkbox"]'),
+        ];
+        const target = boxes.find((box) => box.name === 'agree') ??
+            boxes.find((box) => {
+                const text = box.closest('label')?.textContent ||
+                    box.parentElement?.textContent ||
+                    '';
+                return /carefully read|agree|须知|阅读/i.test(text);
+            }) ??
+            boxes.find((box) => {
+                const style = window.getComputedStyle(box);
+                return style.display !== 'none' && style.visibility !== 'hidden';
+            });
+        if (!target) {
+            return;
+        }
+        target.checked = true;
+        target.dispatchEvent(new Event('change', { bubbles: true }));
+        target.dispatchEvent(new Event('click', { bubbles: true }));
+        target.click();
+    })
+        .catch(() => undefined);
 }
 async function setHiddenSelectByName(page, name, optionIndex = 1) {
     return page.evaluate(({ fieldName, index }) => {
@@ -387,6 +555,50 @@ async function clickStudyPlanApplySimple(page, studyPlanHint) {
     }
     await applyLinks.nth(index).scrollIntoViewIfNeeded().catch(() => undefined);
     await applyLinks.nth(index).click({ force: true });
+    await page.waitForTimeout(800);
+    const alreadyApplied = await page.evaluate(() => {
+        const text = [
+            ...document.querySelectorAll('.messager-body, .messager-window, .panel-body'),
+        ]
+            .map((el) => (el.textContent || '').replace(/\s+/g, ' ').trim())
+            .join(' ');
+        return /already applied|don't repeatedly apply|can'?t repeat the application|repeat the application|operation fails|已存在申请|不要重复申请|重复申请|已经申请/i.test(text);
+    });
+    if (alreadyApplied) {
+        await dismissBlockingDialogs(page);
+        const statusTab = page
+            .locator('a, li a')
+            .filter({ hasText: /Application Status|申请状态|我的申请/i })
+            .first();
+        if ((await statusTab.count()) > 0) {
+            await statusTab.click({ force: true }).catch(() => undefined);
+            await page
+                .waitForLoadState('domcontentloaded', { timeout: 15_000 })
+                .catch(() => undefined);
+            await page.waitForTimeout(500);
+        }
+        const editBtn = page
+            .locator('input[value="Edit"][onclick*="editApply"], input[value="Edit"], input[value="编辑"], a:has-text("Edit"), a:has-text("编辑")')
+            .first();
+        if ((await editBtn.count()) > 0) {
+            await editBtn.click({ force: true });
+            await page
+                .waitForLoadState('domcontentloaded', { timeout: 15_000 })
+                .catch(() => undefined);
+            return {
+                ok: true,
+                via: 'Apply:already-applied→Edit',
+                index,
+                total,
+            };
+        }
+        return {
+            ok: false,
+            via: 'Apply:already-applied-no-Edit',
+            index,
+            total,
+        };
+    }
     return { ok: true, via: 'Apply:debug-parity', index, total };
 }
 async function fillProgramSelection(page) {
@@ -671,7 +883,7 @@ async function pickStudentTypeRadio(page, studentType) {
     await dismissBlockingDialogs(page);
     const hints = studentTypeHintList(studentType);
     const hint = hints[0] ?? 'Undergraduate Student';
-    lastStudentTypePickDiag = { build: 'atomic-v1', hint };
+    lastStudentTypePickDiag = { build: 'atomic-v6-mid-wizard', hint };
     for (const textHint of hints) {
         const escaped = textHint.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         const label = page
@@ -850,7 +1062,7 @@ async function advanceStudentTypeAtomic(page, studentType) {
         ...lastStudentTypePickDiag,
         next: { ok: true, via },
         afterNext: after,
-        build: 'atomic-v4-debug-parity',
+        build: 'atomic-v6-mid-wizard',
     };
     if (after.screen === 'program_selection' || after.hasCollege) {
         return true;
@@ -950,7 +1162,6 @@ async function fillPreWizardScreen(page, screen, hints) {
     switch (screen) {
         case 'application_notes':
             await checkAgree(page);
-            await pickProjectTypeRadio(page, resolved.programText);
             break;
         case 'program_type':
             await checkAgree(page);
@@ -971,19 +1182,25 @@ async function clickPreWizardNext(page, screen, hints, gemini) {
     const resolved = normalizeHints(hints);
     const studyPlanHint = resolved.studyPlanHint;
     if (screen === 'application_notes') {
+        await checkAgree(page);
         const agreeButton = page
             .getByRole('button', {
             name: /agree and continue|同意并继续|同意/i,
         })
             .first();
         if ((await agreeButton.count()) > 0) {
-            await page
+            const enabled = await page
                 .waitForFunction(() => {
                 const buttons = [...document.querySelectorAll('button')];
                 const agree = buttons.find((button) => /agree and continue|同意并继续|同意/i.test(button.textContent ?? ''));
                 return Boolean(agree && !agree.disabled);
-            }, { timeout: 10_000 })
-                .catch(() => undefined);
+            }, { timeout: 3_000 })
+                .then(() => true)
+                .catch(() => false);
+            if (!enabled) {
+                await checkAgree(page);
+                await page.waitForTimeout(300);
+            }
             await agreeButton.click({ force: true });
             return 'Agree and Continue';
         }
@@ -1095,7 +1312,7 @@ async function advancePreWizardScreen(page, screen = null, hints, gemini) {
         lastStudentTypePickDiag = {
             ...lastStudentTypePickDiag,
             afterProcessingScreen: afterScreen,
-            build: 'atomic-v4-debug-parity',
+            build: 'atomic-v6-mid-wizard',
         };
         const onStudyPlan = afterScreen === 'program_selection' ||
             (await page.locator('select[name="collegeId"]').count()) > 0;
@@ -1128,7 +1345,7 @@ async function advancePreWizardScreen(page, screen = null, hints, gemini) {
         lastStudentTypePickDiag = {
             ...lastStudentTypePickDiag,
             studyPlanSolo: applied,
-            build: 'atomic-v4-debug-parity',
+            build: 'atomic-v6-mid-wizard',
         };
         if (!applied.ok) {
             return false;
@@ -1140,6 +1357,8 @@ async function advancePreWizardScreen(page, screen = null, hints, gemini) {
         const finalScreen = await detectPreWizardScreen(page);
         return finalScreen !== 'program_selection' && finalScreen !== 'student_type';
     }
+    await fillPreWizardScreen(page, current, hints);
+    await page.waitForTimeout(400);
     if (current === 'program_type') {
         if (!(await waitForProjectTypeChecked(page, 5_000))) {
             return false;
@@ -1170,6 +1389,13 @@ async function advancePreWizardScreen(page, screen = null, hints, gemini) {
 }
 async function clearStuckProcessing(page) {
     const midPreWizard = await page.evaluate(() => {
+        const body = document.body?.innerText ?? '';
+        const hasAgreeBtn = [...document.querySelectorAll('button, a, input')].some((el) => /agree and continue|同意并继续/i.test(el.value || el.textContent || ''));
+        if (hasAgreeBtn &&
+            /application notes|申请人保证|I hereby affirm/i.test(body) &&
+            !/please choose your program|please choose your type/i.test(body)) {
+            return false;
+        }
         if (document.querySelector('select[name="collegeId"]')) {
             return true;
         }
@@ -1264,17 +1490,41 @@ async function describeNavigationState(page) {
         const bodyRaw = document.body?.innerText ?? '';
         const body = normalize(bodyRaw).slice(0, 240);
         const screen = (() => {
+            const hasAgreeBtn = [...document.querySelectorAll('button, input')].some((el) => /agree and continue|同意并继续/i.test(el.value || el.textContent || ''));
+            if (hasAgreeBtn &&
+                /application notes|申请人保证|I hereby affirm/i.test(bodyRaw) &&
+                !/please choose your program|please choose your type/i.test(bodyRaw)) {
+                return 'application_notes';
+            }
             if (document.querySelector('select[name="collegeId"]')) {
                 return 'program_selection';
             }
             if (/请选择招生类别|please choose your type/i.test(bodyRaw)) {
                 return 'student_type';
             }
+            if (/please choose your program/i.test(bodyRaw)) {
+                return 'program_type';
+            }
             if (document.querySelector('input[name="projectTypeId"]')) {
                 return 'program_type';
             }
+            if (document.querySelector('input[name="sh.studyPlace"], input[name="sh.startDate"], input[name="applyEx.haveStudiedInChina"]')) {
+                return 'wizard_step3';
+            }
+            if (document.querySelector('select[name="apply.languageSkillId"], input[name="apply.guarantorEnname"], input[name="apply.fieldEnglish"]')) {
+                return 'wizard_step2';
+            }
             if (document.querySelector('input[name="apply.lastName"]')) {
                 return 'wizard_step1';
+            }
+            if (document.querySelector('input[name="apply.emergencyName"]')) {
+                return 'wizard_step4';
+            }
+            if (document.querySelector('input[name="apply.homeMobile"]')) {
+                return 'wizard_step5';
+            }
+            if (/application notes|申请须知|申请人保证/i.test(bodyRaw)) {
+                return 'application_notes';
             }
             return 'unknown';
         })();

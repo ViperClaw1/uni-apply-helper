@@ -27,6 +27,10 @@ export interface FieldConfig {
 export interface SessionConfig {
   loginUrlPattern?: string;
   expiredIndicators?: string[];
+  /** Lightweight authenticated page for the proactive health check. Defaults to the form URL's origin. */
+  healthCheckUrl?: string;
+  /** Conservative placeholder until real per-platform mortality data exists (see BrowserSession.consecutiveFailures). */
+  sessionTtlHours?: number;
 }
 
 export interface WizardConfig {

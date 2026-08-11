@@ -30,28 +30,98 @@ let PageObserver = class PageObserver {
     }
     async waitForStable(page) {
         await page
-            .waitForLoadState('networkidle', { timeout: 10_000 })
+            .waitForLoadState('domcontentloaded', { timeout: 10_000 })
             .catch(() => undefined);
         await page.waitForTimeout(400);
     }
     async capturePageStructure(page) {
         return page.evaluate(() => {
             const lines = [];
-            const elements = document.querySelectorAll('input, select, textarea, button, a, [role]');
-            elements.forEach((element) => {
-                const tag = element.tagName.toLowerCase();
-                const role = element.getAttribute('role') ?? tag;
-                const input = element;
-                const label = element.getAttribute('aria-label') ??
-                    element.getAttribute('name') ??
-                    element.getAttribute('placeholder') ??
-                    input.labels?.[0]?.textContent ??
-                    element.textContent;
-                if (!label?.trim()) {
-                    return;
+            const elements = [
+                ...document.querySelectorAll('input:not([type="hidden"]), select, textarea, button, a[href], [role="button"]'),
+            ];
+            const maxNodes = 120;
+            let count = 0;
+            for (const element of elements) {
+                if (count >= maxNodes) {
+                    break;
                 }
-                lines.push(`[${role}] name="${label.trim().slice(0, 120)}"`);
-            });
+                const style = getComputedStyle(element);
+                if (style.display === 'none' || style.visibility === 'hidden') {
+                    continue;
+                }
+                const tag = element.tagName.toLowerCase();
+                const input = element;
+                const role = element.getAttribute('role') ?? tag;
+                const nameAttr = element.getAttribute('name') ?? '';
+                const id = element.id || '';
+                const labelText = (element.getAttribute('aria-label') ??
+                    input.labels?.[0]?.textContent ??
+                    element.closest('label')?.textContent ??
+                    '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+                const placeholder = element.getAttribute('placeholder') ?? '';
+                let hint = placeholder;
+                const describedBy = element.getAttribute('aria-describedby');
+                if (describedBy) {
+                    const desc = describedBy
+                        .split(/\s+/)
+                        .map((ref) => document.getElementById(ref)?.textContent ?? '')
+                        .join(' ')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+                    if (desc) {
+                        hint = hint ? `${hint}; ${desc}` : desc;
+                    }
+                }
+                const surrounding = (element.closest('td, th, .form-group, li, label')?.textContent ??
+                    element.parentElement?.textContent ??
+                    '')
+                    .replace(/\s+/g, ' ')
+                    .trim()
+                    .slice(0, 80);
+                const required = Boolean(input.required ||
+                    element.getAttribute('aria-required') === 'true' ||
+                    /required/i.test(element.getAttribute('validate') || '') ||
+                    /required\s*:\s*true/i.test(element.getAttribute('data-options') || ''));
+                let options = '';
+                if (tag === 'select') {
+                    const select = element;
+                    const opts = [...select.options]
+                        .slice(0, 20)
+                        .map((opt) => {
+                        const t = (opt.textContent || '').replace(/\s+/g, ' ').trim();
+                        return opt.value ? `${t}=${opt.value}` : t;
+                    })
+                        .filter(Boolean);
+                    if (opts.length) {
+                        options = ` options=[${opts.join(' | ')}]`;
+                    }
+                }
+                const display = labelText ||
+                    nameAttr ||
+                    placeholder ||
+                    (element.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+                if (!display) {
+                    continue;
+                }
+                const parts = [
+                    `[${role}]`,
+                    `name="${display.slice(0, 100)}"`,
+                    nameAttr ? `field=${nameAttr}` : '',
+                    id ? `id=${id}` : '',
+                    input.type ? `type=${input.type}` : '',
+                    required ? 'required=true' : '',
+                    hint ? `hint="${hint.slice(0, 60)}"` : '',
+                    surrounding && surrounding !== display
+                        ? `near="${surrounding}"`
+                        : '',
+                    options,
+                ].filter(Boolean);
+                lines.push(parts.join(' '));
+                count += 1;
+            }
             return lines.join('\n');
         });
     }

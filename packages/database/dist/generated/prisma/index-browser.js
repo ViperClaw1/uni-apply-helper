@@ -283,6 +283,18 @@ exports.Prisma.UniversitySchemaScalarFieldEnum = {
   notes: 'notes'
 };
 
+exports.Prisma.BrowserSessionScalarFieldEnum = {
+  id: 'id',
+  universityId: 'universityId',
+  status: 'status',
+  capturedAt: 'capturedAt',
+  lastValidatedAt: 'lastValidatedAt',
+  expiresAt: 'expiresAt',
+  validationMethod: 'validationMethod',
+  consecutiveFailures: 'consecutiveFailures',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.ApplicationBatchScalarFieldEnum = {
   id: 'id',
   studentId: 'studentId',
@@ -378,6 +390,7 @@ exports.Prisma.ModelName = {
   ApplicationTarget: 'ApplicationTarget',
   UniversityAlias: 'UniversityAlias',
   UniversitySchema: 'UniversitySchema',
+  BrowserSession: 'BrowserSession',
   ApplicationBatch: 'ApplicationBatch',
   Application: 'Application',
   GeneratedDocument: 'GeneratedDocument',

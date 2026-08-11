@@ -9,6 +9,7 @@ var OcrPassportUploader_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.OcrPassportUploader = void 0;
 const common_1 = require("@nestjs/common");
+const shared_1 = require("@uni-apply/shared");
 const PHOTO_INPUT = 'input[type="file"][name="photo"], input[name="photo"][type="file"]';
 const UPLOAD_IMAGE_BTN = [
     'input[value="Upload Image"]',
@@ -32,7 +33,7 @@ let OcrPassportUploader = OcrPassportUploader_1 = class OcrPassportUploader {
     logger = new common_1.Logger(OcrPassportUploader_1.name);
     async upload(page, profile) {
         this.logger.log('OCR step 1/4: upload passport via Upload Image + filechooser');
-        await this.uploadPassportViaButton(page, profile.documents.passport);
+        await this.uploadPassportViaButton(page, (0, shared_1.getDocumentUrls)(profile.documents, 'passport')[0]);
         this.logger.log('OCR step 2/4: wait Recognized Information filled');
         await this.waitForOcrReady(page);
         this.logger.log('OCR step 3/4: Confirm Passport Information');
@@ -42,7 +43,7 @@ let OcrPassportUploader = OcrPassportUploader_1 = class OcrPassportUploader {
         await this.waitForApplySync(page);
         await this.dismissInfoDialogs(page);
         await this.closeDatePickers(page);
-        await this.uploadPhoto(page, profile.documents.photo);
+        await this.uploadPhoto(page, (0, shared_1.getDocumentUrls)(profile.documents, 'photo')[0]);
         await this.dismissInfoDialogs(page);
     }
     async uploadPassportViaButton(page, fileUrl) {

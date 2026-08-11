@@ -8,10 +8,12 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var FormFiller_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FormFiller = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
+const shared_1 = require("@uni-apply/shared");
 const agent_config_js_1 = require("../agent/agent.config.js");
 const form_agent_js_1 = require("../agent/form.agent.js");
 const semantic_field_mapper_js_1 = require("../agent/dom/semantic-field.mapper.js");
@@ -22,7 +24,9 @@ const ocr_passport_uploader_js_1 = require("./ocr-passport.uploader.js");
 const wizard_field_groups_js_1 = require("./wizard-field-groups.js");
 const wizard_navigator_js_1 = require("./wizard.navigator.js");
 const geocoding_service_js_1 = require("../geocoding/geocoding.service.js");
-let FormFiller = class FormFiller {
+const zzu_pre_wizard_js_1 = require("../browser/zzu-pre-wizard.js");
+const text_limits_js_1 = require("./text-limits.js");
+let FormFiller = FormFiller_1 = class FormFiller {
     configService;
     fieldMapper;
     fileAttacher;
@@ -32,6 +36,7 @@ let FormFiller = class FormFiller {
     semanticFieldMapper;
     formAgent;
     geocoding;
+    logger = new common_1.Logger(FormFiller_1.name);
     constructor(configService, fieldMapper, fileAttacher, ocrPassportUploader, wizardNavigator, wizardFieldGroups, semanticFieldMapper, formAgent, geocoding) {
         this.configService = configService;
         this.fieldMapper = fieldMapper;
@@ -47,7 +52,11 @@ let FormFiller = class FormFiller {
         const fillMode = university
             ? (0, agent_config_js_1.resolveFillMode)(this.configService, university)
             : 'schema';
-        await this.fillFieldBatch(page, profile, fields, motivationLetterContent, fillMode);
+        await this.fillFieldBatch(page, profile, fields, motivationLetterContent, fillMode, {
+            softSkipAbsent: university
+                ? this.is17gzPortal(university)
+                : false,
+        });
     }
     async attachFiles(page, profile, fields) {
         await this.fileAttacher.attachFiles(page, profile, fields);
@@ -76,11 +85,36 @@ let FormFiller = class FormFiller {
             }
             return;
         }
+        try {
+            await this.processWizardDeterministic(page, profile, university, motivationLetterContent, applicationId, fillMode);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            const skipAgentFallback = /Failed to attach|Missing required document|File input not found/i.test(message);
+            const canFallback = !skipAgentFallback &&
+                (0, agent_config_js_1.isAgentFallbackEnabled)(this.configService, university) &&
+                this.formAgent.isAvailable();
+            if (!canFallback) {
+                throw error;
+            }
+            this.logger.warn(`Deterministic wizard failed, falling back to FormAgent: ${message}`);
+            const resumeStep = (await (0, zzu_pre_wizard_js_1.detectCurrentWizardStep)(page).catch(() => null)) ?? 1;
+            this.logger.warn(`FormAgent fallback resume at wizard step ${resumeStep}`);
+            const result = await this.formAgent.runWizard(page, profile, university, motivationLetterContent, { startStep: resumeStep });
+            if (!result.completed) {
+                throw new Error(`Agent fallback also failed: ${result.finalAction?.reason ?? 'unknown'} (after: ${message})`);
+            }
+        }
+    }
+    async processWizardDeterministic(page, profile, university, motivationLetterContent, applicationId, fillMode) {
         const wizard = university.wizard;
         if (!wizard) {
             throw new Error(`University "${university.id}" has no wizard config`);
         }
-        await this.waitForStepOneFields(page, university);
+        const resumeStep = (await (0, zzu_pre_wizard_js_1.detectCurrentWizardStep)(page).catch(() => null)) ?? 1;
+        if (resumeStep <= 1) {
+            await this.waitForStepOneFields(page, university);
+        }
         await this.wizardNavigator.forEachStep(page, wizard, async (step) => {
             if (step === 1 &&
                 university.navigationHints?.ocrPassportUpload) {
@@ -90,11 +124,11 @@ let FormFiller = class FormFiller {
             const fields = this.wizardFieldGroups.fieldsForStep(university, step);
             await this.wizardNavigator.waitForProcessingDone(page, 60_000);
             await this.dismissFormOverlays(page);
-            await this.fillFieldBatch(page, profile, fields.filter((field) => field.type !== 'file'), motivationLetterContent, fillMode);
+            await this.fillFieldBatch(page, profile, fields.filter((field) => field.type !== 'file'), motivationLetterContent, fillMode, { softSkipAbsent: this.is17gzPortal(university) });
             if (step === 1) {
                 await this.ensureChineseNameWaiver(page, profile);
                 if (this.is17gzPortal(university)) {
-                    await this.ensurePkuStep1RequiredGaps(page);
+                    await this.ensurePkuStep1RequiredGaps(page, profile);
                 }
             }
             if (step === 2 && this.is17gzPortal(university)) {
@@ -125,8 +159,12 @@ let FormFiller = class FormFiller {
             if (fileFields.length > 0) {
                 await this.fileAttacher.attachFiles(page, profile, fileFields);
             }
+            if (step === 6 && this.is17gzPortal(university)) {
+                await this.fileAttacher.assertRequiredAttachmentsPresent(page);
+            }
         }, {
             applicationId,
+            startStep: resumeStep,
             markerForStep: (step) => {
                 const fields = this.wizardFieldGroups.fieldsForStep(university, step);
                 return (fields.find((field) => field.selector && field.type !== 'file')
@@ -156,7 +194,7 @@ let FormFiller = class FormFiller {
             throw new Error(`Step 1 form fields not found after navigation (${selector}). URL: ${page.url()}`);
         }
     }
-    async fillFieldBatch(page, profile, fields, motivationLetterContent, fillMode) {
+    async fillFieldBatch(page, profile, fields, motivationLetterContent, fillMode, { softSkipAbsent = false, } = {}) {
         for (const field of fields) {
             await this.wizardNavigator.waitForProcessingDone(page, 60_000);
             await this.dismissFormOverlays(page);
@@ -187,13 +225,13 @@ let FormFiller = class FormFiller {
                 await page
                     .waitForSelector(field.selector, {
                     state: 'attached',
-                    timeout: 10_000,
+                    timeout: softSkipAbsent ? 2_000 : 10_000,
                 })
                     .catch(() => undefined);
                 locator = await (0, field_locator_js_1.resolveFieldLocator)(page, field);
             }
             if (!locator) {
-                if (field.required) {
+                if (field.required && !softSkipAbsent) {
                     const present = await page
                         .evaluate(() => [...document.querySelectorAll('input[name], select[name], textarea[name]')]
                         .map((el) => el.name)
@@ -287,6 +325,21 @@ let FormFiller = class FormFiller {
         await this.closeDatePickers(page);
     }
     async closeDatePickers(page) {
+        await page.evaluate(() => {
+            const roots = [
+                ...document.querySelectorAll('.WdateDiv, #_my97DP, div[id*="dp"], .datebox-calendar-panel'),
+            ];
+            for (const root of roots) {
+                const style = getComputedStyle(root);
+                if (style.display === 'none' || style.visibility === 'hidden') {
+                    continue;
+                }
+                const ok = [
+                    ...root.querySelectorAll('#dpOkInput, input[value="OK"], input[value="Ok"], input[value="确定"], button'),
+                ].find((el) => /^(OK|Ok|确定)$/i.test((el.value || el.textContent || '').trim()));
+                ok?.click();
+            }
+        });
         await page.keyboard.press('Escape').catch(() => undefined);
         await page.evaluate(() => {
             for (const el of document.querySelectorAll('.WdateDiv, #_my97DP, div[id*="dp"], .datebox-calendar-panel')) {
@@ -346,6 +399,9 @@ let FormFiller = class FormFiller {
             wantLower,
             ...aliasValues.map((v) => v.toLowerCase()).filter((v) => !/^\d+$/.test(v)),
         ];
+        if (/collect|in person/i.test(wantLower)) {
+            labelNeedles.push('in person', 'collect from', 'collect.*in person', '本人领取', '到校领取');
+        }
         for (const v of aliasValues) {
             const byValue = page.locator(`${selector}[value="${v}"]`).first();
             if ((await byValue.count()) > 0) {
@@ -411,7 +467,27 @@ let FormFiller = class FormFiller {
                 if (lab === wantN || new RegExp(`\\b${wantN}\\b`, 'i').test(lab)) {
                     return true;
                 }
-                return needles.some((n) => n.length >= 2 && (lab === n || new RegExp(`\\b${n}\\b`, 'i').test(lab)));
+                return needles.some((n) => {
+                    if (n.length < 2) {
+                        return false;
+                    }
+                    if (lab === n || new RegExp(`\\b${n}\\b`, 'i').test(lab)) {
+                        return true;
+                    }
+                    if (n.includes('.*')) {
+                        try {
+                            return new RegExp(n, 'i').test(lab);
+                        }
+                        catch {
+                            return false;
+                        }
+                    }
+                    if (/in person|collect from/i.test(n) &&
+                        /in person|collect from|本人领取|到校领取/i.test(lab)) {
+                        return true;
+                    }
+                    return lab.includes(n) || (n.length >= 8 && n.includes(lab));
+                });
             });
             const byAlias = radios.find((radio) => aliases.includes(norm(radio.value)));
             const target = byLabel ||
@@ -838,7 +914,57 @@ let FormFiller = class FormFiller {
             /Date|Expire|Birth/.test(field.labelHint || '')) {
             return this.normalizeDateValue(value);
         }
+        if (/bornedAddress|city of birth|birth.?city|place of birth/i.test(key)) {
+            return this.sanitizeCityOfBirth(value);
+        }
+        if (/lastSchool|institution of highest|highest diploma/i.test(key)) {
+            return (0, text_limits_js_1.shortenInstitutionName)(value);
+        }
         return value;
+    }
+    sanitizeCityOfBirth(raw) {
+        let s = raw.replace(/\s+/g, ' ').trim();
+        if (!s) {
+            return 'Unknown';
+        }
+        s = s.split(',')[0]?.trim() || s;
+        s = s
+            .replace(/\s+(village|город|село|деревня|posyolok|settlement)\b.*$/i, '')
+            .trim();
+        s = s
+            .replace(/\s+(oblast|krai|region|province|district|область|край|район)\b.*$/i, '')
+            .trim();
+        if (s.length > 50) {
+            s = s.slice(0, 50).trim();
+        }
+        return s || 'Unknown';
+    }
+    resolveSaneBirthDate(profile) {
+        const raw = profile?.personal.dateOfBirth?.trim();
+        const normalized = raw ? this.normalizeDateValue(raw) : '';
+        const ageYears = (iso) => {
+            const y = Number(iso.slice(0, 4));
+            if (!Number.isFinite(y)) {
+                return -1;
+            }
+            return new Date().getFullYear() - y;
+        };
+        if (/^\d{4}-\d{2}-\d{2}$/.test(normalized) &&
+            ageYears(normalized) >= 15 &&
+            ageYears(normalized) <= 80) {
+            return normalized;
+        }
+        const eduStart = profile?.education?.[0]?.periodStart?.trim();
+        if (eduStart) {
+            const startYear = Number(this.normalizeDateValue(eduStart).slice(0, 4));
+            if (Number.isFinite(startYear)) {
+                const y = startYear - 18;
+                if (y >= 1950 && y <= new Date().getFullYear() - 15) {
+                    return `${y}-01-01`;
+                }
+            }
+        }
+        return '2000-01-01';
     }
     normalizeDateValue(value) {
         const trimmed = value.trim();
@@ -886,7 +1012,7 @@ let FormFiller = class FormFiller {
             await label.click({ force: true }).catch(() => undefined);
         }
     }
-    async ensurePkuStep1RequiredGaps(page) {
+    async ensurePkuStep1RequiredGaps(page, profile) {
         await this.dismissFormOverlays(page);
         await this.checkRadioNearLabel(page, /Marital Status/i, 'Unmarried');
         await page
@@ -910,6 +1036,28 @@ let FormFiller = class FormFiller {
             .catch(() => undefined);
         await this.checkRadioGroupNo(page, 'apply.isOversea');
         await this.checkRadioGroupNo(page, 'applyEx.inChinaOnApply');
+        await page
+            .evaluate(() => {
+            const yes = document.querySelector('input[name="applyEx.inChinaOnApply"][value="1"]');
+            const no = document.querySelector('input[name="applyEx.inChinaOnApply"][value="0"]');
+            if (!no) {
+                return;
+            }
+            if (yes) {
+                yes.checked = false;
+            }
+            no.checked = true;
+            const label = no.closest('label');
+            if (label) {
+                label.click();
+            }
+            else {
+                no.click();
+            }
+            no.dispatchEvent(new Event('change', { bubbles: true }));
+        })
+            .catch(() => undefined);
+        await this.checkRadioNearLabel(page, /Whether in Chinese mainland|in Chinese mainland now/i, 'No');
         await page.evaluate(() => {
             const EMPLOYER = 'High school graduate, no employer';
             const lastSchool = document.querySelector('input[name="applyEx.lastSchool"]');
@@ -1039,11 +1187,239 @@ let FormFiller = class FormFiller {
                 return false;
             }, passportCandidates.map((c) => c.toLowerCase()));
         }
+        await this.checkRadioGroupNo(page, 'applyEx.isYiMin');
+        await this.checkRadioNearLabel(page, /immigrant|是否移民|Have you ever been an immigrant/i, 'No');
+        await this.selectNearLabel(page, /^Religion$|宗教信仰/i, [
+            'None',
+            'Atheism',
+            '无',
+            '无宗教信仰',
+        ]);
+        await this.selectNearLabel(page, /Visa Type|Type of Visa|所持证件|签证种类/i, ['No Visa', 'No visa', '无签证']);
+        await this.selectNearLabel(page, /Passport valid for|Valid for|护照有效范围|限制前往/i, [
+            'Chinese mainland',
+            'Chinese Mainland',
+            'Mainland',
+            '中国大陆',
+            '中国内地',
+        ]);
+        const birthDate = profile?.personal.dateOfBirth?.trim() ||
+            '2000-01-01';
+        const passportExpire = profile?.personal.passportExpiry?.trim() || '2030-12-31';
+        const nationality = profile?.personal.nationality?.trim() || 'N/A';
+        await page.evaluate(({ birthDate: birth, passportExpire: expire, nationality: nation }) => {
+            const jq = window.jQuery;
+            const setInput = (input, value) => {
+                if (!input || !value || (input.value && input.value.trim())) {
+                    return;
+                }
+                input.value = value;
+                input.setAttribute('value', value);
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+                input.dispatchEvent(new Event('blur', { bubbles: true }));
+                if (typeof jq === 'function') {
+                    try {
+                        jq(input).val(value).trigger('change');
+                    }
+                    catch {
+                    }
+                }
+            };
+            const setSelectByNeedles = (name, needles) => {
+                const select = document.querySelector(`select[name="${name}"]`);
+                if (!select) {
+                    return false;
+                }
+                if (select.value &&
+                    select.value !== '0' &&
+                    !/please|choose|-choose-/i.test(select.options[select.selectedIndex]?.text || '')) {
+                    return true;
+                }
+                const match = [...select.options].find((opt) => {
+                    const t = (opt.textContent || '').trim().toLowerCase();
+                    return needles.some((n) => t === n || t.includes(n));
+                });
+                if (!match?.value) {
+                    return false;
+                }
+                select.value = match.value;
+                select.dispatchEvent(new Event('input', { bubbles: true }));
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+                if (typeof jq === 'function') {
+                    try {
+                        jq(select).val(match.value).trigger('chosen:updated');
+                        jq(select).val(match.value).trigger('change');
+                    }
+                    catch {
+                    }
+                }
+                return select.value === match.value;
+            };
+            const religion = document.querySelector('select[name="apply.religionId"]');
+            if (religion) {
+                const cur = (religion.options[religion.selectedIndex]?.text || '').trim();
+                if (!cur || /other|其他|please|choose/i.test(cur)) {
+                    setSelectByNeedles('apply.religionId', [
+                        'none',
+                        'atheism',
+                        '无',
+                    ]);
+                }
+            }
+            setInput(document.querySelector('input[name="apply.otherReligion"]'), 'None');
+            setInput(document.querySelector('input[name="applyEx.chinaPlaceOnApply"]'), 'N/A');
+            for (const name of [
+                'applyEx.chinaSchool',
+                'apply.chinaSchool',
+                'applyEx.currentSchool',
+                'apply.currentSchool',
+                'applyEx.chinaOrg',
+                'apply.workplaceInChina',
+            ]) {
+                setInput(document.querySelector(`input[name="${name}"]`), 'N/A');
+            }
+            setInput(document.querySelector('input[name="apply.visaNo"]'), 'N/A');
+            setInput(document.querySelector('input[name="apply.visaExpire"]'), expire);
+            setInput(document.querySelector('input[name="otherIssuePlace"]'), nation);
+            setInput(document.querySelector('input[name="apply.gainCountryDate"]'), birth);
+            setSelectByNeedles('apply.visaId', ['no visa', '无签证']);
+            setSelectByNeedles('apply.restrict', [
+                'chinese mainland',
+                'mainland',
+                '中国大陆',
+                '中国内地',
+            ]);
+        }, {
+            birthDate,
+            passportExpire,
+            nationality,
+        });
+        await this.checkRadioGroupNo(page, 'apply.isOversea');
+        await this.checkRadioGroupNo(page, 'applyEx.inChinaOnApply');
+        await this.checkRadioGroupNo(page, 'applyEx.isYiMin');
+        await this.repairPkuStep1BlockingValues(page, profile);
         await this.dismissFormOverlays(page);
+    }
+    async repairPkuStep1BlockingValues(page, profile) {
+        const rawDob = profile?.personal.dateOfBirth?.trim() || '';
+        const birthDate = this.resolveSaneBirthDate(profile);
+        if (rawDob && this.normalizeDateValue(rawDob) !== birthDate) {
+            this.logger.warn(`Step1 DOB repaired: profile/OCR "${rawDob}" → "${birthDate}" (age sanity)`);
+        }
+        const cityRaw = profile?.personal.cityOfBirth?.trim() ||
+            (await page
+                .evaluate(() => {
+                const el = document.querySelector('input[name="apply.bornedAddress"]');
+                return el?.value?.trim() || '';
+            })
+                .catch(() => '')) ||
+            'Unknown';
+        const city = this.sanitizeCityOfBirth(cityRaw);
+        if (cityRaw !== city) {
+            this.logger.warn(`Step1 cityOfBirth sanitized: "${cityRaw}" → "${city}"`);
+        }
+        const schoolRaw = profile?.personal.currentInstitution?.trim() ||
+            profile?.education?.[0]?.institution?.trim() ||
+            'Higher Education Institution';
+        const school = (0, text_limits_js_1.shortenInstitutionName)(schoolRaw);
+        if (schoolRaw !== school) {
+            this.logger.warn(`Step1 institution shortened: "${schoolRaw.slice(0, 80)}…" → "${school}"`);
+        }
+        const passportExpire = this.normalizeDateValue(profile?.personal.passportExpiry?.trim() || '2030-12-31');
+        await page.evaluate(({ birthDate: birth, city, school, passportExpire: expire }) => {
+            const jq = window.jQuery;
+            const readMax = (input) => {
+                const attr = Number(input.getAttribute('maxlength'));
+                if (Number.isFinite(attr) && attr > 0) {
+                    return attr;
+                }
+                if (input.maxLength > 0) {
+                    return input.maxLength;
+                }
+                const v = input.getAttribute('validate') || '';
+                const m = v.match(/length\[\s*\d+\s*,\s*(\d+)\s*]/);
+                if (m) {
+                    return Number(m[1]);
+                }
+                return 50;
+            };
+            const forceSet = (name, value) => {
+                const input = document.querySelector(`input[name="${name}"]`);
+                if (!input || !value) {
+                    return;
+                }
+                const next = value.slice(0, readMax(input));
+                input.value = next;
+                input.setAttribute('value', next);
+                input.classList.remove('validatebox-invalid');
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+                input.dispatchEvent(new Event('blur', { bubbles: true }));
+                if (typeof jq === 'function') {
+                    try {
+                        jq(input).val(next).trigger('validate');
+                        jq(input).val(next).trigger('change');
+                        jq(input).val(next).trigger('blur');
+                    }
+                    catch {
+                    }
+                }
+            };
+            forceSet('apply.bornedDate', birth);
+            forceSet('apply.bornedAddress', city);
+            forceSet('applyEx.lastSchool', school);
+            forceSet('apply.passportExpire', expire);
+            forceSet('ocr.bornedAddress', city);
+            forceSet('ocr.bornedDate', birth);
+            const skipExact = new Set([
+                'apply.bornedDate',
+                'apply.passportExpire',
+                'ocr.bornedDate',
+            ]);
+            for (const el of document.querySelectorAll('input[type="text"], input:not([type]), textarea')) {
+                const input = el;
+                const name = input.name || '';
+                if (!/^(apply|applyEx|ocr)\./.test(name) || skipExact.has(name)) {
+                    continue;
+                }
+                if (/date|expire|passportNo|mobile|phone|email|zip/i.test(name)) {
+                    continue;
+                }
+                const val = (input.value || '').trim();
+                if (!val) {
+                    continue;
+                }
+                const max = readMax(input);
+                if (val.length <= max) {
+                    continue;
+                }
+                const next = val.slice(0, max);
+                input.value = next;
+                input.setAttribute('value', next);
+                input.classList.remove('validatebox-invalid');
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+                if (typeof jq === 'function') {
+                    try {
+                        jq(input).val(next).trigger('change');
+                    }
+                    catch {
+                    }
+                }
+            }
+        }, {
+            birthDate,
+            city,
+            school,
+            passportExpire,
+        });
+        await this.closeDatePickers(page);
     }
     is17gzPortal(university) {
         return (university.id === 'pku' ||
             university.id === 'csu' ||
+            university.id === 'suda' ||
             university.id === 'kmmc' ||
             university.id === 'zhengzhou-university' ||
             /(?:^|\.)17gz\.org|kmmc\.cn/i.test(university.formUrl || ''));
@@ -1064,14 +1440,16 @@ let FormFiller = class FormFiller {
             profile.guarantor?.homeAddress?.trim() ||
             'N/A';
         const geo = await this.geocoding.resolve(rawAddress, {
-            city: profile.personal.cityOfBirth?.trim(),
             zip: profile.personal.postCode?.trim(),
             country: nationality,
         });
-        const address = (geo.streetAddress && geo.streetAddress !== geo.city
+        const address = ((geo.streetAddress && geo.streetAddress !== geo.city
             ? geo.streetAddress
-            : rawAddress) || rawAddress;
-        const city = geo.city && !/^n\/?a$/i.test(geo.city) ? geo.city : profile.personal.cityOfBirth?.trim() || 'N/A';
+            : rawAddress) || rawAddress)
+            .replace(/\s+/g, ' ')
+            .trim()
+            .slice(0, 100);
+        const city = this.resolveHomeCity(geo.city, rawAddress);
         const zip = geo.zip || profile.personal.postCode?.trim() || '000000';
         const country = geo.country || nationality;
         const fills = [
@@ -1163,13 +1541,19 @@ let FormFiller = class FormFiller {
                 ...document.querySelectorAll('input[name="apply.receiverType"]'),
             ];
             const labelOf = (radio) => {
+                if (radio.id) {
+                    const forLab = document.querySelector(`label[for="${radio.id}"]`);
+                    if (forLab?.textContent) {
+                        return forLab.textContent;
+                    }
+                }
                 const wrap = radio.closest('label');
                 if (wrap?.textContent) {
                     return wrap.textContent;
                 }
                 return radio.parentElement?.textContent || '';
             };
-            const inPerson = radios.find((r) => /collect.*in person|in person/i.test(labelOf(r)));
+            const inPerson = radios.find((r) => /collect.*in person|in person|本人领取|到校领取/i.test(labelOf(r)));
             if (!inPerson) {
                 return;
             }
@@ -1180,8 +1564,53 @@ let FormFiller = class FormFiller {
             inPerson.click();
             inPerson.dispatchEvent(new Event('change', { bubbles: true }));
         });
+        const collectLabel = page
+            .locator('label, span, td, div')
+            .filter({ hasText: /Collect from .+ in Person|本人领取|到校领取/i })
+            .first();
+        if ((await collectLabel.count()) > 0) {
+            await collectLabel.click({ force: true }).catch(() => undefined);
+        }
+        else {
+            await this.checkRadioNearLabel(page, /How to Collect|Admission Notice|领取/i, 'in Person').catch(() => undefined);
+        }
+        for (const [name, value] of fills) {
+            await this.setInputValueJs(page, `input[name="${name}"]`, value);
+        }
         await this.closeDatePickers(page);
         await this.dismissFormOverlays(page);
+    }
+    resolveHomeCity(geoCity, address) {
+        const clean = (s) => s
+            .replace(/\s+/g, ' ')
+            .replace(/\b(city|village|town|oblast|krai|region)\b/gi, '')
+            .replace(/,+/g, ' ')
+            .trim()
+            .slice(0, 40);
+        if (geoCity && !/^n\/?a$/i.test(geoCity) && geoCity.length <= 40) {
+            const c = clean(geoCity);
+            if (c && !/bayevo|birth/i.test(c)) {
+                return c;
+            }
+        }
+        const parts = address
+            .split(',')
+            .map((p) => p.trim())
+            .filter(Boolean);
+        for (const part of parts) {
+            const m = part.match(/^([A-Za-zА-Яа-я\-]+)\s+city\b/i);
+            if (m?.[1]) {
+                return m[1].slice(0, 40);
+            }
+        }
+        for (const part of parts) {
+            if (part.length >= 3 &&
+                part.length <= 30 &&
+                !/russia|federation|street|st\.|apt|bldg|ignatova|\d/i.test(part)) {
+                return part;
+            }
+        }
+        return 'N/A';
     }
     async ensurePkuStep4RequiredGaps(page, profile) {
         await this.wizardNavigator.waitForProcessingDone(page, 60_000);
@@ -1251,9 +1680,11 @@ let FormFiller = class FormFiller {
                 name: fm?.fullName?.trim() || fallbackName,
                 phone: fm?.phone?.trim() || fallbackPhone,
                 email: fm?.email?.trim() || fallbackEmail,
-                duty: fm?.position?.trim() || fallbackPosition || 'unemployed',
-                workPlace: fm?.company?.trim() || fallbackCompany || 'unemployed',
-                nationality: fm?.nationality?.trim() || nationality,
+                duty: (fm?.position?.trim() || fallbackPosition || 'unemployed').slice(0, 50),
+                workPlace: (fm?.company?.trim() ||
+                    fallbackCompany ||
+                    'unemployed').slice(0, 50),
+                nationalityNeedles: this.expandCountryLabels(fm?.nationality?.trim() || nationality),
                 bornedDate: this.familyBirthDateFromAge(fm?.age),
             };
         });
@@ -1288,7 +1719,7 @@ let FormFiller = class FormFiller {
                 ];
                 const sel = sels[index];
                 if (!sel || !label) {
-                    return;
+                    return false;
                 }
                 const want = label.trim().toLowerCase();
                 const opt = Array.from(sel.options).find((o) => {
@@ -1296,7 +1727,7 @@ let FormFiller = class FormFiller {
                     return t === want || t.includes(want) || want.includes(t);
                 });
                 if (!opt?.value) {
-                    return;
+                    return false;
                 }
                 sel.value = opt.value;
                 sel.dispatchEvent(new Event('input', { bubbles: true }));
@@ -1309,11 +1740,16 @@ let FormFiller = class FormFiller {
                     catch {
                     }
                 }
+                return true;
             };
             for (let i = 0; i < slots.length; i += 1) {
                 const s = slots[i];
                 setSelectByLabel('fm.relativeId', i, s.relative);
-                setSelectByLabel('fm.countryId', i, s.nationality);
+                for (const needle of s.nationalityNeedles) {
+                    if (setSelectByLabel('fm.countryId', i, needle)) {
+                        break;
+                    }
+                }
                 setInput('fm.name', i, s.name);
                 setInput('fm.phone', i, s.phone);
                 setInput('fm.email', i, s.email);
@@ -1324,19 +1760,19 @@ let FormFiller = class FormFiller {
                 }
             }
         }, familySlots);
-        const selfWork = profile.personal.currentInstitution?.trim() ||
+        const selfWork = (0, text_limits_js_1.shortenInstitutionName)(profile.personal.currentInstitution?.trim() ||
             profile.workExperience?.[0]?.company?.trim() ||
             profile.education?.[0]?.institution?.trim() ||
-            'unemployed';
+            'unemployed');
         const singleFills = [
             ['apply.selfSupporter', fullName],
             ['apply.selfphone', phone],
             ['apply.selfwork', selfWork],
             [
                 'apply.ssrelative',
-                profile.guarantor?.relationship?.trim() || 'Self',
+                profile.guarantor?.relationship?.trim() || 'Father',
             ],
-            ['apply.selfaddress', address],
+            ['apply.selfaddress', address.slice(0, 100)],
             ['apply.selfemail', email],
             [
                 'apply.emergencyName',
@@ -1364,11 +1800,37 @@ let FormFiller = class FormFiller {
             ],
             [
                 'apply.emergencyAddress',
-                profile.emergencyContact?.homeAddress?.trim() ||
+                (profile.emergencyContact?.homeAddress?.trim() ||
                     profile.guarantor?.homeAddress?.trim() ||
-                    address,
+                    address).slice(0, 100),
             ],
             ['apply.emergencyZip', zip],
+            [
+                'apply.guarantorEnname',
+                profile.guarantor?.name?.trim() || fullName,
+            ],
+            [
+                'apply.guarMobile',
+                profile.guarantor?.phone?.trim() || phone,
+            ],
+            [
+                'apply.guarPhone',
+                profile.guarantor?.phone?.trim() || phone,
+            ],
+            [
+                'apply.guarEmail',
+                profile.guarantor?.email?.trim() || email,
+            ],
+            [
+                'apply.guarWorkplace',
+                (profile.guarantor?.company?.trim() ||
+                    profile.guarantor?.position?.trim() ||
+                    'N/A').slice(0, 50),
+            ],
+            [
+                'apply.guarAddress',
+                (profile.guarantor?.homeAddress?.trim() || address).slice(0, 100),
+            ],
         ];
         await page.evaluate((rows) => {
             const jq = window.jQuery;
@@ -1393,17 +1855,160 @@ let FormFiller = class FormFiller {
                 }
             }
         }, singleFills);
-        for (const [name, value] of singleFills) {
-            const empty = await page.evaluate((n) => {
-                const el = document.querySelector(`input[name="${n}"]`);
-                return !el || !el.value?.trim();
-            }, name);
-            if (empty) {
+        for (const name of [
+            'apply.selfwork',
+            'apply.guarWorkplace',
+            'apply.selfaddress',
+            'apply.emergencyAddress',
+            'apply.guarAddress',
+        ]) {
+            const value = singleFills.find(([n]) => n === name)?.[1];
+            if (value) {
                 await this.setInputValueJs(page, `input[name="${name}"]`, value);
             }
         }
+        const countryNeedles = this.expandCountryLabels(nationality);
+        await this.forceCountrySelects(page, countryNeedles);
         await this.closeDatePickers(page);
         await this.dismissFormOverlays(page);
+    }
+    async forceCountrySelects(page, needles) {
+        const names = [
+            'fm.countryId',
+            'apply.guarCountryId',
+            'apply.guarCountryId2',
+        ];
+        for (const name of names) {
+            const locators = page.locator(`select[name="${name}"]`);
+            const count = await locators.count();
+            for (let i = 0; i < count; i += 1) {
+                const select = locators.nth(i);
+                let filled = false;
+                for (const needle of needles) {
+                    try {
+                        await select.selectOption({ label: needle }, { force: true, timeout: 1_500 });
+                        filled = true;
+                        break;
+                    }
+                    catch {
+                        try {
+                            await select.selectOption({ value: needle }, { force: true, timeout: 1_000 });
+                            filled = true;
+                            break;
+                        }
+                        catch {
+                        }
+                    }
+                }
+                if (!filled) {
+                    filled = await page.evaluate(({ selName, index, values }) => {
+                        const sels = [
+                            ...document.querySelectorAll(`select[name="${selName}"]`),
+                        ];
+                        const sel = sels[index];
+                        if (!sel) {
+                            return false;
+                        }
+                        const needle = values.map((v) => v.trim().toLowerCase()).filter(Boolean);
+                        const isPlaceholder = (text) => !text ||
+                            /please\s*(choose|select)/i.test(text) ||
+                            /^-+$/.test(text) ||
+                            /^-choose-$/i.test(text);
+                        let best = null;
+                        let bestScore = 0;
+                        for (const opt of sel.options) {
+                            const text = (opt.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+                            const val = opt.value.trim().toLowerCase();
+                            if (!val || isPlaceholder(text)) {
+                                continue;
+                            }
+                            let score = 0;
+                            for (const n of needle) {
+                                if (text === n || val === n)
+                                    score = Math.max(score, 3);
+                                else if (text.includes(n) || (n.length >= 4 && n.includes(text)))
+                                    score = Math.max(score, 2);
+                                else if (text.startsWith(n) || n.startsWith(text))
+                                    score = Math.max(score, 1);
+                            }
+                            if (score > bestScore) {
+                                bestScore = score;
+                                best = opt;
+                            }
+                        }
+                        if (!best?.value || bestScore === 0) {
+                            return false;
+                        }
+                        sel.value = best.value;
+                        sel.dispatchEvent(new Event('input', { bubbles: true }));
+                        sel.dispatchEvent(new Event('change', { bubbles: true }));
+                        const jq = window.jQuery;
+                        if (typeof jq === 'function') {
+                            try {
+                                jq(sel).val(best.value).trigger('chosen:updated');
+                                jq(sel).val(best.value).trigger('liszt:updated');
+                                jq(sel).val(best.value).trigger('change');
+                                const container = sel.nextElementSibling;
+                                if (container?.classList.contains('chosen-container')) {
+                                    const span = container.querySelector('.chosen-single span');
+                                    if (span) {
+                                        span.textContent = (best.textContent || '')
+                                            .replace(/\s+/g, ' ')
+                                            .trim();
+                                    }
+                                    container.classList.remove('chosen-container-active');
+                                }
+                            }
+                            catch {
+                            }
+                        }
+                        return sel.value === best.value;
+                    }, { selName: name, index: i, values: needles });
+                }
+                await this.pickChosenNearSelect(page, select, needles.find((n) => /russia/i.test(n)) ?? needles[0] ?? 'Russia').catch(() => undefined);
+            }
+        }
+        const stillEmpty = await page.evaluate(() => {
+            return [...document.querySelectorAll('select[name="fm.countryId"]')].map((el, i) => {
+                const sel = el;
+                const text = (sel.options[sel.selectedIndex]?.text || '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+                return { i, text, value: sel.value };
+            });
+        });
+        for (const row of stillEmpty) {
+            if (!row.value || /please|choose/i.test(row.text)) {
+                this.logger.warn(`fm.countryId[${row.i}] still empty after force ("${row.text}")`);
+            }
+        }
+    }
+    async pickChosenNearSelect(page, select, searchText) {
+        const chosen = select.locator('xpath=following-sibling::div[contains(@class,"chosen-container")][1]');
+        if ((await chosen.count()) === 0) {
+            return;
+        }
+        const current = await chosen.locator('.chosen-single span').innerText().catch(() => '');
+        if (current && !/please|choose/i.test(current)) {
+            return;
+        }
+        await chosen.locator('.chosen-single').click({ force: true });
+        await page.waitForTimeout(200);
+        const search = chosen.locator('.chosen-search input').first();
+        if ((await search.count()) > 0) {
+            await search.fill(searchText.split(/\s+/)[0] || searchText);
+            await page.waitForTimeout(300);
+        }
+        const result = chosen
+            .locator('.chosen-results li.active-result')
+            .filter({ hasText: new RegExp(searchText.split(/\s+/)[0] || 'Russia', 'i') })
+            .first();
+        if ((await result.count()) > 0) {
+            await result.click({ force: true });
+        }
+        else {
+            await chosen.locator('.chosen-results li.active-result').first().click({ force: true }).catch(() => undefined);
+        }
     }
     normalizeFamilyRelationship(raw) {
         const v = raw.trim().toLowerCase();
@@ -1451,41 +2056,121 @@ let FormFiller = class FormFiller {
     async ensurePkuStep3RequiredGaps(page, profile) {
         await this.dismissFormOverlays(page);
         await this.closeDatePickers(page);
-        for (const [name, value] of [
-            ['applyEx.haveStudiedInChina', '0'],
-            ['applyEx.haveWorkHistory', '0'],
-            ['haveWorkHistory', '0'],
-        ]) {
-            const radio = page.locator(`input[type="radio"][name="${name}"][value="${value}"]`);
-            if ((await radio.count()) > 0) {
-                await radio.first().check({ force: true }).catch(() => undefined);
-            }
-        }
-        await page.evaluate(() => {
-            const yes = document.querySelector('input[name="applyEx.haveStudiedInChina"][value="1"]');
-            const no = document.querySelector('input[name="applyEx.haveStudiedInChina"][value="0"]');
-            if (no && !no.checked) {
-                no.checked = true;
-                no.click();
-                no.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-            if (yes?.checked && no) {
-                yes.checked = false;
-                no.checked = true;
-                no.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-        });
+        const edu = (0, shared_1.primaryEducation)(profile);
+        const school = (0, text_limits_js_1.shortenInstitutionName)(edu?.institution?.trim() ||
+            profile.personal.currentInstitution?.trim() ||
+            'High School');
+        const major = (edu?.major?.trim() || 'General Studies').slice(0, 50);
+        const startRaw = this.normalizeDateValue(edu?.periodStart?.trim() || '');
+        const endRaw = this.normalizeDateValue(edu?.periodEnd?.trim() || '');
+        const start = /^\d{4}-\d{2}-\d{2}$/.test(startRaw) ? startRaw : '2018-09-01';
+        const end = /^\d{4}-\d{2}-\d{2}$/.test(endRaw) ? endRaw : '2022-06-30';
         const nationality = profile.personal.nationality?.trim() || 'Russian Federation';
-        const countrySel = 'select[name="sh.countryId"]';
-        if ((await page.locator(countrySel).count()) > 0) {
-            await this.fillSelectControl(page, {
-                selector: countrySel,
-                type: 'select',
-                required: false,
-                mapsTo: 'personal.nationality',
-                labelHint: 'Institute Location',
-            }, page.locator(countrySel).first(), nationality).catch(() => undefined);
-        }
+        const degreeNeedles = [
+            edu?.degree?.trim() || '',
+            'Senior high',
+            'High school',
+            'Bachelor',
+            '高中',
+            '本科',
+        ].filter(Boolean);
+        await page.evaluate(({ school, major, start, end, degreeNeedles, nationality }) => {
+            const jq = window.jQuery;
+            const setInput = (input, value) => {
+                if (!value) {
+                    return;
+                }
+                input.value = value;
+                input.setAttribute('value', value);
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+                input.dispatchEvent(new Event('blur', { bubbles: true }));
+                if (typeof jq === 'function') {
+                    try {
+                        jq(input).val(value).trigger('change');
+                    }
+                    catch {
+                    }
+                }
+            };
+            const setSelect = (select, needles, force = false) => {
+                if (needles.length === 0) {
+                    return;
+                }
+                const cur = (select.options[select.selectedIndex]?.text || '')
+                    .trim()
+                    .toLowerCase();
+                if (!force &&
+                    cur &&
+                    !/please|choose|-choose-|^$/.test(cur)) {
+                    return;
+                }
+                const lowered = needles.map((n) => n.toLowerCase());
+                const match = [...select.options].find((opt) => {
+                    const t = (opt.textContent || '').trim().toLowerCase();
+                    return lowered.some((n) => n && (t === n || t.includes(n) || n.includes(t)));
+                });
+                if (!match?.value) {
+                    return;
+                }
+                select.value = match.value;
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+                if (typeof jq === 'function') {
+                    try {
+                        jq(select).val(match.value).trigger('chosen:updated');
+                        jq(select).val(match.value).trigger('change');
+                    }
+                    catch {
+                    }
+                }
+            };
+            const setAllInputs = (name, value) => {
+                for (const el of document.querySelectorAll(`input[name="${name}"]`)) {
+                    setInput(el, value);
+                }
+            };
+            const setAllSelects = (name, needles, force = true) => {
+                for (const el of document.querySelectorAll(`select[name="${name}"]`)) {
+                    setSelect(el, needles, force);
+                }
+            };
+            setAllInputs('sh.startDate', start);
+            setAllInputs('sh.endDate', end);
+            setAllInputs('sh.studyPlace', school);
+            setAllInputs('sh.stuhisMajor', major);
+            setAllSelects('sh.educationId', degreeNeedles, true);
+            setAllSelects('sh.countryId', [nationality, 'russian', 'russia', '俄罗斯'], true);
+            const checkNo = (name) => {
+                const no = document.querySelector(`input[type="radio"][name="${name}"][value="0"]`);
+                const yes = document.querySelector(`input[type="radio"][name="${name}"][value="1"]`);
+                if (!no) {
+                    return;
+                }
+                if (yes) {
+                    yes.checked = false;
+                }
+                no.checked = true;
+                const label = no.closest('label');
+                if (label) {
+                    label.click();
+                }
+                else {
+                    no.click();
+                }
+                no.dispatchEvent(new Event('change', { bubbles: true }));
+            };
+            checkNo('applyEx.haveStudiedInChina');
+            checkNo('applyEx.haveWorkedInChina');
+            checkNo('applyEx.haveWorkHistory');
+            checkNo('haveWorkHistory');
+        }, { school, major, start, end, degreeNeedles, nationality });
+        await this.checkRadioGroupNo(page, 'applyEx.haveStudiedInChina');
+        await this.checkRadioGroupNo(page, 'applyEx.haveWorkedInChina');
+        await this.checkRadioGroupNo(page, 'applyEx.haveWorkHistory');
+        await this.checkRadioGroupNo(page, 'haveWorkHistory');
+        await this.checkRadioNearLabel(page, /studied online or offline|studied in China|在中国.*学习/i, 'No');
+        await this.checkRadioNearLabel(page, /worked in China|work in China|在中国.*工作|曾经在中国工作/i, 'No');
+        await this.checkRadioNearLabel(page, /Do you have work experience|work experience|工作经历/i, 'No');
         await this.closeDatePickers(page);
         await this.dismissFormOverlays(page);
     }
@@ -1577,6 +2262,53 @@ let FormFiller = class FormFiller {
             }
             return report;
         }, fills);
+        await page.evaluate(() => {
+            const jq = window.jQuery;
+            const setSelect = (name, needles) => {
+                const select = document.querySelector(`select[name="${name}"]`);
+                if (!select) {
+                    return;
+                }
+                const cur = (select.options[select.selectedIndex]?.text || '')
+                    .trim()
+                    .toLowerCase();
+                if (cur && !/please|choose|-choose-|^$/.test(cur)) {
+                    return;
+                }
+                const match = [...select.options].find((opt) => {
+                    const t = (opt.textContent || '').trim().toLowerCase();
+                    return needles.some((n) => t === n || t.includes(n));
+                });
+                if (!match?.value) {
+                    return;
+                }
+                select.value = match.value;
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+                if (typeof jq === 'function') {
+                    try {
+                        jq(select).val(match.value).trigger('chosen:updated');
+                        jq(select).val(match.value).trigger('change');
+                    }
+                    catch {
+                    }
+                }
+            };
+            setSelect('apply.languageSkillId', ['none', '无', 'poor']);
+            setSelect('apply.hskId', ['none', '无']);
+            setSelect('apply.hskOralId', ['none', '无', 'primary']);
+            setSelect('apply.englishLanguageSkillId', [
+                'good',
+                'excellent',
+                'fair',
+                'none',
+            ]);
+            setSelect('apply.yydjzs', [
+                'native language',
+                'native speaker',
+                'none',
+                'other',
+            ]);
+        });
         for (const [name, value] of fills) {
             if (writeResult[name] === 'OK') {
                 continue;
@@ -1592,6 +2324,7 @@ let FormFiller = class FormFiller {
                 await this.setInputValueJs(page, `input[name="${name}"]`, value);
             });
         }
+        await this.syncStudyDurationMirror(page, profile);
         const nationality = profile.guarantor?.nationality ||
             profile.personal.nationality ||
             'Russian Federation';
@@ -1611,20 +2344,116 @@ let FormFiller = class FormFiller {
         await this.closeDatePickers(page);
         await this.dismissFormOverlays(page);
     }
+    async syncStudyDurationMirror(page, profile) {
+        const fromProfile = profile.applicationTargets?.[0]?.duration?.trim() || '';
+        const result = await page.evaluate((preferred) => {
+            const start = document.querySelector('input[name="apply.studyStartDate"]')?.value?.trim();
+            const end = document.querySelector('input[name="apply.studyEndDate"]')?.value?.trim();
+            let years = preferred;
+            if (!years && start && end) {
+                const a = Date.parse(start);
+                const b = Date.parse(end);
+                if (Number.isFinite(a) && Number.isFinite(b) && b >= a) {
+                    const y = Math.max(1, Math.round((b - a) / (365.25 * 24 * 3600 * 1000)));
+                    years = String(y);
+                }
+            }
+            if (!years) {
+                years = '1';
+            }
+            const candidates = [
+                ...document.querySelectorAll('input[name="temp_studyDuration"], select[name="temp_studyDuration"], #temp_studyDuration, input[name="apply.studyDuration"], select[name="apply.studyDuration"]'),
+            ];
+            if (candidates.length === 0) {
+                return { filled: false, years, reason: 'no-temp-field' };
+            }
+            const jq = window.jQuery;
+            for (const el of candidates) {
+                if (el.tagName === 'SELECT') {
+                    const select = el;
+                    const match = [...select.options].find((opt) => {
+                        const t = (opt.textContent || '').trim().toLowerCase();
+                        const v = (opt.value || '').trim();
+                        return (v === years ||
+                            t === years.toLowerCase() ||
+                            t.includes(`${years} year`) ||
+                            t === `${years} years` ||
+                            (years === '1' && /one year|^1\b/.test(t)));
+                    }) ||
+                        [...select.options].find((opt) => {
+                            const t = (opt.textContent || '').trim().toLowerCase();
+                            return t && !/please|choose|^-$/.test(t);
+                        });
+                    if (match?.value) {
+                        select.value = match.value;
+                        select.dispatchEvent(new Event('change', { bubbles: true }));
+                        if (typeof jq === 'function') {
+                            try {
+                                jq(select).val(match.value).trigger('change');
+                                jq(select).val(match.value).trigger('chosen:updated');
+                            }
+                            catch {
+                            }
+                        }
+                    }
+                }
+                else {
+                    const input = el;
+                    input.value = years;
+                    input.setAttribute('value', years);
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                    input.dispatchEvent(new Event('blur', { bubbles: true }));
+                    if (typeof jq === 'function') {
+                        try {
+                            jq(input).val(years).trigger('change');
+                        }
+                        catch {
+                        }
+                    }
+                }
+            }
+            return { filled: true, years, reason: 'ok' };
+        }, fromProfile);
+        this.logger.log(`Step2 study duration mirror: ${result.reason} years=${result.years} filled=${result.filled}`);
+    }
     async assertPkuStep2CriticalFilled(page, profile) {
         const critical = [
             'apply.yydjzsScore',
             'apply.yydjzsIssueDate',
+            'apply.guarantorEnname',
+            'apply.guarRelation',
+            'apply.guarWorkplace',
+            'apply.guarPhone',
+            'apply.guarEmail',
             'apply.guarSecEnname',
             'apply.guarSecRelative',
             'apply.guarSecWork',
             'apply.guarSecPhone',
             'apply.guarSecEmail',
+            'temp_studyDuration',
+            'apply.studyDuration',
         ];
         const empty = await page.evaluate((names) => {
             return names.filter((name) => {
-                const el = document.querySelector(`input[name="${name}"]`);
-                return !el || !el.value?.trim();
+                const el = document.querySelector(`input[name="${name}"], select[name="${name}"]`);
+                if (!el) {
+                    return false;
+                }
+                const style = getComputedStyle(el);
+                if (style.display === 'none' ||
+                    style.visibility === 'hidden' ||
+                    el.offsetParent === null) {
+                    return false;
+                }
+                if (el.tagName === 'SELECT') {
+                    const select = el;
+                    const t = (select.options[select.selectedIndex]?.text || '')
+                        .trim()
+                        .toLowerCase();
+                    return !select.value || /please|choose|^-$/.test(t);
+                }
+                return !el.value?.trim();
             });
         }, critical);
         if (empty.length === 0) {
@@ -1637,14 +2466,30 @@ let FormFiller = class FormFiller {
             ].map((el) => el.name);
             return {
                 empty: names.filter((name) => {
-                    const el = document.querySelector(`input[name="${name}"]`);
-                    return !el || !el.value?.trim();
+                    const el = document.querySelector(`input[name="${name}"], select[name="${name}"]`);
+                    if (!el) {
+                        return false;
+                    }
+                    const style = getComputedStyle(el);
+                    if (style.display === 'none' ||
+                        style.visibility === 'hidden' ||
+                        el.offsetParent === null) {
+                        return false;
+                    }
+                    if (el.tagName === 'SELECT') {
+                        const select = el;
+                        const t = (select.options[select.selectedIndex]?.text || '')
+                            .trim()
+                            .toLowerCase();
+                        return !select.value || /please|choose|^-$/.test(t);
+                    }
+                    return !el.value?.trim();
                 }),
                 presentGuar: present.slice(0, 40),
             };
         }, critical);
         if (stillEmpty.empty.length > 0) {
-            throw new Error(`PKU Step2 critical fields still empty after force-fill: [${stillEmpty.empty.join(', ')}]. ` +
+            throw new Error(`17gz Step2 critical fields still empty after force-fill: [${stillEmpty.empty.join(', ')}]. ` +
                 `Present apply.guar* names: [${stillEmpty.presentGuar.join(', ')}]`);
         }
     }
@@ -1798,11 +2643,21 @@ let FormFiller = class FormFiller {
         }, { labelSource: labelRe.source, values: candidates });
     }
     normalizePhone(value) {
-        const digits = value.replace(/\D/g, '');
+        const trimmed = value.trim();
+        const digits = trimmed.replace(/\D/g, '');
+        if (!digits) {
+            return '13800138000';
+        }
         if (/^1\d{10}$/.test(digits)) {
             return digits;
         }
-        if (digits.length >= 11) {
+        if (/^[78]\d{10}$/.test(digits)) {
+            return `+7${digits.slice(-10)}`;
+        }
+        if (digits.length >= 10 && digits.length <= 15) {
+            return trimmed.startsWith('+') ? `+${digits}` : digits;
+        }
+        if (digits.length > 11) {
             const last11 = digits.slice(-11);
             if (/^1\d{10}$/.test(last11)) {
                 return last11;
@@ -1818,7 +2673,7 @@ let FormFiller = class FormFiller {
     }
 };
 exports.FormFiller = FormFiller;
-exports.FormFiller = FormFiller = __decorate([
+exports.FormFiller = FormFiller = FormFiller_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [config_1.ConfigService,
         field_mapper_js_1.FieldMapper,

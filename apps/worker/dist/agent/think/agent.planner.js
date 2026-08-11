@@ -58,6 +58,7 @@ function normalizeDecision(decision) {
         ...decision,
         action: {
             ...decision.action,
+            filePath: decision.action.filePath ?? undefined,
             reason: decision.action.reason ?? 'no reason provided',
         },
     };

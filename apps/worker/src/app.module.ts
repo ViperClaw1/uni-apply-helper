@@ -32,6 +32,8 @@ import { Processor } from './processor.js';
 import { ReloginProcessor } from './relogin/relogin.processor.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { ScreenshotService } from './screenshot/screenshot.service.js';
+import { SessionHealthCheckProcessor } from './session-health/session-health-check.processor.js';
+import { UniversitySchemaService } from './university-schema/university-schema.service.js';
 
 @Module({
   imports: [ConfigModule.forRoot({ isGlobal: true }), PrismaModule],
@@ -67,6 +69,8 @@ import { ScreenshotService } from './screenshot/screenshot.service.js';
     NotificationsService,
     Processor,
     ReloginProcessor,
+    UniversitySchemaService,
+    SessionHealthCheckProcessor,
   ],
 })
 export class AppModule {}

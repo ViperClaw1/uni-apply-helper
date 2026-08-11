@@ -14,8 +14,6 @@ exports.Processor = void 0;
 const common_1 = require("@nestjs/common");
 const shared_1 = require("@uni-apply/shared");
 const bullmq_1 = require("bullmq");
-const node_path_1 = require("node:path");
-const promises_1 = require("node:fs/promises");
 const browser_service_js_1 = require("./browser/browser.service.js");
 const session_expired_error_js_1 = require("./errors/session-expired.error.js");
 const notifications_service_js_1 = require("./notifications/notifications.service.js");
@@ -28,6 +26,7 @@ const fill_wizard_step_js_1 = require("./steps/fill-wizard.step.js");
 const log_result_step_js_1 = require("./steps/log-result.step.js");
 const open_form_step_js_1 = require("./steps/open-form.step.js");
 const submit_form_step_js_1 = require("./steps/submit-form.step.js");
+const university_schema_service_js_1 = require("./university-schema/university-schema.service.js");
 let Processor = Processor_1 = class Processor {
     prisma;
     browserService;
@@ -39,10 +38,11 @@ let Processor = Processor_1 = class Processor {
     fillWizardStep;
     logResultStep;
     notificationsService;
+    universitySchemaService;
     logger = new common_1.Logger(Processor_1.name);
     worker;
     steps;
-    constructor(prisma, browserService, screenshotService, openFormStep, fillFieldsStep, attachFilesStep, submitFormStep, fillWizardStep, logResultStep, notificationsService) {
+    constructor(prisma, browserService, screenshotService, openFormStep, fillFieldsStep, attachFilesStep, submitFormStep, fillWizardStep, logResultStep, notificationsService, universitySchemaService) {
         this.prisma = prisma;
         this.browserService = browserService;
         this.screenshotService = screenshotService;
@@ -53,6 +53,7 @@ let Processor = Processor_1 = class Processor {
         this.fillWizardStep = fillWizardStep;
         this.logResultStep = logResultStep;
         this.notificationsService = notificationsService;
+        this.universitySchemaService = universitySchemaService;
         this.steps = [
             this.openFormStep,
             this.fillFieldsStep,
@@ -68,21 +69,88 @@ let Processor = Processor_1 = class Processor {
         return this.steps;
     }
     onModuleInit() {
+        const lockDuration = Number(process.env.BULLMQ_LOCK_DURATION_MS) || 15 * 60_000;
         this.worker = new bullmq_1.Worker(shared_1.QUEUES.APPLICATION_PROCESS, (job) => this.process(job), {
             connection: (0, redis_config_js_1.getRedisConnection)(),
+            lockDuration,
+            stalledInterval: 60_000,
+            maxStalledCount: 2,
+            concurrency: 1,
         });
-        this.logger.log(`Listening on queue "${shared_1.QUEUES.APPLICATION_PROCESS}"`);
+        this.logger.log(`Listening on queue "${shared_1.QUEUES.APPLICATION_PROCESS}" (lockDuration=${lockDuration}ms)`);
         this.worker.on('active', (job) => {
             this.logger.log(`Picked up application job ${job.id}`);
         });
+        this.worker.on('stalled', (jobId) => {
+            this.logger.warn(`Application job ${jobId} stalled (worker likely killed/redeployed or event-loop blocked)`);
+        });
         this.worker.on('failed', (job, error) => {
             this.logger.error(`Application job ${job?.id ?? 'unknown'} failed: ${error.message}`);
+            void this.markApplicationFailedFromJob(job?.data?.applicationId, error.message);
         });
     }
     async onModuleDestroy() {
         await this.worker?.close();
     }
     async process(job) {
+        const timeoutMs = Number(process.env.APPLICATION_JOB_TIMEOUT_MS) || 25 * 60_000;
+        await this.withTimeout(() => this.processApplication(job), timeoutMs, `Application job timed out after ${Math.round(timeoutMs / 60_000)} minutes`);
+    }
+    async withTimeout(fn, ms, message) {
+        let timer;
+        try {
+            return await Promise.race([
+                fn(),
+                new Promise((_, reject) => {
+                    timer = setTimeout(() => reject(new Error(message)), ms);
+                }),
+            ]);
+        }
+        finally {
+            if (timer) {
+                clearTimeout(timer);
+            }
+        }
+    }
+    async markApplicationFailedFromJob(applicationId, errorMessage) {
+        if (!applicationId) {
+            return;
+        }
+        try {
+            const updated = await this.prisma.application.updateMany({
+                where: {
+                    id: applicationId,
+                    status: { in: ['processing', 'queued', 'ready_for_submission'] },
+                },
+                data: {
+                    status: 'failed',
+                    errorMessage: errorMessage.slice(0, 2000),
+                },
+            });
+            if (updated.count === 0) {
+                return;
+            }
+            await this.prisma.applicationStep.updateMany({
+                where: { applicationId, status: 'processing' },
+                data: {
+                    status: 'failed',
+                    errorMessage: errorMessage.slice(0, 2000),
+                    completedAt: new Date(),
+                },
+            });
+            const app = await this.prisma.application.findUnique({
+                where: { id: applicationId },
+                select: { batchId: true },
+            });
+            if (app?.batchId) {
+                await this.recalculateBatchCounters(app.batchId);
+            }
+        }
+        catch (error) {
+            this.logger.warn(`Failed to mark application ${applicationId} failed after job error: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
+    async processApplication(job) {
         const application = await this.prisma.application.findUniqueOrThrow({
             where: { id: job.data.applicationId },
             include: {
@@ -105,7 +173,7 @@ let Processor = Processor_1 = class Processor {
             },
         });
         const profile = this.toStudentProfile(application.batch.student);
-        const university = await this.getUniversitySchema(application.universityId);
+        const university = await this.universitySchemaService.get(application.universityId);
         const motivationLetterContent = application.motivationLetterId
             ? await this.getGeneratedDocumentContent(application.motivationLetterId)
             : undefined;
@@ -265,104 +333,22 @@ let Processor = Processor_1 = class Processor {
         });
         return document?.content;
     }
-    async getUniversitySchema(universityId) {
-        const university = await this.prisma.universitySchema.findUnique({
-            where: { id: universityId },
-        });
-        if (university) {
-            const fileSchema = await this.findFileSchema(universityId);
-            const fields = fileSchema?.fields?.length
-                ? fileSchema.fields
-                : this.toFieldConfigArray(university.fields);
-            const requiredDocuments = fileSchema?.requiredDocuments?.length
-                ? fileSchema.requiredDocuments
-                : this.toStringArray(university.requiredDocuments);
-            return {
-                id: university.id,
-                displayName: fileSchema?.displayName ?? university.displayName,
-                formUrl: fileSchema?.formUrl || university.formUrl,
-                requiredDocuments,
-                fields,
-                wizard: fileSchema?.wizard,
-                session: fileSchema?.session,
-                agent: fileSchema?.agent,
-                defaultProgram: fileSchema?.defaultProgram,
-                navigationHints: fileSchema?.navigationHints,
-                requiresEssay: fileSchema?.requiresEssay ?? university.requiresEssay,
-                essayPrompt: fileSchema?.essayPrompt ?? university.essayPrompt ?? undefined,
-                notes: fileSchema?.notes ?? university.notes ?? undefined,
-            };
-        }
-        const fileSchema = await this.findFileSchema(universityId);
-        if (!fileSchema) {
-            throw new Error(`University schema "${universityId}" was not found.`);
-        }
-        return fileSchema;
-    }
-    async findFileSchema(universityId) {
-        const dir = await this.findSchemasDirectory();
-        if (!dir) {
-            return null;
-        }
-        const files = (await (0, promises_1.readdir)(dir, { withFileTypes: true })).filter((entry) => entry.isFile() && entry.name.endsWith('.json'));
-        for (const file of files) {
-            const raw = await (0, promises_1.readFile)((0, node_path_1.join)(dir, file.name), 'utf8');
-            const schema = JSON.parse(raw);
-            if (schema.id === universityId) {
-                return {
-                    id: schema.id,
-                    displayName: schema.displayName ?? universityId,
-                    formUrl: schema.formUrl ?? '',
-                    requiredDocuments: this.toStringArray(schema.requiredDocuments),
-                    fields: this.toFieldConfigArray(schema.fields),
-                    wizard: schema.wizard,
-                    session: schema.session,
-                    agent: schema.agent,
-                    defaultProgram: schema.defaultProgram,
-                    navigationHints: schema.navigationHints,
-                    requiresEssay: schema.requiresEssay ?? false,
-                    essayPrompt: schema.essayPrompt,
-                    notes: schema.notes,
-                };
-            }
-        }
-        return null;
-    }
-    async findSchemasDirectory() {
-        let currentDir = process.cwd();
-        while (true) {
-            const candidate = (0, node_path_1.join)(currentDir, 'data', 'university-schemas');
-            try {
-                await (0, promises_1.readdir)(candidate);
-                return candidate;
-            }
-            catch {
-                const parent = (0, node_path_1.dirname)(currentDir);
-                if (parent === currentDir) {
-                    return null;
-                }
-                currentDir = parent;
-            }
-        }
-    }
     toStudentProfile(student) {
-        const documents = student.documents.reduce((acc, document) => {
-            acc[document.type] = document.fileUrl;
-            return acc;
-        }, {});
+        const documents = (0, shared_1.groupDocumentUrls)(student.documents ?? []);
         return {
             id: student.id,
+            onboardingStep: student.onboardingStep,
             personal: {
                 surname: student.surname,
                 givenName: student.givenName,
                 sex: student.sex ?? undefined,
                 nationality: student.nationality ?? undefined,
                 cityOfBirth: student.cityOfBirth ?? undefined,
-                dateOfBirth: student.dateOfBirth?.toISOString(),
+                dateOfBirth: toDateOnly(student.dateOfBirth),
                 chineseName: student.chineseName ?? undefined,
                 religion: student.religion ?? undefined,
                 passportNo: student.passportNo ?? undefined,
-                passportExpiry: student.passportExpiry?.toISOString(),
+                passportExpiry: toDateOnly(student.passportExpiry),
                 consulate: student.consulate ?? undefined,
                 maritalStatus: student.maritalStatus ?? undefined,
                 email: student.email,
@@ -374,18 +360,26 @@ let Processor = Processor_1 = class Processor {
                 beenToChina: student.beenToChina,
                 studiedInChina: student.studiedInChina,
             },
-            education: student.education.map((education) => ({
-                degree: education.degree,
-                institution: education.institution,
+            education: [...student.education]
+                .sort((a, b) => {
+                const rank = (level) => level === 'higher' ? 0 : level === 'school' ? 1 : 2;
+                return rank(a.level) - rank(b.level);
+            })
+                .map((education) => ({
+                level: education.level === 'school' || education.level === 'higher'
+                    ? education.level
+                    : undefined,
+                degree: education.degree ?? undefined,
+                institution: education.institution ?? undefined,
                 major: education.major ?? undefined,
-                periodStart: education.periodStart?.toISOString(),
-                periodEnd: education.periodEnd?.toISOString(),
+                periodStart: toDateOnly(education.periodStart),
+                periodEnd: toDateOnly(education.periodEnd),
             })),
             workExperience: student.workExperience.map((workExperience) => ({
                 company: workExperience.company,
                 position: workExperience.position ?? undefined,
-                periodStart: workExperience.periodStart?.toISOString(),
-                periodEnd: workExperience.periodEnd?.toISOString(),
+                periodStart: toDateOnly(workExperience.periodStart),
+                periodEnd: toDateOnly(workExperience.periodEnd),
             })),
             languages: student.languageSkills.map((languageSkill) => ({
                 language: languageSkill.language,
@@ -437,31 +431,6 @@ let Processor = Processor_1 = class Processor {
             })),
         };
     }
-    toStringArray(value) {
-        if (!Array.isArray(value)) {
-            return [];
-        }
-        return value.filter((item) => typeof item === 'string');
-    }
-    toFieldConfigArray(value) {
-        if (!Array.isArray(value)) {
-            return [];
-        }
-        return value.filter((item) => this.isFieldConfig(item));
-    }
-    isFieldConfig(value) {
-        if (!value || typeof value !== 'object') {
-            return false;
-        }
-        const field = value;
-        return (typeof field.selector === 'string' &&
-            (field.mapsTo === null ||
-                typeof field.mapsTo === 'string' ||
-                (Array.isArray(field.mapsTo) &&
-                    field.mapsTo.every((p) => typeof p === 'string'))) &&
-            typeof field.type === 'string' &&
-            typeof field.required === 'boolean');
-    }
     getStudentName(profile) {
         return [profile.personal.givenName, profile.personal.surname]
             .filter(Boolean)
@@ -480,6 +449,19 @@ exports.Processor = Processor = Processor_1 = __decorate([
         submit_form_step_js_1.SubmitFormStep,
         fill_wizard_step_js_1.FillWizardStep,
         log_result_step_js_1.LogResultStep,
-        notifications_service_js_1.NotificationsService])
+        notifications_service_js_1.NotificationsService,
+        university_schema_service_js_1.UniversitySchemaService])
 ], Processor);
+function toDateOnly(value) {
+    if (!value)
+        return undefined;
+    if (value instanceof Date) {
+        if (Number.isNaN(value.getTime()))
+            return undefined;
+        return value.toISOString().slice(0, 10);
+    }
+    const trimmed = String(value).trim();
+    const iso = trimmed.match(/^(\d{4}-\d{2}-\d{2})/);
+    return iso?.[1] ?? trimmed;
+}
 //# sourceMappingURL=processor.js.map

@@ -11,7 +11,8 @@
     "expiredIndicators": [
       "CSRF attack protection",
       "Account Sign In"
-    ]
+    ],
+    "sessionTtlHours": 12
   },
   "aliases": [
     "Peking University",

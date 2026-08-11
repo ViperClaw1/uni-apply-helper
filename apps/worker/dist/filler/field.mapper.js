@@ -13,6 +13,7 @@ exports.FieldMapper = void 0;
 const common_1 = require("@nestjs/common");
 const shared_1 = require("@uni-apply/shared");
 const get_js_1 = __importDefault(require("lodash/get.js"));
+const text_limits_js_1 = require("./text-limits.js");
 let FieldMapper = class FieldMapper {
     getValue(profile, field, motivationLetterContent) {
         if (field.type === 'essay' && !field.mapsTo) {
@@ -21,7 +22,7 @@ let FieldMapper = class FieldMapper {
         if (field.selector?.includes('workplace') ||
             field.selector?.includes('careerName')) {
             const fromProfile = (0, get_js_1.default)(profile, 'personal.currentInstitution') ||
-                profile.education?.[0]?.institution?.trim();
+                (0, shared_1.primaryEducation)(profile)?.institution?.trim();
             if (fromProfile &&
                 !/^currently not studying$/i.test(String(fromProfile)) &&
                 !/high school graduate/i.test(String(fromProfile))) {
@@ -39,6 +40,26 @@ let FieldMapper = class FieldMapper {
         }
         if (field.selector?.includes('studyEndDate')) {
             return '2027-06-30';
+        }
+        if (field.selector?.includes('sh.startDate') || /year attended.*from/i.test(field.labelHint || '')) {
+            const edu = (0, shared_1.primaryEducation)(profile);
+            return edu?.periodStart || (0, get_js_1.default)(profile, 'education.0.periodStart') || '2018-09-01';
+        }
+        if (field.selector?.includes('sh.endDate') || /year attended.*to/i.test(field.labelHint || '')) {
+            const edu = (0, shared_1.primaryEducation)(profile);
+            return edu?.periodEnd || (0, get_js_1.default)(profile, 'education.0.periodEnd') || '2022-06-30';
+        }
+        if (field.selector?.includes('sh.studyPlace')) {
+            const edu = (0, shared_1.primaryEducation)(profile);
+            return (0, text_limits_js_1.shortenInstitutionName)(edu?.institution ||
+                (0, get_js_1.default)(profile, 'education.0.institution') ||
+                profile.personal.currentInstitution ||
+                'High School');
+        }
+        if (field.selector?.includes('sh.stuhisMajor')) {
+            const edu = (0, shared_1.primaryEducation)(profile);
+            const major = edu?.major || (0, get_js_1.default)(profile, 'education.0.major') || 'General Studies';
+            return String(major).trim().slice(0, 50);
         }
         if (field.selector?.includes('yydjzsScore')) {
             return 'N/A';
@@ -179,7 +200,7 @@ let FieldMapper = class FieldMapper {
             field.required) {
             return (profile.personal.currentInstitution?.trim() ||
                 profile.workExperience?.[0]?.company?.trim() ||
-                profile.education?.[0]?.institution?.trim() ||
+                (0, shared_1.primaryEducation)(profile)?.institution?.trim() ||
                 'unemployed');
         }
         if ((this.pathsInclude(paths, 'personal.phone') ||
@@ -198,7 +219,7 @@ let FieldMapper = class FieldMapper {
         }
         if (field.selector?.includes('lastSchool') ||
             /institution of highest/i.test(field.labelHint || '')) {
-            const fromEducation = profile.education?.[0]?.institution?.trim();
+            const fromEducation = (0, shared_1.primaryEducation)(profile)?.institution?.trim();
             if (fromEducation) {
                 return fromEducation;
             }
@@ -231,8 +252,11 @@ let FieldMapper = class FieldMapper {
             }
             return field.required ? 'Unmarried' : undefined;
         }
-        if (path === 'personal.studiedInChina' || path === 'personal.beenToChina') {
+        if (path === 'personal.studiedInChina') {
             return this.normalizeYesNo((0, get_js_1.default)(profile, path), 'No');
+        }
+        if (path === 'personal.beenToChina') {
+            return 'No';
         }
         if (path === 'emergencyContact.name' && field.required) {
             const name = (0, get_js_1.default)(profile, path);
@@ -263,7 +287,7 @@ let FieldMapper = class FieldMapper {
         if (fromTarget) {
             return fromTarget;
         }
-        const fromEducation = profile.education?.[0]?.major?.trim();
+        const fromEducation = (0, shared_1.primaryEducation)(profile)?.major?.trim();
         if (fromEducation) {
             return fromEducation;
         }

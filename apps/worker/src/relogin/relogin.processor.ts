@@ -12,6 +12,7 @@ import { isLoginPage } from '../browser/zzu-session.loader.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { getRedisConnection } from '../queue/redis.config.js';
+import { UniversitySchemaService } from '../university-schema/university-schema.service.js';
 
 type BrowserReloginJobData = {
   universityId: string;
@@ -26,6 +27,7 @@ export class ReloginProcessor implements OnModuleInit, OnModuleDestroy {
     private readonly browserService: BrowserService,
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
+    private readonly universitySchemaService: UniversitySchemaService,
   ) {}
 
   onModuleInit() {
@@ -45,13 +47,7 @@ export class ReloginProcessor implements OnModuleInit, OnModuleDestroy {
   }
 
   private async process(job: Job<BrowserReloginJobData>) {
-    const university = await this.prisma.universitySchema.findUnique({
-      where: { id: job.data.universityId },
-    });
-
-    if (!university) {
-      throw new Error(`University "${job.data.universityId}" was not found.`);
-    }
+    const university = await this.universitySchemaService.get(job.data.universityId);
 
     const profileDir = this.browserService.getProfileDir(university.id);
     const loginUrl = getLoginUrl(university.formUrl);
@@ -74,6 +70,7 @@ export class ReloginProcessor implements OnModuleInit, OnModuleDestroy {
 
         while (Date.now() < deadline) {
           if (!(await isLoginPage(page))) {
+            await this.recordCaptured(university.id, university.session?.sessionTtlHours);
             await this.notificationsService.notifyReloginCompleted(
               university.displayName,
               university.id,
@@ -89,5 +86,33 @@ export class ReloginProcessor implements OnModuleInit, OnModuleDestroy {
         );
       },
     );
+  }
+
+  private async recordCaptured(universityId: string, sessionTtlHours?: number): Promise<void> {
+    const now = new Date();
+    const expiresAt = sessionTtlHours
+      ? new Date(now.getTime() + sessionTtlHours * 3_600_000)
+      : null;
+
+    await this.prisma.browserSession.upsert({
+      where: { universityId },
+      create: {
+        universityId,
+        status: 'fresh',
+        capturedAt: now,
+        lastValidatedAt: now,
+        expiresAt,
+        validationMethod: 'relogin',
+        consecutiveFailures: 0,
+      },
+      update: {
+        status: 'fresh',
+        capturedAt: now,
+        lastValidatedAt: now,
+        expiresAt,
+        validationMethod: 'relogin',
+        consecutiveFailures: 0,
+      },
+    });
   }
 }

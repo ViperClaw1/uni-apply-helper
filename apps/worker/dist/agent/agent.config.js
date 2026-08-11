@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.resolveFillMode = resolveFillMode;
 exports.resolveMaxAgentSteps = resolveMaxAgentSteps;
 exports.shouldUseVision = shouldUseVision;
+exports.isAgentFallbackEnabled = isAgentFallbackEnabled;
 const FILL_MODES = ['schema', 'agent', 'hybrid'];
 function resolveFillMode(configService, university) {
     const envMode = configService.get('FORM_FILL_MODE');
@@ -23,5 +24,14 @@ function shouldUseVision(configService, university) {
         return true;
     }
     return university.agent?.useVision ?? false;
+}
+function isAgentFallbackEnabled(configService, university) {
+    if (configService.get('AGENT_FALLBACK') === '1') {
+        return true;
+    }
+    if (configService.get('AGENT_FALLBACK') === '0') {
+        return false;
+    }
+    return university.agent?.fallbackEnabled === true;
 }
 //# sourceMappingURL=agent.config.js.map

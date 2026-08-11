@@ -4,7 +4,8 @@
   "formUrl": "https://zzu.17gz.org/apply/index.do",
   "session": {
     "loginUrlPattern": "/member/login\\.do",
-    "expiredIndicators": ["CSRF attack protection", "Account Sign In"]
+    "expiredIndicators": ["CSRF attack protection", "Account Sign In"],
+    "sessionTtlHours": 12
   },
   "aliases": [
     "Zhengzhou University",

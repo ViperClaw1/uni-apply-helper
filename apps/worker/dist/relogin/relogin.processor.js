@@ -20,16 +20,19 @@ const zzu_session_loader_js_1 = require("../browser/zzu-session.loader.js");
 const notifications_service_js_1 = require("../notifications/notifications.service.js");
 const prisma_service_js_1 = require("../prisma/prisma.service.js");
 const redis_config_js_1 = require("../queue/redis.config.js");
+const university_schema_service_js_1 = require("../university-schema/university-schema.service.js");
 let ReloginProcessor = ReloginProcessor_1 = class ReloginProcessor {
     browserService;
     prisma;
     notificationsService;
+    universitySchemaService;
     logger = new common_1.Logger(ReloginProcessor_1.name);
     worker;
-    constructor(browserService, prisma, notificationsService) {
+    constructor(browserService, prisma, notificationsService, universitySchemaService) {
         this.browserService = browserService;
         this.prisma = prisma;
         this.notificationsService = notificationsService;
+        this.universitySchemaService = universitySchemaService;
     }
     onModuleInit() {
         this.worker = new bullmq_1.Worker(shared_1.QUEUES.BROWSER_RELOGIN, (job) => this.process(job), {
@@ -41,12 +44,7 @@ let ReloginProcessor = ReloginProcessor_1 = class ReloginProcessor {
         await this.worker?.close();
     }
     async process(job) {
-        const university = await this.prisma.universitySchema.findUnique({
-            where: { id: job.data.universityId },
-        });
-        if (!university) {
-            throw new Error(`University "${job.data.universityId}" was not found.`);
-        }
+        const university = await this.universitySchemaService.get(job.data.universityId);
         const profileDir = this.browserService.getProfileDir(university.id);
         const loginUrl = (0, session_validator_js_1.getLoginUrl)(university.formUrl);
         await this.notificationsService.notifyReloginStarted(university.displayName, university.id, profileDir);
@@ -58,6 +56,7 @@ let ReloginProcessor = ReloginProcessor_1 = class ReloginProcessor {
             const deadline = Date.now() + 15 * 60_000;
             while (Date.now() < deadline) {
                 if (!(await (0, zzu_session_loader_js_1.isLoginPage)(page))) {
+                    await this.recordCaptured(university.id, university.session?.sessionTtlHours);
                     await this.notificationsService.notifyReloginCompleted(university.displayName, university.id);
                     return;
                 }
@@ -66,12 +65,39 @@ let ReloginProcessor = ReloginProcessor_1 = class ReloginProcessor {
             throw new Error(`Re-login timed out for ${university.displayName} — login not completed within 15 minutes`);
         });
     }
+    async recordCaptured(universityId, sessionTtlHours) {
+        const now = new Date();
+        const expiresAt = sessionTtlHours
+            ? new Date(now.getTime() + sessionTtlHours * 3_600_000)
+            : null;
+        await this.prisma.browserSession.upsert({
+            where: { universityId },
+            create: {
+                universityId,
+                status: 'fresh',
+                capturedAt: now,
+                lastValidatedAt: now,
+                expiresAt,
+                validationMethod: 'relogin',
+                consecutiveFailures: 0,
+            },
+            update: {
+                status: 'fresh',
+                capturedAt: now,
+                lastValidatedAt: now,
+                expiresAt,
+                validationMethod: 'relogin',
+                consecutiveFailures: 0,
+            },
+        });
+    }
 };
 exports.ReloginProcessor = ReloginProcessor;
 exports.ReloginProcessor = ReloginProcessor = ReloginProcessor_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [browser_service_js_1.BrowserService,
         prisma_service_js_1.PrismaService,
-        notifications_service_js_1.NotificationsService])
+        notifications_service_js_1.NotificationsService,
+        university_schema_service_js_1.UniversitySchemaService])
 ], ReloginProcessor);
 //# sourceMappingURL=relogin.processor.js.map

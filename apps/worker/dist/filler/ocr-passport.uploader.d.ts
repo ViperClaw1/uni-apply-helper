@@ -1,4 +1,4 @@
-import type { StudentProfile } from '@uni-apply/shared';
+import { type StudentProfile } from '@uni-apply/shared';
 import type { Page } from 'playwright';
 export declare class OcrPassportUploader {
     private readonly logger;

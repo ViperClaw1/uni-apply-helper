@@ -9,6 +9,7 @@ import { FillWizardStep } from './steps/fill-wizard.step.js';
 import { LogResultStep } from './steps/log-result.step.js';
 import { OpenFormStep } from './steps/open-form.step.js';
 import { SubmitFormStep } from './steps/submit-form.step.js';
+import { UniversitySchemaService } from './university-schema/university-schema.service.js';
 export declare class Processor implements OnModuleInit, OnModuleDestroy {
     private readonly prisma;
     private readonly browserService;
@@ -20,23 +21,21 @@ export declare class Processor implements OnModuleInit, OnModuleDestroy {
     private readonly fillWizardStep;
     private readonly logResultStep;
     private readonly notificationsService;
+    private readonly universitySchemaService;
     private readonly logger;
     private worker?;
     private readonly steps;
-    constructor(prisma: PrismaService, browserService: BrowserService, screenshotService: ScreenshotService, openFormStep: OpenFormStep, fillFieldsStep: FillFieldsStep, attachFilesStep: AttachFilesStep, submitFormStep: SubmitFormStep, fillWizardStep: FillWizardStep, logResultStep: LogResultStep, notificationsService: NotificationsService);
+    constructor(prisma: PrismaService, browserService: BrowserService, screenshotService: ScreenshotService, openFormStep: OpenFormStep, fillFieldsStep: FillFieldsStep, attachFilesStep: AttachFilesStep, submitFormStep: SubmitFormStep, fillWizardStep: FillWizardStep, logResultStep: LogResultStep, notificationsService: NotificationsService, universitySchemaService: UniversitySchemaService);
     private getSteps;
     onModuleInit(): void;
     onModuleDestroy(): Promise<void>;
     private process;
+    private withTimeout;
+    private markApplicationFailedFromJob;
+    private processApplication;
     private runStep;
     private recalculateBatchCounters;
     private getGeneratedDocumentContent;
-    private getUniversitySchema;
-    private findFileSchema;
-    private findSchemasDirectory;
     private toStudentProfile;
-    private toStringArray;
-    private toFieldConfigArray;
-    private isFieldConfig;
     private getStudentName;
 }

@@ -15,6 +15,7 @@ export type StudyPlanMatcher = {
 export declare function waitForUiReady(page: Page): Promise<void>;
 export declare function dismissBlockingDialogs(page: Page): Promise<void>;
 export declare function detectPreWizardScreen(page: Page): Promise<PreWizardScreen | null>;
+export declare function detectCurrentWizardStep(page: Page): Promise<number | null>;
 export declare function isMainWizard(page: Page): Promise<boolean>;
 export declare function getLastStudentTypePickDiag(): Record<string, unknown> | null;
 export declare function fillPreWizardScreen(page: Page, screen: PreWizardScreen, hints?: string | PreWizardHints): Promise<boolean>;

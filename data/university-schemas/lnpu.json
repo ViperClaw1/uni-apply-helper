@@ -7,7 +7,8 @@
     "loginUrlPattern": "/student/login(?:/|$|\\?)",
     "expiredIndicators": [
       "Don't have an account?"
-    ]
+    ],
+    "sessionTtlHours": 12
   },
   "aliases": [
     "Liaoning Petrochemical University",

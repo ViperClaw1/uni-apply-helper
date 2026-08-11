@@ -84,6 +84,12 @@ export type UniversityAlias = $Result.DefaultSelection<Prisma.$UniversityAliasPa
  */
 export type UniversitySchema = $Result.DefaultSelection<Prisma.$UniversitySchemaPayload>
 /**
+ * Model BrowserSession
+ * Freshness tracking for a university's saved browser session (storageState/profile).
+ * No relation to UniversitySchema — universityId may reference a file-only schema not seeded in DB.
+ */
+export type BrowserSession = $Result.DefaultSelection<Prisma.$BrowserSessionPayload>
+/**
  * Model ApplicationBatch
  * 
  */
@@ -381,6 +387,16 @@ export class PrismaClient<
     * ```
     */
   get universitySchema(): Prisma.UniversitySchemaDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.browserSession`: Exposes CRUD operations for the **BrowserSession** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more BrowserSessions
+    * const browserSessions = await prisma.browserSession.findMany()
+    * ```
+    */
+  get browserSession(): Prisma.BrowserSessionDelegate<ExtArgs, ClientOptions>;
 
   /**
    * `prisma.applicationBatch`: Exposes CRUD operations for the **ApplicationBatch** model.
@@ -869,6 +885,7 @@ export namespace Prisma {
     ApplicationTarget: 'ApplicationTarget',
     UniversityAlias: 'UniversityAlias',
     UniversitySchema: 'UniversitySchema',
+    BrowserSession: 'BrowserSession',
     ApplicationBatch: 'ApplicationBatch',
     Application: 'Application',
     GeneratedDocument: 'GeneratedDocument',
@@ -888,7 +905,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "account" | "agencyProfile" | "session" | "student" | "education" | "workExperience" | "languageSkill" | "familyMember" | "guarantor" | "emergencyContact" | "studentDocument" | "applicationTarget" | "universityAlias" | "universitySchema" | "applicationBatch" | "application" | "generatedDocument" | "applicationStep"
+      modelProps: "account" | "agencyProfile" | "session" | "student" | "education" | "workExperience" | "languageSkill" | "familyMember" | "guarantor" | "emergencyContact" | "studentDocument" | "applicationTarget" | "universityAlias" | "universitySchema" | "browserSession" | "applicationBatch" | "application" | "generatedDocument" | "applicationStep"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1928,6 +1945,80 @@ export namespace Prisma {
           }
         }
       }
+      BrowserSession: {
+        payload: Prisma.$BrowserSessionPayload<ExtArgs>
+        fields: Prisma.BrowserSessionFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.BrowserSessionFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$BrowserSessionPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.BrowserSessionFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$BrowserSessionPayload>
+          }
+          findFirst: {
+            args: Prisma.BrowserSessionFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$BrowserSessionPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.BrowserSessionFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$BrowserSessionPayload>
+          }
+          findMany: {
+            args: Prisma.BrowserSessionFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$BrowserSessionPayload>[]
+          }
+          create: {
+            args: Prisma.BrowserSessionCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$BrowserSessionPayload>
+          }
+          createMany: {
+            args: Prisma.BrowserSessionCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.BrowserSessionCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$BrowserSessionPayload>[]
+          }
+          delete: {
+            args: Prisma.BrowserSessionDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$BrowserSessionPayload>
+          }
+          update: {
+            args: Prisma.BrowserSessionUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$BrowserSessionPayload>
+          }
+          deleteMany: {
+            args: Prisma.BrowserSessionDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.BrowserSessionUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.BrowserSessionUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$BrowserSessionPayload>[]
+          }
+          upsert: {
+            args: Prisma.BrowserSessionUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$BrowserSessionPayload>
+          }
+          aggregate: {
+            args: Prisma.BrowserSessionAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateBrowserSession>
+          }
+          groupBy: {
+            args: Prisma.BrowserSessionGroupByArgs<ExtArgs>
+            result: $Utils.Optional<BrowserSessionGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.BrowserSessionCountArgs<ExtArgs>
+            result: $Utils.Optional<BrowserSessionCountAggregateOutputType> | number
+          }
+        }
+      }
       ApplicationBatch: {
         payload: Prisma.$ApplicationBatchPayload<ExtArgs>
         fields: Prisma.ApplicationBatchFieldRefs
@@ -2346,6 +2437,7 @@ export namespace Prisma {
     applicationTarget?: ApplicationTargetOmit
     universityAlias?: UniversityAliasOmit
     universitySchema?: UniversitySchemaOmit
+    browserSession?: BrowserSessionOmit
     applicationBatch?: ApplicationBatchOmit
     application?: ApplicationOmit
     generatedDocument?: GeneratedDocumentOmit
@@ -18444,6 +18536,1098 @@ export namespace Prisma {
 
 
   /**
+   * Model BrowserSession
+   */
+
+  export type AggregateBrowserSession = {
+    _count: BrowserSessionCountAggregateOutputType | null
+    _avg: BrowserSessionAvgAggregateOutputType | null
+    _sum: BrowserSessionSumAggregateOutputType | null
+    _min: BrowserSessionMinAggregateOutputType | null
+    _max: BrowserSessionMaxAggregateOutputType | null
+  }
+
+  export type BrowserSessionAvgAggregateOutputType = {
+    consecutiveFailures: number | null
+  }
+
+  export type BrowserSessionSumAggregateOutputType = {
+    consecutiveFailures: number | null
+  }
+
+  export type BrowserSessionMinAggregateOutputType = {
+    id: string | null
+    universityId: string | null
+    status: string | null
+    capturedAt: Date | null
+    lastValidatedAt: Date | null
+    expiresAt: Date | null
+    validationMethod: string | null
+    consecutiveFailures: number | null
+    updatedAt: Date | null
+  }
+
+  export type BrowserSessionMaxAggregateOutputType = {
+    id: string | null
+    universityId: string | null
+    status: string | null
+    capturedAt: Date | null
+    lastValidatedAt: Date | null
+    expiresAt: Date | null
+    validationMethod: string | null
+    consecutiveFailures: number | null
+    updatedAt: Date | null
+  }
+
+  export type BrowserSessionCountAggregateOutputType = {
+    id: number
+    universityId: number
+    status: number
+    capturedAt: number
+    lastValidatedAt: number
+    expiresAt: number
+    validationMethod: number
+    consecutiveFailures: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type BrowserSessionAvgAggregateInputType = {
+    consecutiveFailures?: true
+  }
+
+  export type BrowserSessionSumAggregateInputType = {
+    consecutiveFailures?: true
+  }
+
+  export type BrowserSessionMinAggregateInputType = {
+    id?: true
+    universityId?: true
+    status?: true
+    capturedAt?: true
+    lastValidatedAt?: true
+    expiresAt?: true
+    validationMethod?: true
+    consecutiveFailures?: true
+    updatedAt?: true
+  }
+
+  export type BrowserSessionMaxAggregateInputType = {
+    id?: true
+    universityId?: true
+    status?: true
+    capturedAt?: true
+    lastValidatedAt?: true
+    expiresAt?: true
+    validationMethod?: true
+    consecutiveFailures?: true
+    updatedAt?: true
+  }
+
+  export type BrowserSessionCountAggregateInputType = {
+    id?: true
+    universityId?: true
+    status?: true
+    capturedAt?: true
+    lastValidatedAt?: true
+    expiresAt?: true
+    validationMethod?: true
+    consecutiveFailures?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type BrowserSessionAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which BrowserSession to aggregate.
+     */
+    where?: BrowserSessionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of BrowserSessions to fetch.
+     */
+    orderBy?: BrowserSessionOrderByWithRelationInput | BrowserSessionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: BrowserSessionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` BrowserSessions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` BrowserSessions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned BrowserSessions
+    **/
+    _count?: true | BrowserSessionCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: BrowserSessionAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: BrowserSessionSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: BrowserSessionMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: BrowserSessionMaxAggregateInputType
+  }
+
+  export type GetBrowserSessionAggregateType<T extends BrowserSessionAggregateArgs> = {
+        [P in keyof T & keyof AggregateBrowserSession]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateBrowserSession[P]>
+      : GetScalarType<T[P], AggregateBrowserSession[P]>
+  }
+
+
+
+
+  export type BrowserSessionGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: BrowserSessionWhereInput
+    orderBy?: BrowserSessionOrderByWithAggregationInput | BrowserSessionOrderByWithAggregationInput[]
+    by: BrowserSessionScalarFieldEnum[] | BrowserSessionScalarFieldEnum
+    having?: BrowserSessionScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: BrowserSessionCountAggregateInputType | true
+    _avg?: BrowserSessionAvgAggregateInputType
+    _sum?: BrowserSessionSumAggregateInputType
+    _min?: BrowserSessionMinAggregateInputType
+    _max?: BrowserSessionMaxAggregateInputType
+  }
+
+  export type BrowserSessionGroupByOutputType = {
+    id: string
+    universityId: string
+    status: string
+    capturedAt: Date | null
+    lastValidatedAt: Date | null
+    expiresAt: Date | null
+    validationMethod: string | null
+    consecutiveFailures: number
+    updatedAt: Date
+    _count: BrowserSessionCountAggregateOutputType | null
+    _avg: BrowserSessionAvgAggregateOutputType | null
+    _sum: BrowserSessionSumAggregateOutputType | null
+    _min: BrowserSessionMinAggregateOutputType | null
+    _max: BrowserSessionMaxAggregateOutputType | null
+  }
+
+  type GetBrowserSessionGroupByPayload<T extends BrowserSessionGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<BrowserSessionGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof BrowserSessionGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], BrowserSessionGroupByOutputType[P]>
+            : GetScalarType<T[P], BrowserSessionGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type BrowserSessionSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    universityId?: boolean
+    status?: boolean
+    capturedAt?: boolean
+    lastValidatedAt?: boolean
+    expiresAt?: boolean
+    validationMethod?: boolean
+    consecutiveFailures?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["browserSession"]>
+
+  export type BrowserSessionSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    universityId?: boolean
+    status?: boolean
+    capturedAt?: boolean
+    lastValidatedAt?: boolean
+    expiresAt?: boolean
+    validationMethod?: boolean
+    consecutiveFailures?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["browserSession"]>
+
+  export type BrowserSessionSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    universityId?: boolean
+    status?: boolean
+    capturedAt?: boolean
+    lastValidatedAt?: boolean
+    expiresAt?: boolean
+    validationMethod?: boolean
+    consecutiveFailures?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["browserSession"]>
+
+  export type BrowserSessionSelectScalar = {
+    id?: boolean
+    universityId?: boolean
+    status?: boolean
+    capturedAt?: boolean
+    lastValidatedAt?: boolean
+    expiresAt?: boolean
+    validationMethod?: boolean
+    consecutiveFailures?: boolean
+    updatedAt?: boolean
+  }
+
+  export type BrowserSessionOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "universityId" | "status" | "capturedAt" | "lastValidatedAt" | "expiresAt" | "validationMethod" | "consecutiveFailures" | "updatedAt", ExtArgs["result"]["browserSession"]>
+
+  export type $BrowserSessionPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "BrowserSession"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      universityId: string
+      /**
+       * 'unknown' | 'fresh' | 'stale' | 'expired'
+       */
+      status: string
+      capturedAt: Date | null
+      lastValidatedAt: Date | null
+      expiresAt: Date | null
+      /**
+       * 'job_pipeline' | 'health_check' | 'relogin'
+       */
+      validationMethod: string | null
+      consecutiveFailures: number
+      updatedAt: Date
+    }, ExtArgs["result"]["browserSession"]>
+    composites: {}
+  }
+
+  type BrowserSessionGetPayload<S extends boolean | null | undefined | BrowserSessionDefaultArgs> = $Result.GetResult<Prisma.$BrowserSessionPayload, S>
+
+  type BrowserSessionCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<BrowserSessionFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: BrowserSessionCountAggregateInputType | true
+    }
+
+  export interface BrowserSessionDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['BrowserSession'], meta: { name: 'BrowserSession' } }
+    /**
+     * Find zero or one BrowserSession that matches the filter.
+     * @param {BrowserSessionFindUniqueArgs} args - Arguments to find a BrowserSession
+     * @example
+     * // Get one BrowserSession
+     * const browserSession = await prisma.browserSession.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends BrowserSessionFindUniqueArgs>(args: SelectSubset<T, BrowserSessionFindUniqueArgs<ExtArgs>>): Prisma__BrowserSessionClient<$Result.GetResult<Prisma.$BrowserSessionPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one BrowserSession that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {BrowserSessionFindUniqueOrThrowArgs} args - Arguments to find a BrowserSession
+     * @example
+     * // Get one BrowserSession
+     * const browserSession = await prisma.browserSession.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends BrowserSessionFindUniqueOrThrowArgs>(args: SelectSubset<T, BrowserSessionFindUniqueOrThrowArgs<ExtArgs>>): Prisma__BrowserSessionClient<$Result.GetResult<Prisma.$BrowserSessionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first BrowserSession that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {BrowserSessionFindFirstArgs} args - Arguments to find a BrowserSession
+     * @example
+     * // Get one BrowserSession
+     * const browserSession = await prisma.browserSession.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends BrowserSessionFindFirstArgs>(args?: SelectSubset<T, BrowserSessionFindFirstArgs<ExtArgs>>): Prisma__BrowserSessionClient<$Result.GetResult<Prisma.$BrowserSessionPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first BrowserSession that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {BrowserSessionFindFirstOrThrowArgs} args - Arguments to find a BrowserSession
+     * @example
+     * // Get one BrowserSession
+     * const browserSession = await prisma.browserSession.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends BrowserSessionFindFirstOrThrowArgs>(args?: SelectSubset<T, BrowserSessionFindFirstOrThrowArgs<ExtArgs>>): Prisma__BrowserSessionClient<$Result.GetResult<Prisma.$BrowserSessionPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more BrowserSessions that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {BrowserSessionFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all BrowserSessions
+     * const browserSessions = await prisma.browserSession.findMany()
+     * 
+     * // Get first 10 BrowserSessions
+     * const browserSessions = await prisma.browserSession.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const browserSessionWithIdOnly = await prisma.browserSession.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends BrowserSessionFindManyArgs>(args?: SelectSubset<T, BrowserSessionFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$BrowserSessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a BrowserSession.
+     * @param {BrowserSessionCreateArgs} args - Arguments to create a BrowserSession.
+     * @example
+     * // Create one BrowserSession
+     * const BrowserSession = await prisma.browserSession.create({
+     *   data: {
+     *     // ... data to create a BrowserSession
+     *   }
+     * })
+     * 
+     */
+    create<T extends BrowserSessionCreateArgs>(args: SelectSubset<T, BrowserSessionCreateArgs<ExtArgs>>): Prisma__BrowserSessionClient<$Result.GetResult<Prisma.$BrowserSessionPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many BrowserSessions.
+     * @param {BrowserSessionCreateManyArgs} args - Arguments to create many BrowserSessions.
+     * @example
+     * // Create many BrowserSessions
+     * const browserSession = await prisma.browserSession.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends BrowserSessionCreateManyArgs>(args?: SelectSubset<T, BrowserSessionCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many BrowserSessions and returns the data saved in the database.
+     * @param {BrowserSessionCreateManyAndReturnArgs} args - Arguments to create many BrowserSessions.
+     * @example
+     * // Create many BrowserSessions
+     * const browserSession = await prisma.browserSession.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many BrowserSessions and only return the `id`
+     * const browserSessionWithIdOnly = await prisma.browserSession.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends BrowserSessionCreateManyAndReturnArgs>(args?: SelectSubset<T, BrowserSessionCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$BrowserSessionPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a BrowserSession.
+     * @param {BrowserSessionDeleteArgs} args - Arguments to delete one BrowserSession.
+     * @example
+     * // Delete one BrowserSession
+     * const BrowserSession = await prisma.browserSession.delete({
+     *   where: {
+     *     // ... filter to delete one BrowserSession
+     *   }
+     * })
+     * 
+     */
+    delete<T extends BrowserSessionDeleteArgs>(args: SelectSubset<T, BrowserSessionDeleteArgs<ExtArgs>>): Prisma__BrowserSessionClient<$Result.GetResult<Prisma.$BrowserSessionPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one BrowserSession.
+     * @param {BrowserSessionUpdateArgs} args - Arguments to update one BrowserSession.
+     * @example
+     * // Update one BrowserSession
+     * const browserSession = await prisma.browserSession.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends BrowserSessionUpdateArgs>(args: SelectSubset<T, BrowserSessionUpdateArgs<ExtArgs>>): Prisma__BrowserSessionClient<$Result.GetResult<Prisma.$BrowserSessionPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more BrowserSessions.
+     * @param {BrowserSessionDeleteManyArgs} args - Arguments to filter BrowserSessions to delete.
+     * @example
+     * // Delete a few BrowserSessions
+     * const { count } = await prisma.browserSession.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends BrowserSessionDeleteManyArgs>(args?: SelectSubset<T, BrowserSessionDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more BrowserSessions.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {BrowserSessionUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many BrowserSessions
+     * const browserSession = await prisma.browserSession.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends BrowserSessionUpdateManyArgs>(args: SelectSubset<T, BrowserSessionUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more BrowserSessions and returns the data updated in the database.
+     * @param {BrowserSessionUpdateManyAndReturnArgs} args - Arguments to update many BrowserSessions.
+     * @example
+     * // Update many BrowserSessions
+     * const browserSession = await prisma.browserSession.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more BrowserSessions and only return the `id`
+     * const browserSessionWithIdOnly = await prisma.browserSession.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends BrowserSessionUpdateManyAndReturnArgs>(args: SelectSubset<T, BrowserSessionUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$BrowserSessionPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one BrowserSession.
+     * @param {BrowserSessionUpsertArgs} args - Arguments to update or create a BrowserSession.
+     * @example
+     * // Update or create a BrowserSession
+     * const browserSession = await prisma.browserSession.upsert({
+     *   create: {
+     *     // ... data to create a BrowserSession
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the BrowserSession we want to update
+     *   }
+     * })
+     */
+    upsert<T extends BrowserSessionUpsertArgs>(args: SelectSubset<T, BrowserSessionUpsertArgs<ExtArgs>>): Prisma__BrowserSessionClient<$Result.GetResult<Prisma.$BrowserSessionPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of BrowserSessions.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {BrowserSessionCountArgs} args - Arguments to filter BrowserSessions to count.
+     * @example
+     * // Count the number of BrowserSessions
+     * const count = await prisma.browserSession.count({
+     *   where: {
+     *     // ... the filter for the BrowserSessions we want to count
+     *   }
+     * })
+    **/
+    count<T extends BrowserSessionCountArgs>(
+      args?: Subset<T, BrowserSessionCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], BrowserSessionCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a BrowserSession.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {BrowserSessionAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends BrowserSessionAggregateArgs>(args: Subset<T, BrowserSessionAggregateArgs>): Prisma.PrismaPromise<GetBrowserSessionAggregateType<T>>
+
+    /**
+     * Group by BrowserSession.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {BrowserSessionGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends BrowserSessionGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: BrowserSessionGroupByArgs['orderBy'] }
+        : { orderBy?: BrowserSessionGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, BrowserSessionGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetBrowserSessionGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the BrowserSession model
+   */
+  readonly fields: BrowserSessionFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for BrowserSession.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__BrowserSessionClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the BrowserSession model
+   */
+  interface BrowserSessionFieldRefs {
+    readonly id: FieldRef<"BrowserSession", 'String'>
+    readonly universityId: FieldRef<"BrowserSession", 'String'>
+    readonly status: FieldRef<"BrowserSession", 'String'>
+    readonly capturedAt: FieldRef<"BrowserSession", 'DateTime'>
+    readonly lastValidatedAt: FieldRef<"BrowserSession", 'DateTime'>
+    readonly expiresAt: FieldRef<"BrowserSession", 'DateTime'>
+    readonly validationMethod: FieldRef<"BrowserSession", 'String'>
+    readonly consecutiveFailures: FieldRef<"BrowserSession", 'Int'>
+    readonly updatedAt: FieldRef<"BrowserSession", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * BrowserSession findUnique
+   */
+  export type BrowserSessionFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the BrowserSession
+     */
+    select?: BrowserSessionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the BrowserSession
+     */
+    omit?: BrowserSessionOmit<ExtArgs> | null
+    /**
+     * Filter, which BrowserSession to fetch.
+     */
+    where: BrowserSessionWhereUniqueInput
+  }
+
+  /**
+   * BrowserSession findUniqueOrThrow
+   */
+  export type BrowserSessionFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the BrowserSession
+     */
+    select?: BrowserSessionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the BrowserSession
+     */
+    omit?: BrowserSessionOmit<ExtArgs> | null
+    /**
+     * Filter, which BrowserSession to fetch.
+     */
+    where: BrowserSessionWhereUniqueInput
+  }
+
+  /**
+   * BrowserSession findFirst
+   */
+  export type BrowserSessionFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the BrowserSession
+     */
+    select?: BrowserSessionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the BrowserSession
+     */
+    omit?: BrowserSessionOmit<ExtArgs> | null
+    /**
+     * Filter, which BrowserSession to fetch.
+     */
+    where?: BrowserSessionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of BrowserSessions to fetch.
+     */
+    orderBy?: BrowserSessionOrderByWithRelationInput | BrowserSessionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for BrowserSessions.
+     */
+    cursor?: BrowserSessionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` BrowserSessions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` BrowserSessions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of BrowserSessions.
+     */
+    distinct?: BrowserSessionScalarFieldEnum | BrowserSessionScalarFieldEnum[]
+  }
+
+  /**
+   * BrowserSession findFirstOrThrow
+   */
+  export type BrowserSessionFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the BrowserSession
+     */
+    select?: BrowserSessionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the BrowserSession
+     */
+    omit?: BrowserSessionOmit<ExtArgs> | null
+    /**
+     * Filter, which BrowserSession to fetch.
+     */
+    where?: BrowserSessionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of BrowserSessions to fetch.
+     */
+    orderBy?: BrowserSessionOrderByWithRelationInput | BrowserSessionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for BrowserSessions.
+     */
+    cursor?: BrowserSessionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` BrowserSessions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` BrowserSessions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of BrowserSessions.
+     */
+    distinct?: BrowserSessionScalarFieldEnum | BrowserSessionScalarFieldEnum[]
+  }
+
+  /**
+   * BrowserSession findMany
+   */
+  export type BrowserSessionFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the BrowserSession
+     */
+    select?: BrowserSessionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the BrowserSession
+     */
+    omit?: BrowserSessionOmit<ExtArgs> | null
+    /**
+     * Filter, which BrowserSessions to fetch.
+     */
+    where?: BrowserSessionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of BrowserSessions to fetch.
+     */
+    orderBy?: BrowserSessionOrderByWithRelationInput | BrowserSessionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing BrowserSessions.
+     */
+    cursor?: BrowserSessionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` BrowserSessions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` BrowserSessions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of BrowserSessions.
+     */
+    distinct?: BrowserSessionScalarFieldEnum | BrowserSessionScalarFieldEnum[]
+  }
+
+  /**
+   * BrowserSession create
+   */
+  export type BrowserSessionCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the BrowserSession
+     */
+    select?: BrowserSessionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the BrowserSession
+     */
+    omit?: BrowserSessionOmit<ExtArgs> | null
+    /**
+     * The data needed to create a BrowserSession.
+     */
+    data: XOR<BrowserSessionCreateInput, BrowserSessionUncheckedCreateInput>
+  }
+
+  /**
+   * BrowserSession createMany
+   */
+  export type BrowserSessionCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many BrowserSessions.
+     */
+    data: BrowserSessionCreateManyInput | BrowserSessionCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * BrowserSession createManyAndReturn
+   */
+  export type BrowserSessionCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the BrowserSession
+     */
+    select?: BrowserSessionSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the BrowserSession
+     */
+    omit?: BrowserSessionOmit<ExtArgs> | null
+    /**
+     * The data used to create many BrowserSessions.
+     */
+    data: BrowserSessionCreateManyInput | BrowserSessionCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * BrowserSession update
+   */
+  export type BrowserSessionUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the BrowserSession
+     */
+    select?: BrowserSessionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the BrowserSession
+     */
+    omit?: BrowserSessionOmit<ExtArgs> | null
+    /**
+     * The data needed to update a BrowserSession.
+     */
+    data: XOR<BrowserSessionUpdateInput, BrowserSessionUncheckedUpdateInput>
+    /**
+     * Choose, which BrowserSession to update.
+     */
+    where: BrowserSessionWhereUniqueInput
+  }
+
+  /**
+   * BrowserSession updateMany
+   */
+  export type BrowserSessionUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update BrowserSessions.
+     */
+    data: XOR<BrowserSessionUpdateManyMutationInput, BrowserSessionUncheckedUpdateManyInput>
+    /**
+     * Filter which BrowserSessions to update
+     */
+    where?: BrowserSessionWhereInput
+    /**
+     * Limit how many BrowserSessions to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * BrowserSession updateManyAndReturn
+   */
+  export type BrowserSessionUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the BrowserSession
+     */
+    select?: BrowserSessionSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the BrowserSession
+     */
+    omit?: BrowserSessionOmit<ExtArgs> | null
+    /**
+     * The data used to update BrowserSessions.
+     */
+    data: XOR<BrowserSessionUpdateManyMutationInput, BrowserSessionUncheckedUpdateManyInput>
+    /**
+     * Filter which BrowserSessions to update
+     */
+    where?: BrowserSessionWhereInput
+    /**
+     * Limit how many BrowserSessions to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * BrowserSession upsert
+   */
+  export type BrowserSessionUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the BrowserSession
+     */
+    select?: BrowserSessionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the BrowserSession
+     */
+    omit?: BrowserSessionOmit<ExtArgs> | null
+    /**
+     * The filter to search for the BrowserSession to update in case it exists.
+     */
+    where: BrowserSessionWhereUniqueInput
+    /**
+     * In case the BrowserSession found by the `where` argument doesn't exist, create a new BrowserSession with this data.
+     */
+    create: XOR<BrowserSessionCreateInput, BrowserSessionUncheckedCreateInput>
+    /**
+     * In case the BrowserSession was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<BrowserSessionUpdateInput, BrowserSessionUncheckedUpdateInput>
+  }
+
+  /**
+   * BrowserSession delete
+   */
+  export type BrowserSessionDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the BrowserSession
+     */
+    select?: BrowserSessionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the BrowserSession
+     */
+    omit?: BrowserSessionOmit<ExtArgs> | null
+    /**
+     * Filter which BrowserSession to delete.
+     */
+    where: BrowserSessionWhereUniqueInput
+  }
+
+  /**
+   * BrowserSession deleteMany
+   */
+  export type BrowserSessionDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which BrowserSessions to delete
+     */
+    where?: BrowserSessionWhereInput
+    /**
+     * Limit how many BrowserSessions to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * BrowserSession without action
+   */
+  export type BrowserSessionDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the BrowserSession
+     */
+    select?: BrowserSessionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the BrowserSession
+     */
+    omit?: BrowserSessionOmit<ExtArgs> | null
+  }
+
+
+  /**
    * Model ApplicationBatch
    */
 
@@ -23139,6 +24323,21 @@ export namespace Prisma {
   export type UniversitySchemaScalarFieldEnum = (typeof UniversitySchemaScalarFieldEnum)[keyof typeof UniversitySchemaScalarFieldEnum]
 
 
+  export const BrowserSessionScalarFieldEnum: {
+    id: 'id',
+    universityId: 'universityId',
+    status: 'status',
+    capturedAt: 'capturedAt',
+    lastValidatedAt: 'lastValidatedAt',
+    expiresAt: 'expiresAt',
+    validationMethod: 'validationMethod',
+    consecutiveFailures: 'consecutiveFailures',
+    updatedAt: 'updatedAt'
+  };
+
+  export type BrowserSessionScalarFieldEnum = (typeof BrowserSessionScalarFieldEnum)[keyof typeof BrowserSessionScalarFieldEnum]
+
+
   export const ApplicationBatchScalarFieldEnum: {
     id: 'id',
     studentId: 'studentId',
@@ -24400,6 +25599,80 @@ export namespace Prisma {
     versionHash?: StringNullableWithAggregatesFilter<"UniversitySchema"> | string | null
     lastValidatedAt?: DateTimeNullableWithAggregatesFilter<"UniversitySchema"> | Date | string | null
     notes?: StringNullableWithAggregatesFilter<"UniversitySchema"> | string | null
+  }
+
+  export type BrowserSessionWhereInput = {
+    AND?: BrowserSessionWhereInput | BrowserSessionWhereInput[]
+    OR?: BrowserSessionWhereInput[]
+    NOT?: BrowserSessionWhereInput | BrowserSessionWhereInput[]
+    id?: StringFilter<"BrowserSession"> | string
+    universityId?: StringFilter<"BrowserSession"> | string
+    status?: StringFilter<"BrowserSession"> | string
+    capturedAt?: DateTimeNullableFilter<"BrowserSession"> | Date | string | null
+    lastValidatedAt?: DateTimeNullableFilter<"BrowserSession"> | Date | string | null
+    expiresAt?: DateTimeNullableFilter<"BrowserSession"> | Date | string | null
+    validationMethod?: StringNullableFilter<"BrowserSession"> | string | null
+    consecutiveFailures?: IntFilter<"BrowserSession"> | number
+    updatedAt?: DateTimeFilter<"BrowserSession"> | Date | string
+  }
+
+  export type BrowserSessionOrderByWithRelationInput = {
+    id?: SortOrder
+    universityId?: SortOrder
+    status?: SortOrder
+    capturedAt?: SortOrderInput | SortOrder
+    lastValidatedAt?: SortOrderInput | SortOrder
+    expiresAt?: SortOrderInput | SortOrder
+    validationMethod?: SortOrderInput | SortOrder
+    consecutiveFailures?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type BrowserSessionWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    universityId?: string
+    AND?: BrowserSessionWhereInput | BrowserSessionWhereInput[]
+    OR?: BrowserSessionWhereInput[]
+    NOT?: BrowserSessionWhereInput | BrowserSessionWhereInput[]
+    status?: StringFilter<"BrowserSession"> | string
+    capturedAt?: DateTimeNullableFilter<"BrowserSession"> | Date | string | null
+    lastValidatedAt?: DateTimeNullableFilter<"BrowserSession"> | Date | string | null
+    expiresAt?: DateTimeNullableFilter<"BrowserSession"> | Date | string | null
+    validationMethod?: StringNullableFilter<"BrowserSession"> | string | null
+    consecutiveFailures?: IntFilter<"BrowserSession"> | number
+    updatedAt?: DateTimeFilter<"BrowserSession"> | Date | string
+  }, "id" | "universityId">
+
+  export type BrowserSessionOrderByWithAggregationInput = {
+    id?: SortOrder
+    universityId?: SortOrder
+    status?: SortOrder
+    capturedAt?: SortOrderInput | SortOrder
+    lastValidatedAt?: SortOrderInput | SortOrder
+    expiresAt?: SortOrderInput | SortOrder
+    validationMethod?: SortOrderInput | SortOrder
+    consecutiveFailures?: SortOrder
+    updatedAt?: SortOrder
+    _count?: BrowserSessionCountOrderByAggregateInput
+    _avg?: BrowserSessionAvgOrderByAggregateInput
+    _max?: BrowserSessionMaxOrderByAggregateInput
+    _min?: BrowserSessionMinOrderByAggregateInput
+    _sum?: BrowserSessionSumOrderByAggregateInput
+  }
+
+  export type BrowserSessionScalarWhereWithAggregatesInput = {
+    AND?: BrowserSessionScalarWhereWithAggregatesInput | BrowserSessionScalarWhereWithAggregatesInput[]
+    OR?: BrowserSessionScalarWhereWithAggregatesInput[]
+    NOT?: BrowserSessionScalarWhereWithAggregatesInput | BrowserSessionScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"BrowserSession"> | string
+    universityId?: StringWithAggregatesFilter<"BrowserSession"> | string
+    status?: StringWithAggregatesFilter<"BrowserSession"> | string
+    capturedAt?: DateTimeNullableWithAggregatesFilter<"BrowserSession"> | Date | string | null
+    lastValidatedAt?: DateTimeNullableWithAggregatesFilter<"BrowserSession"> | Date | string | null
+    expiresAt?: DateTimeNullableWithAggregatesFilter<"BrowserSession"> | Date | string | null
+    validationMethod?: StringNullableWithAggregatesFilter<"BrowserSession"> | string | null
+    consecutiveFailures?: IntWithAggregatesFilter<"BrowserSession"> | number
+    updatedAt?: DateTimeWithAggregatesFilter<"BrowserSession"> | Date | string
   }
 
   export type ApplicationBatchWhereInput = {
@@ -25875,6 +27148,90 @@ export namespace Prisma {
     notes?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
+  export type BrowserSessionCreateInput = {
+    id?: string
+    universityId: string
+    status?: string
+    capturedAt?: Date | string | null
+    lastValidatedAt?: Date | string | null
+    expiresAt?: Date | string | null
+    validationMethod?: string | null
+    consecutiveFailures?: number
+    updatedAt?: Date | string
+  }
+
+  export type BrowserSessionUncheckedCreateInput = {
+    id?: string
+    universityId: string
+    status?: string
+    capturedAt?: Date | string | null
+    lastValidatedAt?: Date | string | null
+    expiresAt?: Date | string | null
+    validationMethod?: string | null
+    consecutiveFailures?: number
+    updatedAt?: Date | string
+  }
+
+  export type BrowserSessionUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    universityId?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    capturedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastValidatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    expiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    validationMethod?: NullableStringFieldUpdateOperationsInput | string | null
+    consecutiveFailures?: IntFieldUpdateOperationsInput | number
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type BrowserSessionUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    universityId?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    capturedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastValidatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    expiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    validationMethod?: NullableStringFieldUpdateOperationsInput | string | null
+    consecutiveFailures?: IntFieldUpdateOperationsInput | number
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type BrowserSessionCreateManyInput = {
+    id?: string
+    universityId: string
+    status?: string
+    capturedAt?: Date | string | null
+    lastValidatedAt?: Date | string | null
+    expiresAt?: Date | string | null
+    validationMethod?: string | null
+    consecutiveFailures?: number
+    updatedAt?: Date | string
+  }
+
+  export type BrowserSessionUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    universityId?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    capturedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastValidatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    expiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    validationMethod?: NullableStringFieldUpdateOperationsInput | string | null
+    consecutiveFailures?: IntFieldUpdateOperationsInput | number
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type BrowserSessionUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    universityId?: StringFieldUpdateOperationsInput | string
+    status?: StringFieldUpdateOperationsInput | string
+    capturedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    lastValidatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    expiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    validationMethod?: NullableStringFieldUpdateOperationsInput | string | null
+    consecutiveFailures?: IntFieldUpdateOperationsInput | number
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type ApplicationBatchCreateInput = {
     id?: string
     status?: string
@@ -27125,6 +28482,50 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedJsonFilter<$PrismaModel>
     _max?: NestedJsonFilter<$PrismaModel>
+  }
+
+  export type BrowserSessionCountOrderByAggregateInput = {
+    id?: SortOrder
+    universityId?: SortOrder
+    status?: SortOrder
+    capturedAt?: SortOrder
+    lastValidatedAt?: SortOrder
+    expiresAt?: SortOrder
+    validationMethod?: SortOrder
+    consecutiveFailures?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type BrowserSessionAvgOrderByAggregateInput = {
+    consecutiveFailures?: SortOrder
+  }
+
+  export type BrowserSessionMaxOrderByAggregateInput = {
+    id?: SortOrder
+    universityId?: SortOrder
+    status?: SortOrder
+    capturedAt?: SortOrder
+    lastValidatedAt?: SortOrder
+    expiresAt?: SortOrder
+    validationMethod?: SortOrder
+    consecutiveFailures?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type BrowserSessionMinOrderByAggregateInput = {
+    id?: SortOrder
+    universityId?: SortOrder
+    status?: SortOrder
+    capturedAt?: SortOrder
+    lastValidatedAt?: SortOrder
+    expiresAt?: SortOrder
+    validationMethod?: SortOrder
+    consecutiveFailures?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type BrowserSessionSumOrderByAggregateInput = {
+    consecutiveFailures?: SortOrder
   }
 
   export type ApplicationListRelationFilter = {

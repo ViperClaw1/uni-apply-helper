@@ -205,6 +205,23 @@ model UniversitySchema {
   notes             String?
 }
 
+/// Freshness tracking for a university's saved browser session (storageState/profile).
+/// No relation to UniversitySchema — universityId may reference a file-only schema not seeded in DB.
+model BrowserSession {
+  id           String @id @default(uuid())
+  universityId String @unique
+
+  /// 'unknown' | 'fresh' | 'stale' | 'expired'
+  status              String    @default("unknown")
+  capturedAt          DateTime?
+  lastValidatedAt     DateTime?
+  expiresAt           DateTime?
+  /// 'job_pipeline' | 'health_check' | 'relogin'
+  validationMethod    String?
+  consecutiveFailures Int       @default(0)
+  updatedAt           DateTime  @updatedAt
+}
+
 model ApplicationBatch {
   id           String        @id @default(uuid())
   studentId    String

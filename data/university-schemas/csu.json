@@ -12,7 +12,8 @@
     "expiredIndicators": [
       "CSRF attack protection",
       "Account Sign In"
-    ]
+    ],
+    "sessionTtlHours": 12
   },
   "aliases": [
     "Central South University",

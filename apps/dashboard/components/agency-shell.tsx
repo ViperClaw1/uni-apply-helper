@@ -36,7 +36,7 @@ export function AgencyShell({
 
   return (
     <div className="flex min-h-screen w-full bg-slate-50">
-      <aside className="flex w-60 shrink-0 flex-col border-r border-slate-200 bg-white px-3 py-6">
+      <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col border-r border-slate-200 bg-white px-3 py-6">
         <div className="mb-6 flex items-center gap-2 px-2">
           <Logo />
           <span className="truncate text-sm font-semibold text-slate-950">
