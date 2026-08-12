@@ -50,6 +50,11 @@ export class UniversitiesController {
     return this.universitiesService.listSessions();
   }
 
+  @Get('relogin-status/:jobId')
+  getReloginStatus(@Param('jobId') jobId: string) {
+    return this.universitiesService.getReloginStatus(jobId);
+  }
+
   @Post('aliases')
   createAlias(@Body() body: CreateUniversityAliasInput) {
     if (!body.alias?.trim()) {

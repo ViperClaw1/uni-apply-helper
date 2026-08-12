@@ -12,6 +12,10 @@ export declare class UniversitiesController {
     resolve(name?: string): Promise<import("./types/university-api.types.js").ResolvedUniversity>;
     resolveByFormUrl(url?: string): Promise<import("./types/university-api.types.js").UniversitySchemaResponse>;
     listSessions(): Promise<import("./types/university-api.types.js").UniversitySessionSummary[]>;
+    getReloginStatus(jobId: string): Promise<{
+        status: string;
+        failedReason?: string;
+    }>;
     createAlias(body: CreateUniversityAliasInput): Promise<{
         universityId: string;
         alias: string;

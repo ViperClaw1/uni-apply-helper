@@ -49,6 +49,14 @@ export class ReloginProcessor implements OnModuleInit, OnModuleDestroy {
     );
 
     this.logger.log(`Listening on queue "${QUEUES.BROWSER_RELOGIN}"`);
+
+    // Backstop for failures that never reach process()'s own catch (e.g. a stall/crash mid-job)
+    // — without this, a dead job is silent: no notification, and the dashboard polls forever.
+    this.worker.on('failed', (job, error) => {
+      this.logger.error(
+        `Relogin job ${job?.id ?? 'unknown'} (university ${job?.data?.universityId ?? 'unknown'}) failed: ${error.message}`,
+      );
+    });
   }
 
   async onModuleDestroy() {
@@ -69,40 +77,61 @@ export class ReloginProcessor implements OnModuleInit, OnModuleDestroy {
       profileDir,
     );
 
-    await this.browserService.withPageOptions(
-      { universityId: university.id, headed: true },
-      async (page) => {
-        await page.goto(loginUrl, {
-          waitUntil: 'networkidle',
-          timeout: 60_000,
-        });
+    try {
+      await this.browserService.withPageOptions(
+        { universityId: university.id, headed: true },
+        async (page) => {
+          await page.goto(loginUrl, {
+            waitUntil: 'networkidle',
+            timeout: 60_000,
+          });
 
-        const deadline = Date.now() + 15 * 60_000;
+          const deadline = Date.now() + 15 * 60_000;
 
-        while (Date.now() < deadline) {
-          if (!(await isLoginPage(page))) {
-            await this.recordCaptured(
-              university.id,
-              university.session?.sessionTtlHours,
-            );
-            await this.notificationsService.notifyReloginCompleted(
-              university.displayName,
-              university.id,
-            );
-            await this.applicationResumeService.resumePausedApplications(
-              university.id,
-            );
-            return;
+          while (Date.now() < deadline) {
+            if (!(await isLoginPage(page))) {
+              await this.recordCaptured(
+                university.id,
+                university.session?.sessionTtlHours,
+              );
+              await this.notificationsService.notifyReloginCompleted(
+                university.displayName,
+                university.id,
+              );
+              await this.applicationResumeService.resumePausedApplications(
+                university.id,
+              );
+              return;
+            }
+
+            await page.waitForTimeout(2_000);
           }
 
-          await page.waitForTimeout(2_000);
-        }
+          throw new Error(
+            `Re-login timed out for ${university.displayName} — login not completed within 15 minutes`,
+          );
+        },
+      );
+    } catch (error) {
+      const rawMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      // Playwright's own message when `headless:false` has no X server to attach to — this
+      // worker's container has no virtual display, so every headed launch fails this way.
+      const isNoDisplay = /XServer|Xvfb|X server|DISPLAY environment/i.test(
+        rawMessage,
+      );
+      const message = isNoDisplay
+        ? `This worker can't open a headed browser — no virtual display is configured here. Capture the session locally instead (see apps/worker/scripts/capture-*-session.mjs) and update the deployed session for ${university.displayName}.`
+        : rawMessage;
 
-        throw new Error(
-          `Re-login timed out for ${university.displayName} — login not completed within 15 minutes`,
-        );
-      },
-    );
+      await this.notificationsService.notifyReloginFailed(
+        university.displayName,
+        university.id,
+        message,
+      );
+
+      throw isNoDisplay ? new Error(message) : error;
+    }
   }
 
   private async recordCaptured(

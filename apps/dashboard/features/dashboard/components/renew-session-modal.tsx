@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useT } from "@/lib/i18n/context";
 import {
+  getReloginStatus,
   getUniversitySessions,
   renewUniversitySession,
 } from "@/features/universities/api/universities.api";
@@ -21,6 +22,8 @@ export function RenewSessionModal({ session, onClose, onRenewed }: RenewSessionM
   const [loadedUniversityId, setLoadedUniversityId] = useState(session?.universityId);
   const [phase, setPhase] = useState<Phase>("idle");
   const [profilePath, setProfilePath] = useState<string | undefined>();
+  const [jobId, setJobId] = useState<string | undefined>();
+  const [failureReason, setFailureReason] = useState<string | undefined>();
 
   // Sanctioned React pattern for "adjust state when a prop changes" — runs during render, not
   // in an effect, so opening a different university's modal resets state with no extra render.
@@ -28,6 +31,8 @@ export function RenewSessionModal({ session, onClose, onRenewed }: RenewSessionM
     setLoadedUniversityId(session?.universityId);
     setPhase("idle");
     setProfilePath(undefined);
+    setJobId(undefined);
+    setFailureReason(undefined);
   }
 
   useEffect(() => {
@@ -37,6 +42,22 @@ export function RenewSessionModal({ session, onClose, onRenewed }: RenewSessionM
 
     const universityId = session.universityId;
     const intervalId = window.setInterval(async () => {
+      // Job status first — a dead job (e.g. this worker can't open a headed browser at all)
+      // never flips the session to "active", so without this the modal waits forever.
+      if (jobId) {
+        try {
+          const jobStatus = await getReloginStatus(jobId);
+
+          if (jobStatus.status === "failed") {
+            setFailureReason(jobStatus.failedReason);
+            setPhase("error");
+            return;
+          }
+        } catch {
+          // transient poll failure — fall through and check session status this tick anyway
+        }
+      }
+
       try {
         const sessions = await getUniversitySessions();
         const updated = sessions.find((item) => item.universityId === universityId);
@@ -50,7 +71,7 @@ export function RenewSessionModal({ session, onClose, onRenewed }: RenewSessionM
     }, 5000);
 
     return () => window.clearInterval(intervalId);
-  }, [phase, session]);
+  }, [phase, session, jobId]);
 
   if (!session) {
     return null;
@@ -64,10 +85,12 @@ export function RenewSessionModal({ session, onClose, onRenewed }: RenewSessionM
     }
 
     setPhase("starting");
+    setFailureReason(undefined);
 
     try {
       const result = await renewUniversitySession(session!.universityId);
       setProfilePath(result.profilePath);
+      setJobId(result.jobId);
       setPhase("waiting");
     } catch {
       setPhase("error");
@@ -119,7 +142,7 @@ export function RenewSessionModal({ session, onClose, onRenewed }: RenewSessionM
             <p className="mt-2 text-sm leading-6 text-slate-600">{message}</p>
             {phase === "error" ? (
               <p className="mt-2 text-sm font-medium text-rose-700">
-                {t.dashboard.renewModal.failed}
+                {failureReason ?? t.dashboard.renewModal.failed}
               </p>
             ) : null}
             <p className="mt-4 text-xs text-slate-400">{t.dashboard.renewModal.afterLogin}</p>

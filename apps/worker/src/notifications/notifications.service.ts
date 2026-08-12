@@ -98,6 +98,21 @@ export class NotificationsService {
     );
   }
 
+  async notifyReloginFailed(
+    universityName: string,
+    universityId: string,
+    reason: string,
+  ) {
+    await this.send(
+      [
+        '<b>Re-login не удался</b>',
+        `Вуз: ${this.escapeHtml(universityName)}`,
+        `ID: ${this.escapeHtml(universityId)}`,
+        `Причина: ${this.escapeHtml(reason)}`,
+      ].join('\n'),
+    );
+  }
+
   async notifyReloginCompleted(universityName: string, universityId: string) {
     await this.send(
       [

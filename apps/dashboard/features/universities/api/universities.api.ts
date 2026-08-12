@@ -37,3 +37,11 @@ export async function renewUniversitySession(universityId: string) {
 
   return response.data;
 }
+
+export async function getReloginStatus(jobId: string) {
+  const response = await apiClient.get<{ status: string; failedReason?: string }>(
+    `/universities/relogin-status/${jobId}`,
+  );
+
+  return response.data;
+}

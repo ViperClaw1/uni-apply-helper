@@ -25,6 +25,16 @@ let QueueService = class QueueService {
         const job = await this.getQueue(queueName).getJob(jobId);
         return job?.getState();
     }
+    async getJobDetails(queueName, jobId) {
+        const job = await this.getQueue(queueName).getJob(jobId);
+        if (!job) {
+            return { status: 'unknown' };
+        }
+        return {
+            status: await job.getState(),
+            failedReason: job.failedReason,
+        };
+    }
     getQueue(name) {
         const existingQueue = this.queues.get(name);
         if (existingQueue) {

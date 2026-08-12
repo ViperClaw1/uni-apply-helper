@@ -24,6 +24,10 @@ export declare class UniversitiesService {
         profilePath: string;
         message: string;
     }>;
+    getReloginStatus(jobId: string): Promise<{
+        status: string;
+        failedReason?: string;
+    }>;
     createAlias(input: CreateUniversityAliasInput): Promise<{
         universityId: string;
         alias: string;

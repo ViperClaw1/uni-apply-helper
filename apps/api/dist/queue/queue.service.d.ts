@@ -5,6 +5,10 @@ export declare class QueueService implements OnModuleDestroy {
     onModuleDestroy(): Promise<void>;
     addJob(queueName: string, data: unknown, opts?: JobsOptions): Promise<import("bullmq").Job<any, any, string>>;
     getJobStatus(queueName: string, jobId: string): Promise<"unknown" | import("bullmq").JobState | undefined>;
+    getJobDetails(queueName: string, jobId: string): Promise<{
+        status: string;
+        failedReason?: string;
+    }>;
     private getQueue;
     private getRedisConnection;
 }

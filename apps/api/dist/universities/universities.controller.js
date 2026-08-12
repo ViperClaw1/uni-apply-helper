@@ -44,6 +44,9 @@ let UniversitiesController = class UniversitiesController {
     listSessions() {
         return this.universitiesService.listSessions();
     }
+    getReloginStatus(jobId) {
+        return this.universitiesService.getReloginStatus(jobId);
+    }
     createAlias(body) {
         if (!body.alias?.trim()) {
             throw new common_1.BadRequestException('alias is required.');
@@ -96,6 +99,13 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], UniversitiesController.prototype, "listSessions", null);
+__decorate([
+    (0, common_1.Get)('relogin-status/:jobId'),
+    __param(0, (0, common_1.Param)('jobId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], UniversitiesController.prototype, "getReloginStatus", null);
 __decorate([
     (0, common_1.Post)('aliases'),
     __param(0, (0, common_1.Body)()),

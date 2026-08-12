@@ -23,6 +23,22 @@ export class QueueService implements OnModuleDestroy {
     return job?.getState();
   }
 
+  async getJobDetails(
+    queueName: string,
+    jobId: string,
+  ): Promise<{ status: string; failedReason?: string }> {
+    const job = await this.getQueue(queueName).getJob(jobId);
+
+    if (!job) {
+      return { status: 'unknown' };
+    }
+
+    return {
+      status: await job.getState(),
+      failedReason: job.failedReason,
+    };
+  }
+
   private getQueue(name: string): Queue {
     const existingQueue = this.queues.get(name);
 

@@ -10,6 +10,7 @@ export declare class NotificationsService {
     notifySessionExpired(universityName: string, universityId: string): Promise<void>;
     notifyAttentionRequired(universityName: string, universityId: string, reason: string): Promise<void>;
     notifyReloginStarted(universityName: string, universityId: string, profileDir?: string): Promise<void>;
+    notifyReloginFailed(universityName: string, universityId: string, reason: string): Promise<void>;
     notifyReloginCompleted(universityName: string, universityId: string): Promise<void>;
     private send;
     private escapeHtml;

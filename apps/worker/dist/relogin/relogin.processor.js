@@ -45,6 +45,9 @@ let ReloginProcessor = ReloginProcessor_1 = class ReloginProcessor {
             maxStalledCount: 1,
         });
         this.logger.log(`Listening on queue "${shared_1.QUEUES.BROWSER_RELOGIN}"`);
+        this.worker.on('failed', (job, error) => {
+            this.logger.error(`Relogin job ${job?.id ?? 'unknown'} (university ${job?.data?.universityId ?? 'unknown'}) failed: ${error.message}`);
+        });
     }
     async onModuleDestroy() {
         await this.worker?.close();
@@ -54,23 +57,34 @@ let ReloginProcessor = ReloginProcessor_1 = class ReloginProcessor {
         const profileDir = this.browserService.getProfileDir(university.id);
         const loginUrl = (0, session_validator_js_1.getLoginUrl)(university.formUrl);
         await this.notificationsService.notifyReloginStarted(university.displayName, university.id, profileDir);
-        await this.browserService.withPageOptions({ universityId: university.id, headed: true }, async (page) => {
-            await page.goto(loginUrl, {
-                waitUntil: 'networkidle',
-                timeout: 60_000,
-            });
-            const deadline = Date.now() + 15 * 60_000;
-            while (Date.now() < deadline) {
-                if (!(await (0, zzu_session_loader_js_1.isLoginPage)(page))) {
-                    await this.recordCaptured(university.id, university.session?.sessionTtlHours);
-                    await this.notificationsService.notifyReloginCompleted(university.displayName, university.id);
-                    await this.applicationResumeService.resumePausedApplications(university.id);
-                    return;
+        try {
+            await this.browserService.withPageOptions({ universityId: university.id, headed: true }, async (page) => {
+                await page.goto(loginUrl, {
+                    waitUntil: 'networkidle',
+                    timeout: 60_000,
+                });
+                const deadline = Date.now() + 15 * 60_000;
+                while (Date.now() < deadline) {
+                    if (!(await (0, zzu_session_loader_js_1.isLoginPage)(page))) {
+                        await this.recordCaptured(university.id, university.session?.sessionTtlHours);
+                        await this.notificationsService.notifyReloginCompleted(university.displayName, university.id);
+                        await this.applicationResumeService.resumePausedApplications(university.id);
+                        return;
+                    }
+                    await page.waitForTimeout(2_000);
                 }
-                await page.waitForTimeout(2_000);
-            }
-            throw new Error(`Re-login timed out for ${university.displayName} — login not completed within 15 minutes`);
-        });
+                throw new Error(`Re-login timed out for ${university.displayName} — login not completed within 15 minutes`);
+            });
+        }
+        catch (error) {
+            const rawMessage = error instanceof Error ? error.message : 'Unknown error';
+            const isNoDisplay = /XServer|Xvfb|X server|DISPLAY environment/i.test(rawMessage);
+            const message = isNoDisplay
+                ? `This worker can't open a headed browser — no virtual display is configured here. Capture the session locally instead (see apps/worker/scripts/capture-*-session.mjs) and update the deployed session for ${university.displayName}.`
+                : rawMessage;
+            await this.notificationsService.notifyReloginFailed(university.displayName, university.id, message);
+            throw isNoDisplay ? new Error(message) : error;
+        }
     }
     async recordCaptured(universityId, sessionTtlHours) {
         const now = new Date();

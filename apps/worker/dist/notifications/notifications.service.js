@@ -74,6 +74,14 @@ let NotificationsService = NotificationsService_1 = class NotificationsService {
             'Залогинься в открывшемся окне. Сессия сохранится автоматически.',
         ].join('\n'));
     }
+    async notifyReloginFailed(universityName, universityId, reason) {
+        await this.send([
+            '<b>Re-login не удался</b>',
+            `Вуз: ${this.escapeHtml(universityName)}`,
+            `ID: ${this.escapeHtml(universityId)}`,
+            `Причина: ${this.escapeHtml(reason)}`,
+        ].join('\n'));
+    }
     async notifyReloginCompleted(universityName, universityId) {
         await this.send([
             '<b>Re-login завершён</b>',

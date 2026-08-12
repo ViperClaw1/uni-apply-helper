@@ -287,6 +287,13 @@ export class UniversitiesService {
     };
   }
 
+  /** Lets the dashboard's renew-session modal tell a dead job apart from "still waiting on a human". */
+  async getReloginStatus(
+    jobId: string,
+  ): Promise<{ status: string; failedReason?: string }> {
+    return this.queueService.getJobDetails(QUEUES.BROWSER_RELOGIN, jobId);
+  }
+
   async createAlias(input: CreateUniversityAliasInput) {
     await this.findOne(input.universityId);
 

@@ -189,6 +189,9 @@ let UniversitiesService = class UniversitiesService {
             message: 'Headed browser will open on the worker. Log in manually — session is saved to the profile directory.',
         };
     }
+    async getReloginStatus(jobId) {
+        return this.queueService.getJobDetails(shared_1.QUEUES.BROWSER_RELOGIN, jobId);
+    }
     async createAlias(input) {
         await this.findOne(input.universityId);
         const alias = input.alias.trim();
