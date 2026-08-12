@@ -3,12 +3,18 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.assertSessionValid = assertSessionValid;
 exports.isLoginPage = isLoginPage;
 exports.getLoginUrl = getLoginUrl;
+const attention_required_error_js_1 = require("../errors/attention-required.error.js");
 const session_expired_error_js_1 = require("../errors/session-expired.error.js");
+const attention_detector_js_1 = require("./attention-detector.js");
 const zzu_session_loader_js_1 = require("./zzu-session.loader.js");
 const DEFAULT_LOGIN_PATTERN = /\/member\/login\.do|\/login\.do|\/student\/login(?:\/|$|\?)|\/signin|\/auth\/login/i;
 async function assertSessionValid(page, university) {
     const session = university.session;
     const url = page.url();
+    const attentionReason = await (0, attention_detector_js_1.detectAttentionRequired)(page, session?.attentionIndicators);
+    if (attentionReason) {
+        throw new attention_required_error_js_1.AttentionRequiredError(`Automation blocked by ${(0, attention_detector_js_1.describeAttentionReason)(attentionReason)} for ${university.displayName}`, attentionReason, university.id);
+    }
     if (session?.loginUrlPattern) {
         const pattern = new RegExp(session.loginUrlPattern, 'i');
         if (pattern.test(url)) {
@@ -53,7 +59,8 @@ async function isLoginPage(page) {
     const cucasLogin = await page
         .locator('#login_submit, form#myform[action*="do_login"]')
         .count();
-    if (cucasLogin > 0 && (await page.locator('input[name="password"]').count()) > 0) {
+    if (cucasLogin > 0 &&
+        (await page.locator('input[name="password"]').count()) > 0) {
         return true;
     }
     const username = await page.locator("input[name='username']").count();

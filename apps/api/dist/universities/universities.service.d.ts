@@ -1,7 +1,7 @@
 import { PrismaService } from '../prisma/prisma.service.js';
 import { QueueService } from '../queue/queue.service.js';
 import { SchemasService } from './schemas.service.js';
-import type { CreateUniversityAliasInput, ResolvedUniversity, UniversitySchemaResponse, UniversitySummary } from './types/university-api.types.js';
+import type { CreateUniversityAliasInput, ResolvedUniversity, UniversitySchemaResponse, UniversitySessionSummary, UniversitySummary } from './types/university-api.types.js';
 export declare class UniversitiesService {
     private readonly prisma;
     private readonly schemasService;
@@ -15,6 +15,8 @@ export declare class UniversitiesService {
     private normalizePageUrl;
     private formUrlsMatch;
     findAliases(universityId: string): Promise<string[]>;
+    listSessions(): Promise<UniversitySessionSummary[]>;
+    private toSessionStatus;
     requestRelogin(universityId: string): Promise<{
         jobId: string | undefined;
         status: string;

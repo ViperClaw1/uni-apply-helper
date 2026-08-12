@@ -40,8 +40,7 @@ let ApplicationsService = class ApplicationsService {
             throw new common_1.BadRequestException('Student has no resolved application targets. Add universities by form URL first.');
         }
         const submittedUniversityIds = await this.findSubmittedUniversityIds(input.studentId);
-        const selectedTargets = resolvedTargets.filter((target) => target.universityId &&
-            !submittedUniversityIds.has(target.universityId));
+        const selectedTargets = resolvedTargets.filter((target) => target.universityId && !submittedUniversityIds.has(target.universityId));
         if (selectedTargets.length === 0) {
             throw new common_1.BadRequestException('All selected universities already have a submitted application.');
         }
@@ -51,8 +50,7 @@ let ApplicationsService = class ApplicationsService {
         };
         const prepared = await this.prepareApplications(batchProfile);
         const unresolvedCount = prepared.unresolvedTargets.length;
-        const blockedCount = prepared.applications.filter((application) => application.status === 'blocked')
-            .length + unresolvedCount;
+        const blockedCount = prepared.applications.filter((application) => application.status === 'blocked').length + unresolvedCount;
         const batch = await this.prisma.applicationBatch.create({
             data: {
                 studentId: input.studentId,
@@ -93,6 +91,47 @@ let ApplicationsService = class ApplicationsService {
             universityId: app.universityId,
         })));
         return this.toBatchResponse(batch);
+    }
+    async findAll() {
+        const applications = await this.prisma.application.findMany({
+            orderBy: { createdAt: 'desc' },
+            include: {
+                batch: {
+                    select: {
+                        studentId: true,
+                        student: { select: { givenName: true, surname: true } },
+                    },
+                },
+            },
+        });
+        const universityNames = await this.getUniversityDisplayNames(applications.map((application) => application.universityId));
+        return applications.map((application) => ({
+            id: application.id,
+            batchId: application.batchId,
+            studentId: application.batch.studentId,
+            studentName: [application.batch.student.givenName, application.batch.student.surname]
+                .filter(Boolean)
+                .join(' ') || application.batch.studentId,
+            universityId: application.universityId,
+            universityDisplayName: universityNames.get(application.universityId),
+            status: application.status,
+            blockedReason: application.blockedReason ?? undefined,
+            submittedAt: application.submittedAt?.toISOString(),
+            createdAt: application.createdAt.toISOString(),
+        }));
+    }
+    async getUniversityDisplayNames(universityIds) {
+        const uniqueIds = [...new Set(universityIds)];
+        const entries = await Promise.all(uniqueIds.map(async (id) => {
+            try {
+                const university = await this.universitiesService.findOne(id);
+                return [id, university.displayName];
+            }
+            catch {
+                return [id, id];
+            }
+        }));
+        return new Map(entries);
     }
     async findByStudent(studentId) {
         await this.studentsService.findOne(studentId);
@@ -305,7 +344,9 @@ let ApplicationsService = class ApplicationsService {
             applications.push({
                 universityId: university.id,
                 status: missing.length > 0 ? 'blocked' : 'ready_for_submission',
-                blockedReason: missing.length > 0 ? `Missing requirements: ${missing.join(', ')}` : undefined,
+                blockedReason: missing.length > 0
+                    ? `Missing requirements: ${missing.join(', ')}`
+                    : undefined,
                 motivationLetterId: approvedLetterId,
             });
             if (missing.length > 0) {
@@ -322,7 +363,9 @@ let ApplicationsService = class ApplicationsService {
             : null;
         const missing = [
             ...missingDocuments,
-            university.requiresEssay && !approvedLetter ? 'approved motivation letter' : null,
+            university.requiresEssay && !approvedLetter
+                ? 'approved motivation letter'
+                : null,
         ].filter((item) => item !== null);
         return { missing, approvedLetterId: approvedLetter?.id };
     }
@@ -331,7 +374,8 @@ let ApplicationsService = class ApplicationsService {
         const submittedUniversityIds = await this.findSubmittedUniversityIds(studentId);
         const results = [];
         for (const target of profile.applicationTargets) {
-            if (target.universityId && submittedUniversityIds.has(target.universityId)) {
+            if (target.universityId &&
+                submittedUniversityIds.has(target.universityId)) {
                 results.push({
                     universityId: target.universityId,
                     universityRaw: target.universityRaw,
@@ -357,7 +401,9 @@ let ApplicationsService = class ApplicationsService {
                 universityRaw: target.universityRaw,
                 status: missing.length > 0 ? 'blocked' : 'ready',
                 missingDocuments: missing,
-                blockedReason: missing.length > 0 ? `Missing requirements: ${missing.join(', ')}` : undefined,
+                blockedReason: missing.length > 0
+                    ? `Missing requirements: ${missing.join(', ')}`
+                    : undefined,
             });
         }
         return results;

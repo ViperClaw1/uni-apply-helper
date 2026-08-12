@@ -350,7 +350,9 @@ const en = {
         "Automation hit a CAPTCHA, 2FA prompt, or other unexpected step it can't clear on its own.",
       openLogin: "Open university login",
       afterLogin: "After successful login the session will be saved automatically.",
-      waiting: "Waiting for manual login on the automation worker…",
+      waiting:
+        "A browser window opened on the automation worker — not this device. Log in there; this page updates automatically once it's done.",
+      canCloseHint: "You can close this window — the login window on the worker stays open.",
       success: "Session updated successfully",
       failed: "Failed to start the renewal. Please try again.",
       close: "Close",

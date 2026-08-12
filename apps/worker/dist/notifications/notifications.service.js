@@ -56,6 +56,14 @@ let NotificationsService = NotificationsService_1 = class NotificationsService {
             'Или локально: pnpm --filter worker capture:zzu-session',
         ].join('\n'));
     }
+    async notifyAttentionRequired(universityName, universityId, reason) {
+        await this.send([
+            '<b>Требуется внимание (CAPTCHA/2FA)</b>',
+            `Вуз: ${this.escapeHtml(universityName)}`,
+            `Причина: ${this.escapeHtml(reason)}`,
+            `Разрешить вручную: PATCH /universities/${this.escapeHtml(universityId)}/relogin`,
+        ].join('\n'));
+    }
     async notifyReloginStarted(universityName, universityId, profileDir) {
         await this.send([
             '<b>Re-login: браузер открыт</b>',

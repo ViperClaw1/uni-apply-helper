@@ -29,9 +29,11 @@ export async function getUniversitySessions() {
 }
 
 export async function renewUniversitySession(universityId: string) {
-  const response = await apiClient.patch<{ jobId?: string; status: string }>(
-    `/universities/${universityId}/relogin`,
-  );
+  const response = await apiClient.patch<{
+    jobId?: string;
+    status: string;
+    profilePath?: string;
+  }>(`/universities/${universityId}/relogin`);
 
   return response.data;
 }

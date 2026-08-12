@@ -33,11 +33,18 @@ export class ReloginProcessor implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   onModuleInit() {
+    // Waits up to 15 min for a human to log in. BullMQ default lockDuration is 30s — if the
+    // worker process stalls or redeploys mid-wait, Redis marks the job stalled and BullMQ
+    // retries it, opening a second headed browser and re-sending the "re-login started"
+    // notification for the same university. Same fix as the main application Processor.
     this.worker = new Worker<BrowserReloginJobData>(
       QUEUES.BROWSER_RELOGIN,
       (job) => this.process(job),
       {
         connection: getRedisConnection(),
+        lockDuration: 16 * 60_000,
+        stalledInterval: 60_000,
+        maxStalledCount: 1,
       },
     );
 

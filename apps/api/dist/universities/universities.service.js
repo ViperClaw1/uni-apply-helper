@@ -145,11 +145,41 @@ let UniversitiesService = class UniversitiesService {
         const university = await this.findOne(universityId);
         return university.aliases;
     }
+    async listSessions() {
+        const universities = await this.findAll();
+        const sessions = await this.prisma.browserSession.findMany();
+        const sessionByUniversityId = new Map(sessions.map((session) => [session.universityId, session]));
+        const applicationCounts = await this.prisma.application.groupBy({
+            by: ['universityId'],
+            _count: { _all: true },
+        });
+        const applicationCountByUniversityId = new Map(applicationCounts.map((row) => [row.universityId, row._count._all]));
+        return universities.map((university) => {
+            const session = sessionByUniversityId.get(university.id);
+            return {
+                universityId: university.id,
+                displayName: university.displayName,
+                status: this.toSessionStatus(session),
+                lastCheckedAt: session?.lastValidatedAt?.toISOString(),
+                applications: applicationCountByUniversityId.get(university.id) ?? 0,
+            };
+        });
+    }
+    toSessionStatus(session) {
+        if (!session || session.status === 'unknown') {
+            return 'login_required';
+        }
+        if (session.status === 'attention_required') {
+            return 'attention_required';
+        }
+        if (session.status === 'expired') {
+            return session.capturedAt ? 'expired' : 'login_required';
+        }
+        return 'active';
+    }
     async requestRelogin(universityId) {
         await this.findOne(universityId);
-        const job = await this.queueService.addJob(shared_1.QUEUES.BROWSER_RELOGIN, {
-            universityId,
-        });
+        const job = await this.queueService.addJob(shared_1.QUEUES.BROWSER_RELOGIN, { universityId }, { attempts: 1 });
         const profilesRoot = process.env.BROWSER_PROFILES_DIR ?? (0, node_path_1.join)(process.cwd(), 'profiles');
         return {
             jobId: job.id,

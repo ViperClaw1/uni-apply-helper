@@ -16,7 +16,9 @@ const shared_1 = require("@uni-apply/shared");
 const bullmq_1 = require("bullmq");
 const browser_service_js_1 = require("../browser/browser.service.js");
 const session_validator_js_1 = require("../browser/session.validator.js");
+const attention_required_error_js_1 = require("../errors/attention-required.error.js");
 const prisma_service_js_1 = require("../prisma/prisma.service.js");
+const application_resume_service_js_1 = require("../queue/application-resume.service.js");
 const redis_config_js_1 = require("../queue/redis.config.js");
 const university_schema_service_js_1 = require("../university-schema/university-schema.service.js");
 const SCHEDULER_ID = 'session-health-check';
@@ -26,19 +28,25 @@ let SessionHealthCheckProcessor = SessionHealthCheckProcessor_1 = class SessionH
     browserService;
     prisma;
     universitySchemaService;
+    applicationResumeService;
     logger = new common_1.Logger(SessionHealthCheckProcessor_1.name);
     queue;
     worker;
-    constructor(browserService, prisma, universitySchemaService) {
+    constructor(browserService, prisma, universitySchemaService, applicationResumeService) {
         this.browserService = browserService;
         this.prisma = prisma;
         this.universitySchemaService = universitySchemaService;
+        this.applicationResumeService = applicationResumeService;
     }
     async onModuleInit() {
         const connection = (0, redis_config_js_1.getRedisConnection)();
-        const intervalMs = Number(process.env.SESSION_HEALTH_CHECK_INTERVAL_MS) || DEFAULT_INTERVAL_MS;
+        const intervalMs = Number(process.env.SESSION_HEALTH_CHECK_INTERVAL_MS) ||
+            DEFAULT_INTERVAL_MS;
         this.queue = new bullmq_1.Queue(shared_1.QUEUES.SESSION_HEALTH_CHECK, { connection });
-        await this.queue.upsertJobScheduler(SCHEDULER_ID, { every: intervalMs, immediately: false });
+        await this.queue.upsertJobScheduler(SCHEDULER_ID, {
+            every: intervalMs,
+            immediately: false,
+        });
         this.worker = new bullmq_1.Worker(shared_1.QUEUES.SESSION_HEALTH_CHECK, () => this.process(), { connection });
         this.logger.log(`Listening on queue "${shared_1.QUEUES.SESSION_HEALTH_CHECK}" (every ${intervalMs}ms)`);
     }
@@ -46,7 +54,7 @@ let SessionHealthCheckProcessor = SessionHealthCheckProcessor_1 = class SessionH
         await this.worker?.close();
         await this.queue?.close();
     }
-    async process(_job) {
+    async process() {
         const universityIds = await this.universitySchemaService.listIds();
         for (const universityId of universityIds) {
             try {
@@ -63,6 +71,10 @@ let SessionHealthCheckProcessor = SessionHealthCheckProcessor_1 = class SessionH
         if (!targetUrl) {
             return;
         }
+        const previous = await this.prisma.browserSession.findUnique({
+            where: { universityId },
+            select: { status: true },
+        });
         try {
             await this.browserService.withPageOptions({ universityId }, async (page) => {
                 await page.goto(targetUrl, {
@@ -71,27 +83,34 @@ let SessionHealthCheckProcessor = SessionHealthCheckProcessor_1 = class SessionH
                 });
                 await (0, session_validator_js_1.assertSessionValid)(page, university);
             });
-            await this.recordResult(universityId, true, university);
+            await this.recordResult(universityId, 'valid');
+            if (previous &&
+                previous.status !== 'fresh' &&
+                previous.status !== 'stale') {
+                await this.applicationResumeService.resumePausedApplications(universityId);
+            }
         }
         catch (error) {
-            await this.recordResult(universityId, false, university);
+            await this.recordResult(universityId, error instanceof attention_required_error_js_1.AttentionRequiredError
+                ? 'attention_required'
+                : 'expired');
             throw error;
         }
     }
-    async recordResult(universityId, valid, university) {
+    async recordResult(universityId, outcome) {
         const now = new Date();
-        if (!valid) {
+        if (outcome !== 'valid') {
             await this.prisma.browserSession.upsert({
                 where: { universityId },
                 create: {
                     universityId,
-                    status: 'expired',
+                    status: outcome,
                     lastValidatedAt: now,
                     validationMethod: 'health_check',
                     consecutiveFailures: 1,
                 },
                 update: {
-                    status: 'expired',
+                    status: outcome,
                     lastValidatedAt: now,
                     validationMethod: 'health_check',
                     consecutiveFailures: { increment: 1 },
@@ -102,7 +121,9 @@ let SessionHealthCheckProcessor = SessionHealthCheckProcessor_1 = class SessionH
         const existing = await this.prisma.browserSession.findUnique({
             where: { universityId },
         });
-        const status = this.isNearExpiry(existing?.expiresAt ?? null, now) ? 'stale' : 'fresh';
+        const status = this.isNearExpiry(existing?.expiresAt ?? null, now)
+            ? 'stale'
+            : 'fresh';
         await this.prisma.browserSession.upsert({
             where: { universityId },
             create: {
@@ -140,6 +161,7 @@ exports.SessionHealthCheckProcessor = SessionHealthCheckProcessor = SessionHealt
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [browser_service_js_1.BrowserService,
         prisma_service_js_1.PrismaService,
-        university_schema_service_js_1.UniversitySchemaService])
+        university_schema_service_js_1.UniversitySchemaService,
+        application_resume_service_js_1.ApplicationResumeService])
 ], SessionHealthCheckProcessor);
 //# sourceMappingURL=session-health-check.processor.js.map

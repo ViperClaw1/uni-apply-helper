@@ -13,6 +13,7 @@ exports.OpenFormStep = void 0;
 const common_1 = require("@nestjs/common");
 const session_validator_js_1 = require("../browser/session.validator.js");
 const navigation_registry_service_js_1 = require("../browser/navigation/navigation-registry.service.js");
+const attention_required_error_js_1 = require("../errors/attention-required.error.js");
 const prisma_service_js_1 = require("../prisma/prisma.service.js");
 let OpenFormStep = class OpenFormStep {
     navigationRegistry;
@@ -29,24 +30,27 @@ let OpenFormStep = class OpenFormStep {
             await (0, session_validator_js_1.assertSessionValid)(context.page, context.university);
         }
         catch (error) {
-            await this.recordSessionCheck(context.university.id, false);
+            await this.recordSessionCheck(context.university.id, error instanceof attention_required_error_js_1.AttentionRequiredError
+                ? 'attention_required'
+                : 'expired');
             throw error;
         }
-        await this.recordSessionCheck(context.university.id, true);
+        await this.recordSessionCheck(context.university.id, 'fresh');
     }
-    async recordSessionCheck(universityId, valid) {
+    async recordSessionCheck(universityId, status) {
         const now = new Date();
+        const valid = status === 'fresh';
         await this.prisma.browserSession.upsert({
             where: { universityId },
             create: {
                 universityId,
-                status: valid ? 'fresh' : 'expired',
+                status,
                 lastValidatedAt: now,
                 validationMethod: 'job_pipeline',
                 consecutiveFailures: valid ? 0 : 1,
             },
             update: {
-                status: valid ? 'fresh' : 'expired',
+                status,
                 lastValidatedAt: now,
                 validationMethod: 'job_pipeline',
                 consecutiveFailures: valid ? 0 : { increment: 1 },

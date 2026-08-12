@@ -30,3 +30,11 @@ export type SeedUniversitySchemasResult = {
     schemas: number;
     aliases: number;
 };
+export type UniversitySessionStatus = 'active' | 'expired' | 'login_required' | 'attention_required' | 'checking';
+export type UniversitySessionSummary = {
+    universityId: string;
+    displayName: string;
+    status: UniversitySessionStatus;
+    lastCheckedAt?: string;
+    applications: number;
+};

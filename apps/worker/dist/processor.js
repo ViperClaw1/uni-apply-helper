@@ -15,6 +15,7 @@ const common_1 = require("@nestjs/common");
 const shared_1 = require("@uni-apply/shared");
 const bullmq_1 = require("bullmq");
 const browser_service_js_1 = require("./browser/browser.service.js");
+const attention_required_error_js_1 = require("./errors/attention-required.error.js");
 const session_expired_error_js_1 = require("./errors/session-expired.error.js");
 const notifications_service_js_1 = require("./notifications/notifications.service.js");
 const prisma_service_js_1 = require("./prisma/prisma.service.js");
@@ -221,9 +222,6 @@ let Processor = Processor_1 = class Processor {
                     const fromMessage = baseMessage.match(/Screenshot:\s*(https?:\/\/\S+)/i)?.[1];
                     const shotUrl = fromMessage ??
                         (await this.screenshotService.captureSafe(page, application.id, 'failed'));
-                    const message = shotUrl && !fromMessage
-                        ? `${baseMessage} Screenshot: ${shotUrl}`
-                        : baseMessage;
                     if (shotUrl) {
                         await this.prisma.application
                             .update({
@@ -232,6 +230,13 @@ let Processor = Processor_1 = class Processor {
                         })
                             .catch(() => undefined);
                     }
+                    if (innerError instanceof session_expired_error_js_1.SessionExpiredError ||
+                        innerError instanceof attention_required_error_js_1.AttentionRequiredError) {
+                        throw innerError;
+                    }
+                    const message = shotUrl && !fromMessage
+                        ? `${baseMessage} Screenshot: ${shotUrl}`
+                        : baseMessage;
                     throw message === baseMessage
                         ? innerError
                         : new Error(message, { cause: innerError });
@@ -239,6 +244,24 @@ let Processor = Processor_1 = class Processor {
             });
         }
         catch (error) {
+            if (error instanceof session_expired_error_js_1.SessionExpiredError ||
+                error instanceof attention_required_error_js_1.AttentionRequiredError) {
+                const status = error instanceof attention_required_error_js_1.AttentionRequiredError
+                    ? 'attention_required'
+                    : 'waiting_for_login';
+                await this.prisma.application.update({
+                    where: { id: application.id },
+                    data: { status, errorMessage: error.message },
+                });
+                await this.recalculateBatchCounters(application.batchId);
+                if (error instanceof attention_required_error_js_1.AttentionRequiredError) {
+                    await this.notificationsService.notifyAttentionRequired(university.displayName, university.id, error.reason);
+                }
+                else {
+                    await this.notificationsService.notifySessionExpired(university.displayName, university.id);
+                }
+                return;
+            }
             const message = error instanceof Error ? error.message : 'Unknown error';
             await this.prisma.application.update({
                 where: { id: application.id },
@@ -252,12 +275,7 @@ let Processor = Processor_1 = class Processor {
             const attemptNumber = job.attemptsStarted || job.attemptsMade + 1;
             const isFinalAttempt = attemptNumber >= maxAttempts;
             if (isFinalAttempt) {
-                if (error instanceof session_expired_error_js_1.SessionExpiredError) {
-                    await this.notificationsService.notifySessionExpired(university.displayName, university.id);
-                }
-                else {
-                    await this.notificationsService.notifyFailed(university.displayName, studentName, message);
-                }
+                await this.notificationsService.notifyFailed(university.displayName, studentName, message);
             }
             throw error;
         }

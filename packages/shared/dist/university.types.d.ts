@@ -17,6 +17,8 @@ export interface FieldConfig {
 export interface SessionConfig {
     loginUrlPattern?: string;
     expiredIndicators?: string[];
+    /** Body-text hints for a CAPTCHA/2FA/unknown-challenge page, beyond the generic selector-based detector. */
+    attentionIndicators?: string[];
     /** Lightweight authenticated page for the proactive health check. Defaults to the form URL's origin. */
     healthCheckUrl?: string;
     /** Conservative placeholder until real per-platform mortality data exists (see BrowserSession.consecutiveFailures). */

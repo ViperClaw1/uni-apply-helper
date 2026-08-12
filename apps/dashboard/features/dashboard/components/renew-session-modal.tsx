@@ -18,11 +18,17 @@ type RenewSessionModalProps = {
 
 export function RenewSessionModal({ session, onClose, onRenewed }: RenewSessionModalProps) {
   const t = useT();
+  const [loadedUniversityId, setLoadedUniversityId] = useState(session?.universityId);
   const [phase, setPhase] = useState<Phase>("idle");
+  const [profilePath, setProfilePath] = useState<string | undefined>();
 
-  useEffect(() => {
+  // Sanctioned React pattern for "adjust state when a prop changes" — runs during render, not
+  // in an effect, so opening a different university's modal resets state with no extra render.
+  if (session?.universityId !== loadedUniversityId) {
+    setLoadedUniversityId(session?.universityId);
     setPhase("idle");
-  }, [session?.universityId]);
+    setProfilePath(undefined);
+  }
 
   useEffect(() => {
     if (phase !== "waiting" || !session) {
@@ -51,10 +57,17 @@ export function RenewSessionModal({ session, onClose, onRenewed }: RenewSessionM
   }
 
   async function handleOpenLogin() {
+    // Belt-and-suspenders alongside the button's `disabled` — closes the window where a fast
+    // double-click could fire the job twice before the disabled state paints.
+    if (phase === "starting" || phase === "waiting") {
+      return;
+    }
+
     setPhase("starting");
 
     try {
-      await renewUniversitySession(session!.universityId);
+      const result = await renewUniversitySession(session!.universityId);
+      setProfilePath(result.profilePath);
       setPhase("waiting");
     } catch {
       setPhase("error");
@@ -74,7 +87,6 @@ export function RenewSessionModal({ session, onClose, onRenewed }: RenewSessionM
       <button
         type="button"
         aria-label={t.common.close}
-        disabled={isBusy}
         onClick={onClose}
         className="absolute inset-0 bg-slate-950/40 backdrop-blur-[2px]"
       />
@@ -93,7 +105,15 @@ export function RenewSessionModal({ session, onClose, onRenewed }: RenewSessionM
             {t.dashboard.renewModal.success}
           </p>
         ) : isBusy ? (
-          <p className="mt-4 text-sm text-slate-600">{t.dashboard.renewModal.waiting}</p>
+          <>
+            <p className="mt-4 text-sm text-slate-600">{t.dashboard.renewModal.waiting}</p>
+            {profilePath ? (
+              <p className="mt-2 rounded-lg bg-slate-50 px-3 py-2 font-mono text-xs text-slate-500">
+                {profilePath}
+              </p>
+            ) : null}
+            <p className="mt-3 text-xs text-slate-400">{t.dashboard.renewModal.canCloseHint}</p>
+          </>
         ) : (
           <>
             <p className="mt-2 text-sm leading-6 text-slate-600">{message}</p>
@@ -109,11 +129,12 @@ export function RenewSessionModal({ session, onClose, onRenewed }: RenewSessionM
         <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button
             type="button"
-            disabled={isBusy}
             onClick={phase === "success" ? onRenewed : onClose}
-            className="inline-flex h-10 cursor-pointer items-center justify-center rounded-xl px-4 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-60"
+            className="inline-flex h-10 cursor-pointer items-center justify-center rounded-xl px-4 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 transition-colors hover:bg-slate-50"
           >
-            {phase === "success" ? t.dashboard.renewModal.close : t.dashboard.renewModal.cancel}
+            {phase === "success" || isBusy
+              ? t.dashboard.renewModal.close
+              : t.dashboard.renewModal.cancel}
           </button>
           {phase !== "success" ? (
             <button

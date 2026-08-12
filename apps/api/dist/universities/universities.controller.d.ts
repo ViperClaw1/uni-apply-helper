@@ -11,6 +11,7 @@ export declare class UniversitiesController {
     findAll(): Promise<import("./types/university-api.types.js").UniversitySummary[]>;
     resolve(name?: string): Promise<import("./types/university-api.types.js").ResolvedUniversity>;
     resolveByFormUrl(url?: string): Promise<import("./types/university-api.types.js").UniversitySchemaResponse>;
+    listSessions(): Promise<import("./types/university-api.types.js").UniversitySessionSummary[]>;
     createAlias(body: CreateUniversityAliasInput): Promise<{
         universityId: string;
         alias: string;

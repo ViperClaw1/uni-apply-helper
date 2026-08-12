@@ -1,4 +1,4 @@
-export type ApplicationStatus = 'queued' | 'ready_for_submission' | 'blocked' | 'submitted' | 'failed';
+export type ApplicationStatus = 'queued' | 'ready_for_submission' | 'blocked' | 'submitted' | 'failed' | 'waiting_for_login' | 'attention_required';
 export type ApplicationBatchStatus = 'queued' | 'processing' | 'completed' | 'failed';
 export type CreateApplicationBatchInput = {
     studentId: string;
@@ -76,4 +76,16 @@ export type ApplicationBatchResponse = {
     failed: number;
     createdAt: string;
     applications: ApplicationResponse[];
+};
+export type ApplicationListItemResponse = {
+    id: string;
+    batchId: string;
+    studentId: string;
+    studentName: string;
+    universityId: string;
+    universityDisplayName?: string;
+    status: string;
+    blockedReason?: string;
+    submittedAt?: string;
+    createdAt: string;
 };

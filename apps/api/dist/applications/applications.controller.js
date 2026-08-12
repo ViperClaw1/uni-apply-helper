@@ -24,6 +24,9 @@ let ApplicationsController = class ApplicationsController {
     createBatch(body) {
         return this.applicationsService.createBatch(body);
     }
+    findAll() {
+        return this.applicationsService.findAll();
+    }
     createBatchForStudent(studentId) {
         return this.applicationsService.createBatch({ studentId });
     }
@@ -66,6 +69,12 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], ApplicationsController.prototype, "createBatch", null);
+__decorate([
+    (0, common_1.Get)('applications'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", void 0)
+], ApplicationsController.prototype, "findAll", null);
 __decorate([
     (0, common_1.Post)('students/:studentId/applications/batches'),
     __param(0, (0, common_1.Param)('studentId')),

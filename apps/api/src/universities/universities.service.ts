@@ -266,9 +266,13 @@ export class UniversitiesService {
   async requestRelogin(universityId: string) {
     await this.findOne(universityId);
 
-    const job = await this.queueService.addJob(QUEUES.BROWSER_RELOGIN, {
-      universityId,
-    });
+    // attempts: 1 — this waits up to 15 min for a human, once. Auto-retrying a timeout would
+    // silently open a second headed browser and wait another 15 min with no signal to the agent.
+    const job = await this.queueService.addJob(
+      QUEUES.BROWSER_RELOGIN,
+      { universityId },
+      { attempts: 1 },
+    );
 
     const profilesRoot =
       process.env.BROWSER_PROFILES_DIR ?? join(process.cwd(), 'profiles');

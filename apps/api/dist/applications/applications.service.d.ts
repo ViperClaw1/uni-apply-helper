@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { QueueService } from '../queue/queue.service.js';
 import { StudentsService } from '../students/students.service.js';
 import { UniversitiesService } from '../universities/universities.service.js';
-import type { ActiveApplicationResponse, ApplicationBatchResponse, ApplicationReadinessResponse, ApplicationResponse, ApplicationStepResponse, CreateApplicationBatchInput, SubmitApplicationInput, UpdateApplicationInput } from './types/application-api.types.js';
+import type { ActiveApplicationResponse, ApplicationBatchResponse, ApplicationListItemResponse, ApplicationReadinessResponse, ApplicationResponse, ApplicationStepResponse, CreateApplicationBatchInput, SubmitApplicationInput, UpdateApplicationInput } from './types/application-api.types.js';
 export declare class ApplicationsService {
     private readonly prisma;
     private readonly studentsService;
@@ -12,6 +12,8 @@ export declare class ApplicationsService {
     private readonly queueService;
     constructor(prisma: PrismaService, studentsService: StudentsService, universitiesService: UniversitiesService, notificationsService: NotificationsService, queueService: QueueService);
     createBatch(input: CreateApplicationBatchInput): Promise<ApplicationBatchResponse>;
+    findAll(): Promise<ApplicationListItemResponse[]>;
+    private getUniversityDisplayNames;
     findByStudent(studentId: string): Promise<ApplicationBatchResponse[]>;
     findBatch(id: string): Promise<ApplicationBatchResponse>;
     findApplication(id: string): Promise<ApplicationResponse>;

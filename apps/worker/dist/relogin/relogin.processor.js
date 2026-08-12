@@ -19,6 +19,7 @@ const session_validator_js_1 = require("../browser/session.validator.js");
 const zzu_session_loader_js_1 = require("../browser/zzu-session.loader.js");
 const notifications_service_js_1 = require("../notifications/notifications.service.js");
 const prisma_service_js_1 = require("../prisma/prisma.service.js");
+const application_resume_service_js_1 = require("../queue/application-resume.service.js");
 const redis_config_js_1 = require("../queue/redis.config.js");
 const university_schema_service_js_1 = require("../university-schema/university-schema.service.js");
 let ReloginProcessor = ReloginProcessor_1 = class ReloginProcessor {
@@ -26,17 +27,22 @@ let ReloginProcessor = ReloginProcessor_1 = class ReloginProcessor {
     prisma;
     notificationsService;
     universitySchemaService;
+    applicationResumeService;
     logger = new common_1.Logger(ReloginProcessor_1.name);
     worker;
-    constructor(browserService, prisma, notificationsService, universitySchemaService) {
+    constructor(browserService, prisma, notificationsService, universitySchemaService, applicationResumeService) {
         this.browserService = browserService;
         this.prisma = prisma;
         this.notificationsService = notificationsService;
         this.universitySchemaService = universitySchemaService;
+        this.applicationResumeService = applicationResumeService;
     }
     onModuleInit() {
         this.worker = new bullmq_1.Worker(shared_1.QUEUES.BROWSER_RELOGIN, (job) => this.process(job), {
             connection: (0, redis_config_js_1.getRedisConnection)(),
+            lockDuration: 16 * 60_000,
+            stalledInterval: 60_000,
+            maxStalledCount: 1,
         });
         this.logger.log(`Listening on queue "${shared_1.QUEUES.BROWSER_RELOGIN}"`);
     }
@@ -58,6 +64,7 @@ let ReloginProcessor = ReloginProcessor_1 = class ReloginProcessor {
                 if (!(await (0, zzu_session_loader_js_1.isLoginPage)(page))) {
                     await this.recordCaptured(university.id, university.session?.sessionTtlHours);
                     await this.notificationsService.notifyReloginCompleted(university.displayName, university.id);
+                    await this.applicationResumeService.resumePausedApplications(university.id);
                     return;
                 }
                 await page.waitForTimeout(2_000);
@@ -98,6 +105,7 @@ exports.ReloginProcessor = ReloginProcessor = ReloginProcessor_1 = __decorate([
     __metadata("design:paramtypes", [browser_service_js_1.BrowserService,
         prisma_service_js_1.PrismaService,
         notifications_service_js_1.NotificationsService,
-        university_schema_service_js_1.UniversitySchemaService])
+        university_schema_service_js_1.UniversitySchemaService,
+        application_resume_service_js_1.ApplicationResumeService])
 ], ReloginProcessor);
 //# sourceMappingURL=relogin.processor.js.map

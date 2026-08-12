@@ -4,6 +4,7 @@ export declare class ApplicationsController {
     private readonly applicationsService;
     constructor(applicationsService: ApplicationsService);
     createBatch(body: CreateApplicationBatchInput): Promise<import("./types/application-api.types.js").ApplicationBatchResponse>;
+    findAll(): Promise<import("./types/application-api.types.js").ApplicationListItemResponse[]>;
     createBatchForStudent(studentId: string): Promise<import("./types/application-api.types.js").ApplicationBatchResponse>;
     findByStudent(studentId: string): Promise<import("./types/application-api.types.js").ApplicationBatchResponse[]>;
     previewReadiness(studentId: string): Promise<import("./types/application-api.types.js").ApplicationReadinessResponse[]>;

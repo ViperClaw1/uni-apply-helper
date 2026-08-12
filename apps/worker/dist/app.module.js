@@ -38,6 +38,7 @@ const wizard_navigator_js_1 = require("./filler/wizard.navigator.js");
 const geocoding_service_js_1 = require("./geocoding/geocoding.service.js");
 const notifications_service_js_1 = require("./notifications/notifications.service.js");
 const processor_js_1 = require("./processor.js");
+const application_resume_service_js_1 = require("./queue/application-resume.service.js");
 const relogin_processor_js_1 = require("./relogin/relogin.processor.js");
 const prisma_module_js_1 = require("./prisma/prisma.module.js");
 const screenshot_service_js_1 = require("./screenshot/screenshot.service.js");
@@ -80,6 +81,7 @@ exports.AppModule = AppModule = __decorate([
             log_result_step_js_1.LogResultStep,
             notifications_service_js_1.NotificationsService,
             processor_js_1.Processor,
+            application_resume_service_js_1.ApplicationResumeService,
             relogin_processor_js_1.ReloginProcessor,
             university_schema_service_js_1.UniversitySchemaService,
             session_health_check_processor_js_1.SessionHealthCheckProcessor,
