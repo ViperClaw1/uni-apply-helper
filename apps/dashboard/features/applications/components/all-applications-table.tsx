@@ -1,40 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useT } from "@/lib/i18n/context";
+import { useCachedFetch } from "@/lib/use-cached-fetch";
 import { getAllApplications } from "../api/applications.api";
 import { getApplicationStatusLabel, getStatusClassName } from "../lib/status";
-import type { ApplicationListItem, ApplicationStatus } from "../types/application.types";
+import type { ApplicationStatus } from "../types/application.types";
 
 type FilterValue = "all" | ApplicationStatus;
 
 export function AllApplicationsTable() {
   const t = useT();
-  const [applications, setApplications] = useState<ApplicationListItem[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { data: applications, error: loadError } = useCachedFetch(
+    "all-applications",
+    getAllApplications,
+  );
+  const error = loadError ? t.applications.list.loadFailed : null;
   const [filter, setFilter] = useState<FilterValue>("all");
-
-  useEffect(() => {
-    let isMounted = true;
-
-    getAllApplications()
-      .then((data) => {
-        if (isMounted) {
-          setApplications(data);
-        }
-      })
-      .catch(() => {
-        if (isMounted) {
-          setError(t.applications.list.loadFailed);
-        }
-      });
-
-    return () => {
-      isMounted = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const filters = useMemo<FilterValue[]>(() => {
     const statuses = new Set<ApplicationStatus>();

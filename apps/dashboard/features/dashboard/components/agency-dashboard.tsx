@@ -1,15 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useT } from "@/lib/i18n/context";
 import { toTitleCase } from "@/lib/format";
+import { useCachedFetch } from "@/lib/use-cached-fetch";
 import { getStudents } from "@/features/students/api/students.api";
 import { computeStudentStatus } from "@/features/students/lib/student-status";
 import { REQUIRED_DOCUMENT_TYPES } from "@/features/students/lib/profile-readiness";
 import { useDocumentTypeLabel } from "@/features/documents/constants/document-types";
-import type { StudentListItem } from "@/features/students/types/student.types";
 import { getUniversitySessions } from "@/features/universities/api/universities.api";
-import type { UniversitySession } from "@/features/universities/types/session.types";
 import { DashboardStats, type DashboardStatCounts } from "./dashboard-stats";
 import { StudentsNeedingAttention, type StudentActionItem } from "./students-needing-attention";
 import { UniversitySessionsPanel } from "./university-sessions-panel";
@@ -17,38 +16,24 @@ import { UniversitySessionsPanel } from "./university-sessions-panel";
 export function AgencyDashboard() {
   const t = useT();
   const documentTypeLabel = useDocumentTypeLabel();
-  const [students, setStudents] = useState<StudentListItem[] | null>(null);
-  const [sessions, setSessions] = useState<UniversitySession[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
-  const loadSessions = useCallback(() => {
-    getUniversitySessions()
-      .then(setSessions)
-      .catch(() => setError((current) => current ?? t.dashboard.sessions.loadFailed));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const {
+    data: studentsData,
+    error: studentsLoadError,
+  } = useCachedFetch("students", getStudents);
+  const {
+    data: sessionsData,
+    error: sessionsLoadError,
+    reload: reloadSessions,
+  } = useCachedFetch("university-sessions", getUniversitySessions);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    Promise.all([getStudents(), getUniversitySessions()])
-      .then(([studentsData, sessionsData]) => {
-        if (isMounted) {
-          setStudents(studentsData);
-          setSessions(sessionsData);
-        }
-      })
-      .catch(() => {
-        if (isMounted) {
-          setError(t.dashboard.loadFailed);
-        }
-      });
-
-    return () => {
-      isMounted = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const students = studentsData;
+  const sessions = sessionsData;
+  const error = studentsLoadError
+    ? t.dashboard.loadFailed
+    : sessionsLoadError
+      ? t.dashboard.sessions.loadFailed
+      : null;
 
   const statuses = useMemo(
     () =>
@@ -140,7 +125,7 @@ export function AgencyDashboard() {
 
       <DashboardStats counts={counts} />
       <StudentsNeedingAttention items={actionItems} />
-      <UniversitySessionsPanel sessions={sessions} onRenewed={loadSessions} />
+      <UniversitySessionsPanel sessions={sessions} onRenewed={reloadSessions} />
     </div>
   );
 }

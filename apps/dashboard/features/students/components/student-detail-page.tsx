@@ -168,28 +168,32 @@ export function StudentDetailPage() {
         ))}
       </nav>
 
-      {/* All five panels stay mounted (grid-stacked in the same cell, toggled by opacity) instead
-          of mounting/unmounting on tab click — each tab's own fetched data (universities list,
-          motivation letters, readiness preview, …) is fetched once and kept, and switching tabs
-          is a crossfade instead of a fresh mount+loading flash every time. */}
-      <div className="mt-6 grid">
-        <TabPanel active={activeTab === "overview"}>
-          <OverviewTab
-            readiness={readiness}
-            documentsPresent={documentsPresent}
-            documentsRequired={REQUIRED_DOCUMENT_TYPES.length}
-            universitiesCount={resolvedTargets.length}
-            latestBatch={latestBatch}
-            onJumpToTab={setActiveTab}
-          />
-        </TabPanel>
+      {/* Only the active tab is mounted — the container's height always matches its actual
+          content, never a hidden tab's. `.page-transition` + the `key` retrigger the same fade
+          used on route changes elsewhere, so switching tabs still feels like a smooth crossfade.
+          Each tab's own data fetch is cached (useCachedFetch) so revisiting a tab is instant. */}
+      <div className="mt-6">
+        {activeTab === "overview" ? (
+          <div key="overview" className="page-transition">
+            <OverviewTab
+              readiness={readiness}
+              documentsPresent={documentsPresent}
+              documentsRequired={REQUIRED_DOCUMENT_TYPES.length}
+              universitiesCount={resolvedTargets.length}
+              latestBatch={latestBatch}
+              onJumpToTab={setActiveTab}
+            />
+          </div>
+        ) : null}
 
-        <TabPanel active={activeTab === "profile"}>
-          <ProfileTab studentId={studentId} student={student} onUpdated={setStudent} />
-        </TabPanel>
+        {activeTab === "profile" ? (
+          <div key="profile" className="page-transition">
+            <ProfileTab studentId={studentId} student={student} onUpdated={setStudent} />
+          </div>
+        ) : null}
 
-        <TabPanel active={activeTab === "documents"}>
-          <div>
+        {activeTab === "documents" ? (
+          <div key="documents" className="page-transition">
             <RequiredDocumentsPanel
               targets={resolvedTargets}
               documentsByType={documentsByType}
@@ -211,20 +215,22 @@ export function StudentDetailPage() {
               ))}
             </div>
           </div>
-        </TabPanel>
+        ) : null}
 
-        <TabPanel active={activeTab === "universities"}>
-          <UniversitiesTab
-            studentId={studentId}
-            student={student}
-            documentsByType={documentsByType}
-            highlightUniversityId={highlightUniversityId}
-            onTargetsChange={handleTargetsChange}
-          />
-        </TabPanel>
+        {activeTab === "universities" ? (
+          <div key="universities" className="page-transition">
+            <UniversitiesTab
+              studentId={studentId}
+              student={student}
+              documentsByType={documentsByType}
+              highlightUniversityId={highlightUniversityId}
+              onTargetsChange={handleTargetsChange}
+            />
+          </div>
+        ) : null}
 
-        <TabPanel active={activeTab === "applications"}>
-          <div>
+        {activeTab === "applications" ? (
+          <div key="applications" className="page-transition">
             {resolvedTargets.length > 0 ? (
               <ApplicationsReadinessPreview
                 studentId={studentId}
@@ -260,24 +266,9 @@ export function StudentDetailPage() {
                     : `${t.students.profilePage.submitButtonPrefix}${readyCount ?? pendingTargets.length}${t.students.profilePage.submitButtonSuffix}`}
             </button>
           </div>
-        </TabPanel>
+        ) : null}
       </div>
     </main>
-  );
-}
-
-function TabPanel({ active, children }: { active: boolean; children: React.ReactNode }) {
-  return (
-    <div
-      className={`col-start-1 row-start-1 transition-all duration-300 ease-out ${
-        active
-          ? "z-10 opacity-100 translate-y-0"
-          : "pointer-events-none opacity-0 -translate-y-1"
-      }`}
-      inert={!active}
-    >
-      {children}
-    </div>
   );
 }
 

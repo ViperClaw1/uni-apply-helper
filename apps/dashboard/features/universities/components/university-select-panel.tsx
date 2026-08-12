@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useT } from "@/lib/i18n/context";
 import { Skeleton } from "@/components/skeleton";
+import { useCachedFetch } from "@/lib/use-cached-fetch";
 import { useDocumentTypeLabel } from "@/features/documents/constants/document-types";
 import type { StudentDocument } from "@/features/documents/types/document.types";
 import { setStudentApplicationTargets } from "@/features/students/api/students.api";
@@ -27,9 +28,13 @@ export function UniversitySelectPanel({
   const s = t.universities.selectPanel;
   const documentTypeLabel = useDocumentTypeLabel();
 
-  const [universities, setUniversities] = useState<UniversitySummary[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const {
+    data: universitiesData,
+    error: loadCacheError,
+    isLoading,
+  } = useCachedFetch("universities", getUniversities);
+  const universities = universitiesData ?? [];
+  const loadError = loadCacheError ? s.loadFailed : null;
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [detailByUniversity, setDetailByUniversity] = useState<Map<string, UniversityDetail>>(
@@ -37,33 +42,6 @@ export function UniversitySelectPanel({
   );
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    getUniversities()
-      .then((data) => {
-        if (isMounted) {
-          setUniversities(data);
-          setLoadError(null);
-        }
-      })
-      .catch(() => {
-        if (isMounted) {
-          setLoadError(s.loadFailed);
-        }
-      })
-      .finally(() => {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      isMounted = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const selectedIds = useMemo(
     () =>

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useT } from "@/lib/i18n/context";
 import { Skeleton } from "@/components/skeleton";
+import { useCachedFetch } from "@/lib/use-cached-fetch";
 import { getUniversity } from "@/features/universities/api/universities.api";
 import { useDocumentTypeLabel } from "@/features/documents/constants/document-types";
 import type { StudentDocument } from "@/features/documents/types/document.types";
@@ -13,6 +13,23 @@ type RequiredDocumentsPanelProps = {
   documentsByType: Map<string, StudentDocument[]>;
 };
 
+async function fetchRequiredTypes(universityIds: string[]): Promise<string[]> {
+  if (universityIds.length === 0) {
+    return [];
+  }
+
+  const universities = await Promise.all(universityIds.map((id) => getUniversity(id)));
+  const union = new Set<string>();
+
+  for (const university of universities) {
+    for (const type of university.requiredDocuments) {
+      union.add(type);
+    }
+  }
+
+  return [...union];
+}
+
 export function RequiredDocumentsPanel({ targets, documentsByType }: RequiredDocumentsPanelProps) {
   const t = useT();
   const documentTypeLabel = useDocumentTypeLabel();
@@ -20,47 +37,11 @@ export function RequiredDocumentsPanel({ targets, documentsByType }: RequiredDoc
     .map((target) => target.universityId)
     .filter((id): id is string => Boolean(id));
   const universityIdsKey = universityIds.join(",");
-  const [requiredTypes, setRequiredTypes] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    if (universityIds.length === 0) {
-      return;
-    }
-
-    let isMounted = true;
-
-    Promise.all(universityIds.map((id) => getUniversity(id)))
-      .then((universities) => {
-        if (!isMounted) {
-          return;
-        }
-
-        const union = new Set<string>();
-        for (const university of universities) {
-          for (const type of university.requiredDocuments) {
-            union.add(type);
-          }
-        }
-        setRequiredTypes([...union]);
-      })
-      .catch(() => {
-        if (isMounted) {
-          setRequiredTypes([]);
-        }
-      })
-      .finally(() => {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      isMounted = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [universityIdsKey]);
-
+  const { data, isLoading } = useCachedFetch(`required-documents:${universityIdsKey}`, () =>
+    fetchRequiredTypes(universityIds),
+  );
+  const requiredTypes = data ?? [];
   const showSkeleton = isLoading && universityIds.length > 0;
 
   if (showSkeleton) {

@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Header, Logo, LogoutButton } from "@/components/header";
 import { useLocale, useT } from "@/lib/i18n/context";
 import { toTitleCase } from "@/lib/format";
+import { useCachedFetch } from "@/lib/use-cached-fetch";
 import { deleteStudent, getStudents } from "../api/students.api";
 import type { StudentListItem } from "../types/student.types";
 import { computeProfileReadiness, REQUIRED_DOCUMENT_TYPES } from "../lib/profile-readiness";
@@ -27,41 +28,20 @@ type StudentRow = StudentListItem & {
 export function StudentList({ companyName }: { companyName?: string } = {}) {
   const t = useT();
   const { locale } = useLocale();
-  const [students, setStudents] = useState<StudentListItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const {
+    data: studentsData,
+    error: loadCacheError,
+    isLoading,
+    mutate: mutateStudents,
+  } = useCachedFetch("students", getStudents);
+  const students = studentsData ?? [];
   const [error, setError] = useState<string | null>(null);
+  const loadError = error ?? (loadCacheError ? t.students.list.loadFailed : null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [studentToDelete, setStudentToDelete] = useState<StudentListItem | null>(
     null,
   );
   const [filter, setFilter] = useState<StudentStatusFilter>("all");
-
-  useEffect(() => {
-    let isMounted = true;
-
-    getStudents()
-      .then((data) => {
-        if (isMounted) {
-          setStudents(data);
-          setError(null);
-        }
-      })
-      .catch(() => {
-        if (isMounted) {
-          setError(t.students.list.loadFailed);
-        }
-      })
-      .finally(() => {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      isMounted = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const rows: StudentRow[] = useMemo(
     () =>
@@ -124,8 +104,8 @@ export function StudentList({ companyName }: { companyName?: string } = {}) {
 
     try {
       await deleteStudent(studentToDelete.id);
-      setStudents((current) =>
-        current.filter((item) => item.id !== studentToDelete.id),
+      mutateStudents((current) =>
+        (current ?? []).filter((item) => item.id !== studentToDelete.id),
       );
       setStudentToDelete(null);
     } catch {
@@ -164,8 +144,8 @@ export function StudentList({ companyName }: { companyName?: string } = {}) {
 
       {isLoading ? (
         <StateCard title={t.students.list.loadingTitle} description={t.students.list.loadingDesc} />
-      ) : error && students.length === 0 ? (
-        <StateCard title={t.common.error} description={error} tone="danger" />
+      ) : loadError && students.length === 0 ? (
+        <StateCard title={t.common.error} description={loadError} tone="danger" />
       ) : students.length === 0 ? (
         <StateCard
           title={t.students.list.emptyTitle}
@@ -173,9 +153,9 @@ export function StudentList({ companyName }: { companyName?: string } = {}) {
         />
       ) : (
         <div className="flex flex-col gap-4">
-          {error ? (
+          {loadError ? (
             <div className="rounded-xl bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 ring-1 ring-rose-100">
-              {error}
+              {loadError}
             </div>
           ) : null}
 

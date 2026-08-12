@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useT } from "@/lib/i18n/context";
 import { Skeleton } from "@/components/skeleton";
+import { useCachedFetch } from "@/lib/use-cached-fetch";
 import { getApplicationsReadiness } from "../api/applications.api";
-import type { ApplicationReadiness, ApplicationReadinessStatus } from "../types/application.types";
+import type { ApplicationReadinessStatus } from "../types/application.types";
 
 type ApplicationsReadinessPreviewProps = {
   studentId: string;
@@ -19,39 +20,22 @@ export function ApplicationsReadinessPreview({
 }: ApplicationsReadinessPreviewProps) {
   const t = useT();
   const p = t.applications.readinessPreview;
-  const [items, setItems] = useState<ApplicationReadiness[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+
+  const {
+    data,
+    error: loadError,
+    isLoading,
+  } = useCachedFetch(`readiness:${studentId}:${refreshKey}`, () =>
+    getApplicationsReadiness(studentId),
+  );
+  const items = data ?? [];
 
   useEffect(() => {
-    let isMounted = true;
-
-    getApplicationsReadiness(studentId)
-      .then((data) => {
-        if (!isMounted) {
-          return;
-        }
-
-        setItems(data);
-        setError(null);
-        onReadyCountChange?.(data.filter((item) => item.status === "ready").length);
-      })
-      .catch(() => {
-        if (isMounted) {
-          setError(p.loadFailed);
-        }
-      })
-      .finally(() => {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      });
-
-    return () => {
-      isMounted = false;
-    };
+    if (data) {
+      onReadyCountChange?.(data.filter((item) => item.status === "ready").length);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [studentId, refreshKey]);
+  }, [data]);
 
   if (isLoading) {
     return (
@@ -69,10 +53,10 @@ export function ApplicationsReadinessPreview({
     );
   }
 
-  if (error) {
+  if (loadError) {
     return (
       <div className="mb-4 rounded-xl bg-rose-50 px-3 py-2 text-xs font-medium text-rose-700 ring-1 ring-rose-100">
-        {error}
+        {p.loadFailed}
       </div>
     );
   }
