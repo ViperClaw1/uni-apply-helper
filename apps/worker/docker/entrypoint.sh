@@ -12,10 +12,15 @@ done
 
 export DISPLAY=:99
 
-# ponytail: no VNC password (-nopw) — auth boundary is Railway private-network isolation plus
-# the ticket gate added in Phase 2, not VNC's own weak auth. Add x11vnc -passwd if that
-# isolation ever looks weaker than assumed. -localhost: only reachable from inside this
-# container; the API proxy reaches it via Railway private networking, never the public internet.
-x11vnc -display :99 -forever -shared -nopw -rfbport 5900 -localhost &
+# No -localhost: Railway's private networking is service-to-service over IPv6 — traffic from
+# the API arrives on this container's real interface, not as loopback, so -localhost (which
+# also seems to trigger x11vnc's IPv6 bind failing with "Address already in use") would block
+# it entirely. Reachability now depends on nothing ever generating a public domain for this
+# service's port 5900 — see the plan's risk #3. Do NOT do that in Railway's settings.
+#
+# ponytail: no VNC password (-nopw) either — auth boundary is that private-network-only
+# reachability plus the single-use ticket gate in the API (Phase 2), not VNC's own weak auth.
+# Add x11vnc -passwd if the "never public" assumption ever looks weaker than expected.
+x11vnc -display :99 -forever -shared -nopw -rfbport 5900 &
 
 exec pnpm --filter worker start:prod
