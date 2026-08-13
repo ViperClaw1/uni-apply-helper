@@ -5,7 +5,7 @@ ENV PATH="$PNPM_HOME:$PATH"
 WORKDIR /app
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ca-certificates openssl \
+  && apt-get install -y --no-install-recommends ca-certificates openssl xvfb x11vnc tini \
   && rm -rf /var/lib/apt/lists/* \
   && corepack enable \
   && corepack prepare pnpm@11.10.0 --activate
@@ -51,4 +51,9 @@ ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 COPY --from=build /app /app
 
-CMD ["pnpm", "--filter", "worker", "start:prod"]
+RUN chmod +x apps/worker/docker/entrypoint.sh
+
+# tini as PID 1 so Xvfb/x11vnc (backgrounded in entrypoint.sh alongside the Node app) get
+# signals forwarded and zombies reaped correctly — see plan: snug-rolling-mitten.md, Phase 1.
+ENTRYPOINT ["tini", "--"]
+CMD ["/app/apps/worker/docker/entrypoint.sh"]

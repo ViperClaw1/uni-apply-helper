@@ -63,6 +63,9 @@ importers:
       grammy:
         specifier: ^1.44.0
         version: 1.44.0
+      ioredis:
+        specifier: ^5.10.1
+        version: 5.10.1
       lodash:
         specifier: ^4.18.1
         version: 4.18.1
@@ -75,6 +78,9 @@ importers:
       rxjs:
         specifier: ^7.8.1
         version: 7.8.2
+      ws:
+        specifier: ^8.21.0
+        version: 8.21.0
     devDependencies:
       '@eslint/eslintrc':
         specifier: ^3.2.0
@@ -109,6 +115,9 @@ importers:
       '@types/supertest':
         specifier: ^7.0.0
         version: 7.2.0
+      '@types/ws':
+        specifier: ^8.5.13
+        version: 8.18.1
       eslint:
         specifier: ^9.18.0
         version: 9.39.4(jiti@2.7.0)
@@ -154,6 +163,9 @@ importers:
 
   apps/dashboard:
     dependencies:
+      '@novnc/novnc':
+        specifier: ^1.6.0
+        version: 1.7.0
       axios:
         specifier: ^1.18.1
         version: 1.18.1
@@ -1582,6 +1594,9 @@ packages:
     resolution: {integrity: sha512-nn5ozdjYQpUCZlWGuxcJY/KpxkWQs4DcbMCmKojjyrYDEAGy4Ce19NN4v5MduafTwJlbKc99UA8YhSVqq9yPZA==}
     engines: {node: '>=12.4.0'}
 
+  '@novnc/novnc@1.7.0':
+    resolution: {integrity: sha512-ucEJOx4T2avIRCleodk7YobZj5O2Ga2AeLfQ69A/yjG9HHba2+PDgwSkN3FttrmG+70ZGx21sElNFouK13RzyA==}
+
   '@paralleldrive/cuid2@2.3.1':
     resolution: {integrity: sha512-XO7cAxhnTZl0Yggq6jOgjiOHhbgcO4NqFqwSmQpjK3b6TEE6Uj/jfSk6wzYyemh3+I0sHirKSetjQwn5cZktFw==}
 
@@ -2277,6 +2292,9 @@ packages:
 
   '@types/supertest@7.2.0':
     resolution: {integrity: sha512-uh2Lv57xvggst6lCqNdFAmDSvoMG7M/HDtX4iUCquxQ5EGPtaPM5PL5Hmi7LCvOG8db7YaCPNJEeoI8s/WzIQw==}
+
+  '@types/ws@8.18.1':
+    resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
 
   '@types/yargs-parser@21.0.3':
     resolution: {integrity: sha512-I4q9QU9MQv4oEOz4tAHJtNz1cwuLxn2F3xcc2iV5WdqLPpUnj30aUuxt1mAxYTG+oe8CZMV/+6rU4S4gRDzqtQ==}
@@ -7351,6 +7369,8 @@ snapshots:
 
   '@nolyfill/is-core-module@1.0.39': {}
 
+  '@novnc/novnc@1.7.0': {}
+
   '@paralleldrive/cuid2@2.3.1':
     dependencies:
       '@noble/hashes': 1.8.0
@@ -8042,6 +8062,10 @@ snapshots:
     dependencies:
       '@types/methods': 1.1.4
       '@types/superagent': 8.1.10
+
+  '@types/ws@8.18.1':
+    dependencies:
+      '@types/node': 24.13.3
 
   '@types/yargs-parser@21.0.3': {}
 

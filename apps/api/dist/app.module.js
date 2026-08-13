@@ -18,6 +18,7 @@ const letters_module_js_1 = require("./letters/letters.module.js");
 const notifications_module_1 = require("./notifications/notifications.module");
 const prisma_module_1 = require("./prisma/prisma.module");
 const queue_module_1 = require("./queue/queue.module");
+const relogin_viewer_module_js_1 = require("./relogin-viewer/relogin-viewer.module.js");
 const students_module_1 = require("./students/students.module");
 const universities_module_js_1 = require("./universities/universities.module.js");
 const webhook_module_1 = require("./webhook/webhook.module");
@@ -35,6 +36,7 @@ exports.AppModule = AppModule = __decorate([
             documents_module_js_1.DocumentsModule,
             letters_module_js_1.LettersModule,
             notifications_module_1.NotificationsModule,
+            relogin_viewer_module_js_1.ReloginViewerModule,
             students_module_1.StudentsModule,
             universities_module_js_1.UniversitiesModule,
             webhook_module_1.WebhookModule,

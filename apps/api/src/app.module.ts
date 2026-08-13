@@ -9,6 +9,7 @@ import { LettersModule } from './letters/letters.module.js';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { QueueModule } from './queue/queue.module';
+import { ReloginViewerModule } from './relogin-viewer/relogin-viewer.module.js';
 import { StudentsModule } from './students/students.module';
 import { UniversitiesModule } from './universities/universities.module.js';
 import { WebhookModule } from './webhook/webhook.module';
@@ -23,6 +24,7 @@ import { WebhookModule } from './webhook/webhook.module';
     DocumentsModule,
     LettersModule,
     NotificationsModule,
+    ReloginViewerModule,
     StudentsModule,
     UniversitiesModule,
     WebhookModule,

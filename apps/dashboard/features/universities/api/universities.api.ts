@@ -1,4 +1,5 @@
 import { apiClient } from "@/lib/api-client";
+import { sessionApiClient } from "@/lib/session-api-client";
 import type { UniversityDetail, UniversitySummary } from "../types/university.types";
 import type { UniversitySession } from "../types/session.types";
 
@@ -41,6 +42,16 @@ export async function renewUniversitySession(universityId: string) {
 export async function getReloginStatus(jobId: string) {
   const response = await apiClient.get<{ status: string; failedReason?: string }>(
     `/universities/relogin-status/${jobId}`,
+  );
+
+  return response.data;
+}
+
+// Guard-protected — needs the session cookie, so sessionApiClient (not apiClient) even in dev.
+export async function mintReloginViewerTicket(jobId: string) {
+  const response = await sessionApiClient.post<{ ticket: string; expiresInMs: number }>(
+    "/universities/relogin-viewer-ticket",
+    { jobId },
   );
 
   return response.data;

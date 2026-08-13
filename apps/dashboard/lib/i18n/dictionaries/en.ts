@@ -351,7 +351,10 @@ const en = {
       openLogin: "Open university login",
       afterLogin: "After successful login the session will be saved automatically.",
       waiting:
-        "A browser window opened on the automation worker — not this device. Log in there; this page updates automatically once it's done.",
+        "Log in below — this is a live view of the browser running on the automation worker. This page updates automatically once you're done.",
+      viewerConnecting: "Connecting to the live view…",
+      viewerUnavailable:
+        "Live view unavailable right now — still waiting automatically for the login to complete.",
       canCloseHint: "You can close this window — the login window on the worker stays open.",
       success: "Session updated successfully",
       failed: "Failed to start the renewal. Please try again.",
