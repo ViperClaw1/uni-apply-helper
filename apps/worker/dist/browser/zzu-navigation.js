@@ -1,12 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.applyUrlFromForm = applyUrlFromForm;
 exports.navigateToZzuApplication = navigateToZzuApplication;
 const session_expired_error_js_1 = require("../errors/session-expired.error.js");
 const program_hint_js_1 = require("./program-hint.js");
 const zzu_session_loader_js_1 = require("./zzu-session.loader.js");
 const zzu_pre_wizard_js_1 = require("./zzu-pre-wizard.js");
-function memberUrlFromForm(formUrl) {
-    return `${new URL(formUrl).origin}/member/index.do`;
+function applyUrlFromForm(formUrl) {
+    return `${new URL(formUrl).origin}/apply/index.do`;
 }
 const NAV_APPLICATION = [
     'a:has-text("Application"):not(:has-text("Status"))',
@@ -137,7 +138,7 @@ async function navigateToZzuApplication(page, formUrl, profile, universityId = '
     await page.goto(formUrl, {
         waitUntil: 'domcontentloaded',
         timeout: 60_000,
-        referer: memberUrlFromForm(formUrl),
+        referer: applyUrlFromForm(formUrl),
     });
     if ((0, zzu_session_loader_js_1.isLoginRedirect)(page.url())) {
         throw new session_expired_error_js_1.SessionExpiredError(`Session expired for ${universityId}`, universityId);

@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import PhoneInput from "react-phone-input-2";
-import "react-phone-input-2/lib/style.css";
 import {
   saveMyProfile,
   updateStudentProfile,
@@ -12,9 +10,11 @@ import { COUNTRIES, flagEmoji } from "@/features/auth/lib/countries";
 import type { StudentProfile } from "@/features/students/types/student.types";
 import { useT } from "@/lib/i18n/context";
 import {
+  AddressField,
   CheckboxField,
   ErrorBanner,
   Field,
+  PhoneField,
   SelectField,
   StepActions,
   StepSection,
@@ -171,18 +171,13 @@ export function PersonalStep({
           onChange={(v) => updateField("email", v)}
           required
         />
-        <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-slate-600">{t.profileWizard.personal.phone}</label>
-          <PhoneInput
-            value={(fields.phone ?? "").replace(/^\+/, "")}
-            onChange={(value) => updateField("phone", `+${value}`)}
-            placeholder={t.profileWizard.personal.phonePlaceholder}
-            inputClass="!h-10 !w-full !rounded-lg !border !border-slate-200 !text-sm !text-slate-800"
-            buttonClass="!rounded-l-lg !border !border-slate-200"
-            containerClass="!w-full"
-          />
-        </div>
-        <Field
+        <PhoneField
+          label={t.profileWizard.personal.phone}
+          value={fields.phone ?? ""}
+          onChange={(v) => updateField("phone", v)}
+          placeholder={t.profileWizard.personal.phonePlaceholder}
+        />
+        <AddressField
           label={t.profileWizard.personal.permanentAddress}
           placeholder="123 Main St, Almaty"
           value={fields.permanentAddress ?? ""}

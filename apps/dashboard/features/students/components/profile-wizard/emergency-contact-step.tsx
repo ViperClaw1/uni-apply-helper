@@ -11,6 +11,7 @@ import { useT } from "@/lib/i18n/context";
 import {
   ErrorBanner,
   Field,
+  PhoneField,
   StepActions,
   StepSection,
   extractErrorMessage,
@@ -73,7 +74,7 @@ export function EmergencyContactStep({
           value={fields.relationship ?? ""}
           onChange={(v) => updateField("relationship", v)}
         />
-        <Field
+        <PhoneField
           label={t.profileWizard.emergencyContact.phone}
           placeholder="+7 701 987 6543"
           value={fields.phone ?? ""}

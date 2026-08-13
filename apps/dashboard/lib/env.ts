@@ -14,4 +14,6 @@ export const env = {
     (process.env.NODE_ENV === "development"
       ? "http://localhost:3000"
       : undefined),
+  // Address fields degrade to plain text inputs (no autocomplete) when unset.
+  googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim() || undefined,
 };

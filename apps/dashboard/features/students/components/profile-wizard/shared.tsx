@@ -1,4 +1,8 @@
 import { isAxiosError } from "axios";
+import { useEffect, useRef } from "react";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
+import { env } from "@/lib/env";
 import { useT } from "@/lib/i18n/context";
 
 export function Field({
@@ -72,6 +76,125 @@ export function SelectField({
           </option>
         ))}
       </select>
+    </div>
+  );
+}
+
+export function PhoneField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  required,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  required?: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="text-xs font-medium text-slate-600">
+        {label}
+        {required ? <span className="text-rose-500"> *</span> : null}
+      </label>
+      <PhoneInput
+        value={value.replace(/^\+/, "")}
+        onChange={(v) => onChange(`+${v}`)}
+        placeholder={placeholder}
+        inputClass="!h-10 !w-full !rounded-lg !border !border-slate-200 !text-sm !text-slate-800"
+        buttonClass="!rounded-l-lg !border !border-slate-200"
+        containerClass="!w-full"
+      />
+    </div>
+  );
+}
+
+let googleMapsPromise: Promise<void> | null = null;
+
+function loadGoogleMaps(apiKey: string): Promise<void> {
+  if (window.google?.maps?.places) {
+    return Promise.resolve();
+  }
+
+  googleMapsPromise ??= new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async&callback=__initGoogleMapsAutocomplete`;
+    script.async = true;
+    (window as unknown as Record<string, () => void>).__initGoogleMapsAutocomplete = resolve;
+    script.onerror = () => reject(new Error("Failed to load Google Maps script"));
+    document.head.appendChild(script);
+  });
+
+  return googleMapsPromise;
+}
+
+// Geocoded address search — degrades to a plain text input when no API key is configured.
+export function AddressField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  required,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  required?: boolean;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const onChangeRef = useRef(onChange);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  });
+
+  useEffect(() => {
+    const apiKey = env.googleMapsApiKey;
+    if (!apiKey || !inputRef.current) {
+      return;
+    }
+
+    let autocomplete: google.maps.places.Autocomplete | undefined;
+    let cancelled = false;
+
+    loadGoogleMaps(apiKey).then(() => {
+      if (cancelled || !inputRef.current || !window.google) {
+        return;
+      }
+      autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
+        fields: ["formatted_address"],
+      });
+      autocomplete.addListener("place_changed", () => {
+        const place = autocomplete!.getPlace();
+        if (place.formatted_address) {
+          onChangeRef.current(place.formatted_address);
+        }
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="text-xs font-medium text-slate-600">
+        {label}
+        {required ? <span className="text-rose-500"> *</span> : null}
+      </label>
+      <input
+        ref={inputRef}
+        type="text"
+        value={value}
+        placeholder={placeholder}
+        required={required}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-10 rounded-lg border border-slate-200 px-3 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-blue-400"
+      />
     </div>
   );
 }

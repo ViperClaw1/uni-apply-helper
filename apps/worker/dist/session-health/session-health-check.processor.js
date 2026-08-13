@@ -16,6 +16,8 @@ const shared_1 = require("@uni-apply/shared");
 const bullmq_1 = require("bullmq");
 const browser_service_js_1 = require("../browser/browser.service.js");
 const session_validator_js_1 = require("../browser/session.validator.js");
+const zzu_navigation_js_1 = require("../browser/zzu-navigation.js");
+const zzu_session_loader_js_1 = require("../browser/zzu-session.loader.js");
 const attention_required_error_js_1 = require("../errors/attention-required.error.js");
 const prisma_service_js_1 = require("../prisma/prisma.service.js");
 const application_resume_service_js_1 = require("../queue/application-resume.service.js");
@@ -67,10 +69,14 @@ let SessionHealthCheckProcessor = SessionHealthCheckProcessor_1 = class SessionH
     }
     async checkOne(universityId) {
         const university = await this.universitySchemaService.get(universityId);
+        const usingFormUrlFallback = !university.session?.healthCheckUrl;
         const targetUrl = university.session?.healthCheckUrl ?? university.formUrl;
         if (!targetUrl) {
             return;
         }
+        const referer = usingFormUrlFallback && (0, zzu_session_loader_js_1.isZzuFormUrl)(university.formUrl)
+            ? (0, zzu_navigation_js_1.applyUrlFromForm)(university.formUrl)
+            : undefined;
         const previous = await this.prisma.browserSession.findUnique({
             where: { universityId },
             select: { status: true },
@@ -80,6 +86,7 @@ let SessionHealthCheckProcessor = SessionHealthCheckProcessor_1 = class SessionH
                 await page.goto(targetUrl, {
                     waitUntil: 'domcontentloaded',
                     timeout: 30_000,
+                    referer,
                 });
                 await (0, session_validator_js_1.assertSessionValid)(page, university);
             });

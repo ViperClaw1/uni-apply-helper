@@ -9,8 +9,10 @@ import {
 import type { StudentProfile } from "@/features/students/types/student.types";
 import { useT } from "@/lib/i18n/context";
 import {
+  AddressField,
   ErrorBanner,
   Field,
+  PhoneField,
   StepActions,
   StepSection,
   extractErrorMessage,
@@ -73,7 +75,7 @@ export function GuarantorStep({
           value={fields.relationship ?? ""}
           onChange={(v) => updateField("relationship", v)}
         />
-        <Field
+        <PhoneField
           label={t.profileWizard.guarantor.phone}
           placeholder="+7 701 234 5678"
           value={fields.phone ?? ""}
@@ -86,7 +88,7 @@ export function GuarantorStep({
           value={fields.email ?? ""}
           onChange={(v) => updateField("email", v)}
         />
-        <Field
+        <AddressField
           label={t.profileWizard.guarantor.homeAddress}
           placeholder="456 Oak St, Almaty"
           value={fields.homeAddress ?? ""}

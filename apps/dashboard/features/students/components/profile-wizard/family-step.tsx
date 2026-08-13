@@ -13,6 +13,7 @@ import { useT } from "@/lib/i18n/context";
 import {
   ErrorBanner,
   Field,
+  PhoneField,
   SelectField,
   StepActions,
   StepSection,
@@ -84,7 +85,7 @@ export function FamilyStep({
           onChange={(v) => updateRelative("father", "nationality", v)}
           options={NATIONALITY_OPTIONS}
         />
-        <Field
+        <PhoneField
           label={t.profileWizard.family.phone}
           placeholder="+7 701 234 5678"
           value={fields.father?.phone ?? ""}
@@ -124,7 +125,7 @@ export function FamilyStep({
           onChange={(v) => updateRelative("mother", "nationality", v)}
           options={NATIONALITY_OPTIONS}
         />
-        <Field
+        <PhoneField
           label={t.profileWizard.family.phone}
           placeholder="+7 701 111 2233"
           value={fields.mother?.phone ?? ""}

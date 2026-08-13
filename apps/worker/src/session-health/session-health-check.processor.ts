@@ -8,6 +8,8 @@ import { QUEUES } from '@uni-apply/shared';
 import { Queue, Worker } from 'bullmq';
 import { BrowserService } from '../browser/browser.service.js';
 import { assertSessionValid } from '../browser/session.validator.js';
+import { applyUrlFromForm } from '../browser/zzu-navigation.js';
+import { isZzuFormUrl } from '../browser/zzu-session.loader.js';
 import { AttentionRequiredError } from '../errors/attention-required.error.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { ApplicationResumeService } from '../queue/application-resume.service.js';
@@ -85,11 +87,20 @@ export class SessionHealthCheckProcessor
     // IS the public login gate regardless of auth state, so it can never confirm a session is
     // valid. formUrl is the same page OpenFormStep already navigates to for real jobs, so it
     // reliably differs between an authenticated and expired session.
+    const usingFormUrlFallback = !university.session?.healthCheckUrl;
     const targetUrl = university.session?.healthCheckUrl ?? university.formUrl;
 
     if (!targetUrl) {
       return;
     }
+
+    // 17gz's CSRF guard checks the Referer header, not just the session cookie — a direct
+    // goto with no referer trips it even on a valid session. navigateToZzuApplication always
+    // sets this same referer when it loads formUrl for real jobs; replicate it here too.
+    const referer =
+      usingFormUrlFallback && isZzuFormUrl(university.formUrl)
+        ? applyUrlFromForm(university.formUrl)
+        : undefined;
 
     const previous = await this.prisma.browserSession.findUnique({
       where: { universityId },
@@ -103,6 +114,7 @@ export class SessionHealthCheckProcessor
           await page.goto(targetUrl, {
             waitUntil: 'domcontentloaded',
             timeout: 30_000,
+            referer,
           });
           await assertSessionValid(page, university);
         },

@@ -14,8 +14,8 @@ import {
   type StudyPlanMatcher,
 } from './zzu-pre-wizard.js';
 
-function memberUrlFromForm(formUrl: string): string {
-  return `${new URL(formUrl).origin}/member/index.do`;
+export function applyUrlFromForm(formUrl: string): string {
+  return `${new URL(formUrl).origin}/apply/index.do`;
 }
 
 const NAV_APPLICATION = [
@@ -199,7 +199,10 @@ export async function navigateToZzuApplication(
   await page.goto(formUrl, {
     waitUntil: 'domcontentloaded',
     timeout: 60_000,
-    referer: memberUrlFromForm(formUrl),
+    // /member/index.do is a signin gateway, not the authenticated dashboard — sending it as
+    // the referer looks like an unauthenticated hop and trips the platform's Referer-based
+    // CSRF guard on its own. /apply/index.do is the wizard itself, the legitimate in-app referer.
+    referer: applyUrlFromForm(formUrl),
   });
 
   // Fail fast — don't burn 10m clicking around a login wall
