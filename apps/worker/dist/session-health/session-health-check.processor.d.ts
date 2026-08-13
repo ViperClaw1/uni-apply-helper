@@ -18,5 +18,4 @@ export declare class SessionHealthCheckProcessor implements OnModuleInit, OnModu
     private checkOne;
     private recordResult;
     private isNearExpiry;
-    private originOf;
 }

@@ -67,7 +67,7 @@ let SessionHealthCheckProcessor = SessionHealthCheckProcessor_1 = class SessionH
     }
     async checkOne(universityId) {
         const university = await this.universitySchemaService.get(universityId);
-        const targetUrl = university.session?.healthCheckUrl ?? this.originOf(university.formUrl);
+        const targetUrl = university.session?.healthCheckUrl ?? university.formUrl;
         if (!targetUrl) {
             return;
         }
@@ -146,14 +146,6 @@ let SessionHealthCheckProcessor = SessionHealthCheckProcessor_1 = class SessionH
             return false;
         }
         return expiresAt.getTime() - now.getTime() <= STALE_THRESHOLD_MS;
-    }
-    originOf(formUrl) {
-        try {
-            return new URL(formUrl).origin;
-        }
-        catch {
-            return null;
-        }
     }
 };
 exports.SessionHealthCheckProcessor = SessionHealthCheckProcessor;

@@ -18,20 +18,6 @@ export async function assertSessionValid(
   const session = university.session;
   const url = page.url();
 
-  // Checked first — a CAPTCHA/2FA prompt can sit in front of an otherwise-valid session, and
-  // conflating it with "session expired" would send the agent into a pointless re-login loop.
-  const attentionReason = await detectAttentionRequired(
-    page,
-    session?.attentionIndicators,
-  );
-  if (attentionReason) {
-    throw new AttentionRequiredError(
-      `Automation blocked by ${describeAttentionReason(attentionReason)} for ${university.displayName}`,
-      attentionReason,
-      university.id,
-    );
-  }
-
   if (session?.loginUrlPattern) {
     const pattern = new RegExp(session.loginUrlPattern, 'i');
     if (pattern.test(url)) {
@@ -50,6 +36,24 @@ export async function assertSessionValid(
   if (await isLoginPage(page)) {
     throw new SessionExpiredError(
       `Login form detected — session expired for ${university.displayName}`,
+      university.id,
+    );
+  }
+
+  // Checked only once we know we're NOT sitting on the plain login form — a CAPTCHA/2FA
+  // prompt can sit in front of an otherwise-valid session on some other page, and conflating
+  // that with "session expired" would send the agent into a pointless re-login loop. But on
+  // platforms (e.g. 17gz) where the ordinary login form itself always carries a visible
+  // CAPTCHA field as standard furniture, checking this first misclassified every expired
+  // session as "attention required" instead — the login-page checks above must win first.
+  const attentionReason = await detectAttentionRequired(
+    page,
+    session?.attentionIndicators,
+  );
+  if (attentionReason) {
+    throw new AttentionRequiredError(
+      `Automation blocked by ${describeAttentionReason(attentionReason)} for ${university.displayName}`,
+      attentionReason,
       university.id,
     );
   }

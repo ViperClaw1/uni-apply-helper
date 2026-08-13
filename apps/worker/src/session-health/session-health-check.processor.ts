@@ -81,8 +81,11 @@ export class SessionHealthCheckProcessor
 
   private async checkOne(universityId: string): Promise<void> {
     const university = await this.universitySchemaService.get(universityId);
-    const targetUrl =
-      university.session?.healthCheckUrl ?? this.originOf(university.formUrl);
+    // The bare origin isn't session-aware on every platform — on 17gz (pku/kmmc/csu/...) it
+    // IS the public login gate regardless of auth state, so it can never confirm a session is
+    // valid. formUrl is the same page OpenFormStep already navigates to for real jobs, so it
+    // reliably differs between an authenticated and expired session.
+    const targetUrl = university.session?.healthCheckUrl ?? university.formUrl;
 
     if (!targetUrl) {
       return;
@@ -184,13 +187,5 @@ export class SessionHealthCheckProcessor
     }
 
     return expiresAt.getTime() - now.getTime() <= STALE_THRESHOLD_MS;
-  }
-
-  private originOf(formUrl: string): string | null {
-    try {
-      return new URL(formUrl).origin;
-    } catch {
-      return null;
-    }
   }
 }

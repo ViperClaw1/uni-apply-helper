@@ -2,11 +2,12 @@ import type { Page } from 'playwright';
 import type { AttentionReason } from '../errors/attention-required.error.js';
 
 // Generic, platform-agnostic — university-specific text hints go in SessionConfig.attentionIndicators.
-// `:visible` (Playwright's own CSS extension) matters a lot here: broad selectors like
-// [class*="captcha" i] otherwise match dormant, never-shown library containers that some
+// `:visible` (Playwright's own CSS extension) matters here: broad selectors like
+// [class*="captcha" i] would otherwise match dormant, never-shown library containers that some
 // shared CMS/portal platforms bake into every page's markup regardless of whether a challenge
-// is actually being presented — this was confirmed in production as a 100%-hit-rate false
-// positive across every university on every health check, not a real CAPTCHA appearing.
+// is actually being presented. Note: on platforms whose ordinary login form carries a visible
+// CAPTCHA field as standard furniture, a genuinely-visible match here still doesn't mean "attention
+// required" — see the login-page-first ordering in session.validator.ts's assertSessionValid.
 const CAPTCHA_SELECTOR = [
   'iframe[src*="recaptcha" i]:visible',
   'iframe[title*="recaptcha" i]:visible',

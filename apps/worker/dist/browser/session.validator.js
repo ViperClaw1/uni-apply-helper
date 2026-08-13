@@ -11,10 +11,6 @@ const DEFAULT_LOGIN_PATTERN = /\/member\/login\.do|\/login\.do|\/student\/login(
 async function assertSessionValid(page, university) {
     const session = university.session;
     const url = page.url();
-    const attentionReason = await (0, attention_detector_js_1.detectAttentionRequired)(page, session?.attentionIndicators);
-    if (attentionReason) {
-        throw new attention_required_error_js_1.AttentionRequiredError(`Automation blocked by ${(0, attention_detector_js_1.describeAttentionReason)(attentionReason)} for ${university.displayName}`, attentionReason, university.id);
-    }
     if (session?.loginUrlPattern) {
         const pattern = new RegExp(session.loginUrlPattern, 'i');
         if (pattern.test(url)) {
@@ -26,6 +22,10 @@ async function assertSessionValid(page, university) {
     }
     if (await isLoginPage(page)) {
         throw new session_expired_error_js_1.SessionExpiredError(`Login form detected — session expired for ${university.displayName}`, university.id);
+    }
+    const attentionReason = await (0, attention_detector_js_1.detectAttentionRequired)(page, session?.attentionIndicators);
+    if (attentionReason) {
+        throw new attention_required_error_js_1.AttentionRequiredError(`Automation blocked by ${(0, attention_detector_js_1.describeAttentionReason)(attentionReason)} for ${university.displayName}`, attentionReason, university.id);
     }
     if (await (0, zzu_session_loader_js_1.isCsrfBlocked)(page)) {
         throw new session_expired_error_js_1.SessionExpiredError(`CSRF protection triggered — re-login required for ${university.displayName}`, university.id);
