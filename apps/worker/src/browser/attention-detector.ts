@@ -2,27 +2,32 @@ import type { Page } from 'playwright';
 import type { AttentionReason } from '../errors/attention-required.error.js';
 
 // Generic, platform-agnostic — university-specific text hints go in SessionConfig.attentionIndicators.
+// `:visible` (Playwright's own CSS extension) matters a lot here: broad selectors like
+// [class*="captcha" i] otherwise match dormant, never-shown library containers that some
+// shared CMS/portal platforms bake into every page's markup regardless of whether a challenge
+// is actually being presented — this was confirmed in production as a 100%-hit-rate false
+// positive across every university on every health check, not a real CAPTCHA appearing.
 const CAPTCHA_SELECTOR = [
-  'iframe[src*="recaptcha" i]',
-  'iframe[title*="recaptcha" i]',
-  '.g-recaptcha',
-  '#recaptcha',
-  'iframe[src*="hcaptcha" i]',
-  '.h-captcha',
-  'iframe[src*="turnstile" i]',
-  '[class*="captcha" i]',
-  'input[name*="captcha" i]',
-  'img[src*="captcha" i]',
-  'img[alt*="captcha" i]',
+  'iframe[src*="recaptcha" i]:visible',
+  'iframe[title*="recaptcha" i]:visible',
+  '.g-recaptcha:visible',
+  '#recaptcha:visible',
+  'iframe[src*="hcaptcha" i]:visible',
+  '.h-captcha:visible',
+  'iframe[src*="turnstile" i]:visible',
+  '[class*="captcha" i]:visible',
+  'input[name*="captcha" i]:visible',
+  'img[src*="captcha" i]:visible',
+  'img[alt*="captcha" i]:visible',
 ].join(', ');
 
 const TWO_FACTOR_SELECTOR = [
-  'input[autocomplete="one-time-code"]',
-  'input[name*="otp" i]',
-  'input[name*="verifycode" i]',
-  'input[name*="verificationcode" i]',
-  'input[placeholder*="verification code" i]',
-  'input[placeholder*="one-time" i]',
+  'input[autocomplete="one-time-code"]:visible',
+  'input[name*="otp" i]:visible',
+  'input[name*="verifycode" i]:visible',
+  'input[name*="verificationcode" i]:visible',
+  'input[placeholder*="verification code" i]:visible',
+  'input[placeholder*="one-time" i]:visible',
 ].join(', ');
 
 /** Best-effort — a false negative just falls through to the existing session-expired checks. */
