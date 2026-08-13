@@ -64,14 +64,16 @@ let NotificationsService = NotificationsService_1 = class NotificationsService {
             `Разрешить вручную: PATCH /universities/${this.escapeHtml(universityId)}/relogin`,
         ].join('\n'));
     }
-    async notifyReloginStarted(universityName, universityId, profileDir) {
+    async notifyReloginStarted(universityName, universityId, profileDir, credentialsAutofilled) {
         await this.send([
             '<b>Re-login: браузер открыт</b>',
             `Вуз: ${this.escapeHtml(universityName)}`,
             profileDir
                 ? `Профиль: ${this.escapeHtml(profileDir)}`
                 : `Профиль: profiles/${this.escapeHtml(universityId)}`,
-            'Залогинься в открывшемся окне. Сессия сохранится автоматически.',
+            credentialsAutofilled
+                ? 'Логин и пароль подставлены автоматически — останется решить капчу.'
+                : 'Залогинься в открывшемся окне. Сессия сохранится автоматически.',
         ].join('\n'));
     }
     async notifyReloginFailed(universityName, universityId, reason) {
@@ -103,7 +105,7 @@ let NotificationsService = NotificationsService_1 = class NotificationsService {
         }
     }
     escapeHtml(value) {
-        return String(value ?? '')
+        return value
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;');

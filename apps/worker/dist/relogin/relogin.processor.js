@@ -22,6 +22,7 @@ const prisma_service_js_1 = require("../prisma/prisma.service.js");
 const application_resume_service_js_1 = require("../queue/application-resume.service.js");
 const redis_config_js_1 = require("../queue/redis.config.js");
 const university_schema_service_js_1 = require("../university-schema/university-schema.service.js");
+const university_credentials_js_1 = require("./university-credentials.js");
 let ReloginProcessor = ReloginProcessor_1 = class ReloginProcessor {
     browserService;
     prisma;
@@ -56,13 +57,17 @@ let ReloginProcessor = ReloginProcessor_1 = class ReloginProcessor {
         const university = await this.universitySchemaService.get(job.data.universityId);
         const profileDir = this.browserService.getProfileDir(university.id);
         const loginUrl = (0, session_validator_js_1.getLoginUrl)(university.formUrl);
-        await this.notificationsService.notifyReloginStarted(university.displayName, university.id, profileDir);
+        const credentials = (0, university_credentials_js_1.getUniversityCredentials)(university.id);
+        await this.notificationsService.notifyReloginStarted(university.displayName, university.id, profileDir, Boolean(credentials));
         try {
             await this.browserService.withPageOptions({ universityId: university.id, headed: true }, async (page) => {
                 await page.goto(loginUrl, {
                     waitUntil: 'networkidle',
                     timeout: 60_000,
                 });
+                if (credentials) {
+                    await this.tryAutofillCredentials(page, university.id, credentials);
+                }
                 const deadline = Date.now() + 15 * 60_000;
                 while (Date.now() < deadline) {
                     if (!(await (0, zzu_session_loader_js_1.isLoginPage)(page))) {
@@ -84,6 +89,26 @@ let ReloginProcessor = ReloginProcessor_1 = class ReloginProcessor {
                 : rawMessage;
             await this.notificationsService.notifyReloginFailed(university.displayName, university.id, message);
             throw isNoDisplay ? new Error(message) : error;
+        }
+    }
+    async tryAutofillCredentials(page, universityId, credentials) {
+        try {
+            const passwordInput = page.locator('input[type="password"]').first();
+            if ((await passwordInput.count()) === 0) {
+                return;
+            }
+            await passwordInput.fill(credentials.password);
+            const form = passwordInput.locator('xpath=ancestor::form[1]');
+            const usernameInput = form
+                .locator('input[type="text"], input[type="email"]')
+                .first();
+            if ((await usernameInput.count()) > 0) {
+                await usernameInput.fill(credentials.username);
+            }
+            this.logger.log(`Auto-filled login credentials for ${universityId}.`);
+        }
+        catch (error) {
+            this.logger.warn(`Credential auto-fill failed for ${universityId}, falling back to manual entry: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
     async recordCaptured(universityId, sessionTtlHours) {

@@ -85,6 +85,7 @@ export class NotificationsService {
     universityName: string,
     universityId: string,
     profileDir?: string,
+    credentialsAutofilled?: boolean,
   ) {
     await this.send(
       [
@@ -93,7 +94,9 @@ export class NotificationsService {
         profileDir
           ? `Профиль: ${this.escapeHtml(profileDir)}`
           : `Профиль: profiles/${this.escapeHtml(universityId)}`,
-        'Залогинься в открывшемся окне. Сессия сохранится автоматически.',
+        credentialsAutofilled
+          ? 'Логин и пароль подставлены автоматически — останется решить капчу.'
+          : 'Залогинься в открывшемся окне. Сессия сохранится автоматически.',
       ].join('\n'),
     );
   }
@@ -141,8 +144,8 @@ export class NotificationsService {
     }
   }
 
-  private escapeHtml(value: unknown) {
-    return String(value ?? '')
+  private escapeHtml(value: string) {
+    return value
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');

@@ -16,5 +16,6 @@ export declare class ReloginProcessor implements OnModuleInit, OnModuleDestroy {
     onModuleInit(): void;
     onModuleDestroy(): Promise<void>;
     private process;
+    private tryAutofillCredentials;
     private recordCaptured;
 }

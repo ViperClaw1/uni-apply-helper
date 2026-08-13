@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { QUEUES } from '@uni-apply/shared';
 import { Job, Worker } from 'bullmq';
+import type { Page } from 'playwright';
 import { BrowserService } from '../browser/browser.service.js';
 import { getLoginUrl } from '../browser/session.validator.js';
 import { isLoginPage } from '../browser/zzu-session.loader.js';
@@ -14,6 +15,10 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { ApplicationResumeService } from '../queue/application-resume.service.js';
 import { getRedisConnection } from '../queue/redis.config.js';
 import { UniversitySchemaService } from '../university-schema/university-schema.service.js';
+import {
+  getUniversityCredentials,
+  type UniversityCredentials,
+} from './university-credentials.js';
 
 type BrowserReloginJobData = {
   universityId: string;
@@ -70,11 +75,13 @@ export class ReloginProcessor implements OnModuleInit, OnModuleDestroy {
 
     const profileDir = this.browserService.getProfileDir(university.id);
     const loginUrl = getLoginUrl(university.formUrl);
+    const credentials = getUniversityCredentials(university.id);
 
     await this.notificationsService.notifyReloginStarted(
       university.displayName,
       university.id,
       profileDir,
+      Boolean(credentials),
     );
 
     try {
@@ -85,6 +92,10 @@ export class ReloginProcessor implements OnModuleInit, OnModuleDestroy {
             waitUntil: 'networkidle',
             timeout: 60_000,
           });
+
+          if (credentials) {
+            await this.tryAutofillCredentials(page, university.id, credentials);
+          }
 
           const deadline = Date.now() + 15 * 60_000;
 
@@ -131,6 +142,44 @@ export class ReloginProcessor implements OnModuleInit, OnModuleDestroy {
       );
 
       throw isNoDisplay ? new Error(message) : error;
+    }
+  }
+
+  /**
+   * Best-effort — never blocks the manual flow. Fills the password field plus whatever
+   * text/email input shares its form (the near-universal login-form layout), so a human only
+   * has to solve the CAPTCHA rather than retype credentials that don't change between renewals.
+   */
+  private async tryAutofillCredentials(
+    page: Page,
+    universityId: string,
+    credentials: UniversityCredentials,
+  ): Promise<void> {
+    try {
+      const passwordInput = page.locator('input[type="password"]').first();
+
+      if ((await passwordInput.count()) === 0) {
+        return;
+      }
+
+      await passwordInput.fill(credentials.password);
+
+      const form = passwordInput.locator('xpath=ancestor::form[1]');
+      const usernameInput = form
+        .locator('input[type="text"], input[type="email"]')
+        .first();
+
+      if ((await usernameInput.count()) > 0) {
+        await usernameInput.fill(credentials.username);
+      }
+
+      this.logger.log(`Auto-filled login credentials for ${universityId}.`);
+    } catch (error) {
+      this.logger.warn(
+        `Credential auto-fill failed for ${universityId}, falling back to manual entry: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
     }
   }
 
