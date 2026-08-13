@@ -10,5 +10,8 @@ declare module "@novnc/novnc" {
     disconnect(): void;
     addEventListener(type: string, listener: (event: CustomEvent) => void): void;
     removeEventListener(type: string, listener: (event: CustomEvent) => void): void;
+    /** Manual key injection — bypasses the browser's native (often unreliable) handling of
+     * toggle keys like Caps Lock. Omitting `down` sends a full press+release pair. */
+    sendKey(keysym: number, code?: string | null, down?: boolean): void;
   }
 }

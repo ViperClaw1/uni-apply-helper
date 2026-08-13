@@ -355,6 +355,7 @@ const en = {
       viewerConnecting: "Connecting to the live view…",
       viewerUnavailable:
         "Live view unavailable right now — still waiting automatically for the login to complete.",
+      toggleCapsLock: "Caps Lock",
       canCloseHint: "You can close this window — the login window on the worker stays open.",
       success: "Session updated successfully",
       failed: "Failed to start the renewal. Please try again.",

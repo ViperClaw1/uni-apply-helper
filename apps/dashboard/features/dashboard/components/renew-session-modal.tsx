@@ -225,7 +225,19 @@ export function RenewSessionModal({ session, onClose, onRenewed }: RenewSessionM
                     ? t.dashboard.renewModal.viewerUnavailable
                     : t.dashboard.renewModal.viewerConnecting}
                 </div>
-              ) : null}
+              ) : (
+                // Caps Lock is a toggle key — browsers are notoriously unreliable about firing
+                // clean keydown/keyup for it, so the remote X session's lock state can silently
+                // desync from what the browser thinks it's sending. sendKey() injects an
+                // explicit press+release, bypassing that native handling entirely.
+                <button
+                  type="button"
+                  onClick={() => rfbRef.current?.sendKey(0xffe5, "CapsLock")}
+                  className="absolute right-2 top-2 cursor-pointer rounded-lg bg-slate-950/70 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm transition-colors hover:bg-slate-950/90"
+                >
+                  {t.dashboard.renewModal.toggleCapsLock}
+                </button>
+              )}
             </div>
 
             {profilePath ? (
