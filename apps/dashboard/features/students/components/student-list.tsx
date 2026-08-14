@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 import { Header, Logo, LogoutButton } from "@/components/header";
 import { useLocale, useT } from "@/lib/i18n/context";
@@ -17,6 +18,20 @@ import {
 import { ConfirmDialog } from "./confirm-dialog";
 import { PhotoAvatar } from "./photo-avatar";
 import { StudentKpiTiles, type StudentStatusFilter } from "./student-kpi-tiles";
+
+const VALID_FILTERS: readonly StudentStatusFilter[] = [
+  "all",
+  "needs_attention",
+  "ready",
+  "in_progress",
+  "submitted",
+];
+
+function parseStatusFilter(raw: string | null): StudentStatusFilter {
+  return (VALID_FILTERS as readonly string[]).includes(raw ?? "")
+    ? (raw as StudentStatusFilter)
+    : "all";
+}
 
 type StudentRow = StudentListItem & {
   status: StudentStatusBucket;
@@ -41,7 +56,10 @@ export function StudentList({ companyName }: { companyName?: string } = {}) {
   const [studentToDelete, setStudentToDelete] = useState<StudentListItem | null>(
     null,
   );
-  const [filter, setFilter] = useState<StudentStatusFilter>("all");
+  const searchParams = useSearchParams();
+  const [filter, setFilter] = useState<StudentStatusFilter>(() =>
+    parseStatusFilter(searchParams.get("filter")),
+  );
 
   const rows: StudentRow[] = useMemo(
     () =>

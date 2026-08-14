@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Logo, LogoutButton, LanguageSwitcher } from "@/components/header";
 import { useT } from "@/lib/i18n/context";
+
+const COLLAPSED_STORAGE_KEY = "agency-sidebar-collapsed";
 
 type NavTab =
   | "home"
@@ -33,15 +36,41 @@ export function AgencyShell({
   children: React.ReactNode;
 }) {
   const t = useT();
+  const [collapsed, setCollapsed] = useState(false);
+
+  // Each dashboard page mounts its own <AgencyShell> (no persistent layout wraps them), so the
+  // preference is read from localStorage on mount rather than lifted to a shared layout/context —
+  // otherwise it'd silently reset to expanded on every nav click. This has to run post-mount:
+  // `window` doesn't exist during SSR, so reading it during render would either crash on the
+  // server or desync from the server-rendered (always "expanded") HTML and trip a hydration
+  // mismatch — an effect deliberately trades that for one harmless expanded-then-collapsed flash.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCollapsed(window.localStorage.getItem(COLLAPSED_STORAGE_KEY) === "1");
+  }, []);
+
+  function toggleCollapsed() {
+    setCollapsed((current) => {
+      const next = !current;
+      window.localStorage.setItem(COLLAPSED_STORAGE_KEY, next ? "1" : "0");
+      return next;
+    });
+  }
 
   return (
     <div className="flex min-h-screen w-full bg-slate-50">
-      <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col border-r border-slate-200 bg-white px-3 py-6">
-        <div className="mb-6 flex items-center gap-2 px-2">
+      <aside
+        className={`sticky top-0 relative flex h-screen shrink-0 flex-col border-r border-slate-200 bg-white py-6 transition-[width] duration-200 ${
+          collapsed ? "w-[76px] px-2" : "w-60 px-3"
+        }`}
+      >
+        <div className={`mb-6 flex items-center gap-2 px-2 ${collapsed ? "justify-center" : ""}`}>
           <Logo />
-          <span className="truncate text-sm font-semibold text-slate-950">
-            {companyName || t.header.brand}
-          </span>
+          {!collapsed ? (
+            <span className="truncate text-sm font-semibold text-slate-950">
+              {companyName || t.header.brand}
+            </span>
+          ) : null}
         </div>
 
         <nav className="flex flex-1 flex-col gap-1">
@@ -53,14 +82,17 @@ export function AgencyShell({
                 {tab === "team" ? <div className="my-2 border-t border-slate-100" /> : null}
                 <Link
                   href={href}
+                  title={collapsed ? t.agencyShell.nav[tab] : undefined}
                   className={`flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
+                    collapsed ? "justify-center px-0" : ""
+                  } ${
                     isActive
                       ? "bg-slate-950 text-white"
                       : "text-slate-600 hover:bg-slate-50 hover:text-slate-950"
                   }`}
                 >
                   <Icon />
-                  {t.agencyShell.nav[tab]}
+                  {!collapsed ? t.agencyShell.nav[tab] : null}
                 </Link>
               </div>
             );
@@ -68,13 +100,72 @@ export function AgencyShell({
         </nav>
 
         <div className="flex flex-col gap-2 border-t border-slate-100 pt-3">
-          <LanguageSwitcher />
-          <LogoutButton className="inline-flex h-10 w-full cursor-pointer items-center justify-center rounded-xl px-4 text-sm font-medium text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-slate-50" />
+          {!collapsed ? <LanguageSwitcher /> : null}
+          <LogoutButton
+            title={collapsed ? t.header.logOut : undefined}
+            icon={collapsed ? <LogoutIcon /> : undefined}
+            className={
+              collapsed
+                ? "inline-flex h-10 w-full cursor-pointer items-center justify-center rounded-xl text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-slate-50"
+                : "inline-flex h-10 w-full cursor-pointer items-center justify-center rounded-xl px-4 text-sm font-medium text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-slate-50"
+            }
+          />
         </div>
+
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          title={collapsed ? t.agencyShell.expandSidebar : t.agencyShell.collapseSidebar}
+          className="absolute -right-3 top-8 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-950"
+        >
+          <CollapseIcon collapsed={collapsed} />
+        </button>
       </aside>
 
-      <main className="flex-1">{children}</main>
+      <main className="min-w-0 flex-1">{children}</main>
     </div>
+  );
+}
+
+function CollapseIcon({ collapsed }: { collapsed: boolean }) {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+      className={`transition-transform ${collapsed ? "rotate-180" : ""}`}
+    >
+      <path
+        d="m15 6-6 6 6 6"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function LogoutIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M16 15.5 20 12l-4-3.5M20 12H9"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 

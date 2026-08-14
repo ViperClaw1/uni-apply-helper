@@ -63,9 +63,14 @@ function GlobeIcon({ className }: { className?: string }) {
 export function LogoutButton({
   className,
   onClick,
+  icon,
+  title,
 }: {
   className?: string;
   onClick?: () => void;
+  /** Renders instead of the text label — for icon-only placements (e.g. a collapsed sidebar). */
+  icon?: ReactNode;
+  title?: string;
 }) {
   const t = useT();
   const router = useRouter();
@@ -87,12 +92,13 @@ export function LogoutButton({
       type="button"
       onClick={handleLogout}
       disabled={isLoggingOut}
+      title={title}
       className={
         className ??
         "inline-flex h-10 cursor-pointer items-center justify-center rounded-xl px-4 text-sm font-medium text-slate-600 ring-1 ring-slate-200 transition-colors hover:bg-slate-50 disabled:cursor-default disabled:opacity-60"
       }
     >
-      {t.header.logOut}
+      {icon ?? t.header.logOut}
     </button>
   );
 }

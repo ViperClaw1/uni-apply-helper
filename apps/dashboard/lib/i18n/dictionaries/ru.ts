@@ -306,6 +306,8 @@ const ru: Dictionary = {
       title: "Скоро",
       description: "Этот раздел пока недоступен.",
     },
+    collapseSidebar: "Свернуть меню",
+    expandSidebar: "Развернуть меню",
   },
   dashboard: {
     title: "Дашборд",

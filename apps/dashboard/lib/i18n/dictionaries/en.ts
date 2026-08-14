@@ -299,6 +299,8 @@ const en = {
       title: "Coming soon",
       description: "This section isn't available yet.",
     },
+    collapseSidebar: "Collapse sidebar",
+    expandSidebar: "Expand sidebar",
   },
   dashboard: {
     title: "Dashboard",
