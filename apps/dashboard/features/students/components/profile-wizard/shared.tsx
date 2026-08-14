@@ -1,5 +1,5 @@
 import { isAxiosError } from "axios";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 import { env } from "@/lib/env";
@@ -78,6 +78,92 @@ export function SelectField({
       </select>
     </div>
   );
+}
+
+// <input type="date"> is always stored as ISO but DISPLAYED per the browser/OS locale — there's
+// no reliable cross-browser way to force that display format. This masked text input always
+// shows/types dd/mm/yyyy while still emitting ISO "YYYY-MM-DD" via onChange, so callers (and the
+// passport-parse auto-fill) don't need to know the difference. Trade-off: no native calendar picker.
+export function DateField({
+  label,
+  value,
+  onChange,
+  required,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  required?: boolean;
+}) {
+  const [display, setDisplay] = useState(() => isoToDisplayDate(value));
+  const [lastValue, setLastValue] = useState(value);
+
+  // Render-time "adjust state when a prop changes" — keeps the typed text in sync when the ISO
+  // value changes from outside (e.g. passport-parse auto-fill) without fighting the user's own
+  // keystrokes the way a plain `value={isoToDisplayDate(value)}` controlled input would.
+  if (value !== lastValue) {
+    setLastValue(value);
+    setDisplay(isoToDisplayDate(value));
+  }
+
+  function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const formatted = formatDateDigits(event.target.value);
+    setDisplay(formatted);
+
+    const iso = formatted === "" ? "" : displayDateToIso(formatted);
+    if (iso !== undefined) {
+      setLastValue(iso);
+      onChange(iso);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="text-xs font-medium text-slate-600">
+        {label}
+        {required ? <span className="text-rose-500"> *</span> : null}
+      </label>
+      <input
+        type="text"
+        inputMode="numeric"
+        placeholder="DD/MM/YYYY"
+        value={display}
+        required={required}
+        pattern="\d{2}/\d{2}/\d{4}"
+        onChange={handleChange}
+        className="h-10 rounded-lg border border-slate-200 px-3 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-blue-400"
+      />
+    </div>
+  );
+}
+
+function formatDateDigits(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 8);
+  const parts = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)].filter(Boolean);
+  return parts.join("/");
+}
+
+function displayDateToIso(display: string): string | undefined {
+  const match = display.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!match) {
+    return undefined;
+  }
+
+  const [, day, month, year] = match;
+  const iso = `${year}-${month}-${day}`;
+  const date = new Date(iso);
+
+  return Number.isNaN(date.getTime()) ? undefined : iso;
+}
+
+function isoToDisplayDate(iso: string): string {
+  const match = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) {
+    return "";
+  }
+
+  const [, year, month, day] = match;
+  return `${day}/${month}/${year}`;
 }
 
 export function PhoneField({

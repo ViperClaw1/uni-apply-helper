@@ -13,6 +13,7 @@ import { useT } from "@/lib/i18n/context";
 import {
   AddressField,
   CheckboxField,
+  DateField,
   ErrorBanner,
   Field,
   PhoneField,
@@ -91,6 +92,7 @@ export function PersonalStep({
       onNext(profile);
     } catch (submitError) {
       setError(extractErrorMessage(submitError, t.common.somethingWentWrong));
+    } finally {
       setIsSubmitting(false);
     }
   }
@@ -132,9 +134,8 @@ export function PersonalStep({
           value={fields.cityOfBirth ?? ""}
           onChange={(v) => updateField("cityOfBirth", v)}
         />
-        <Field
+        <DateField
           label={t.profileWizard.personal.dateOfBirth}
-          type="date"
           value={fields.dateOfBirth ?? ""}
           onChange={(v) => updateField("dateOfBirth", v)}
         />
@@ -165,9 +166,8 @@ export function PersonalStep({
           value={fields.passportNo ?? ""}
           onChange={(v) => updateField("passportNo", v)}
         />
-        <Field
+        <DateField
           label={t.profileWizard.personal.passportExpiry}
-          type="date"
           value={fields.passportExpiry ?? ""}
           onChange={(v) => updateField("passportExpiry", v)}
         />

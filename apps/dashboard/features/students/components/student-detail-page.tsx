@@ -2,7 +2,7 @@
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useT } from "@/lib/i18n/context";
 import { toTitleCase } from "@/lib/format";
 import { Skeleton, SkeletonCard } from "@/components/skeleton";
@@ -290,31 +290,87 @@ function ProfileTab({
 }) {
   const t = useT();
   const labels = t.profileWizard.stepLabels;
+  const sectionRefs = useRef<Array<HTMLDetailsElement | null>>([]);
+
+  function advanceToSection(index: number) {
+    const section = sectionRefs.current[index];
+    if (!section) {
+      return;
+    }
+    section.open = true;
+    section.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   return (
     <div className="flex flex-col gap-4">
-      <InfoSection title={labels[0]} defaultOpen>
+      <InfoSection
+        ref={(el) => {
+          sectionRefs.current[0] = el;
+        }}
+        title={labels[0]}
+        defaultOpen
+      >
         <PersonalStep
           initial={toPersonalInput(student)}
           studentId={studentId}
-          onNext={onUpdated}
+          onNext={(profile) => {
+            onUpdated(profile);
+            advanceToSection(1);
+          }}
           passportDocument={documentsByType.get("passport")?.[0]}
         />
       </InfoSection>
-      <InfoSection title={labels[1]}>
-        <EducationStep initial={toEducationInput(student)} studentId={studentId} onNext={onUpdated} />
+      <InfoSection
+        ref={(el) => {
+          sectionRefs.current[1] = el;
+        }}
+        title={labels[1]}
+      >
+        <EducationStep
+          initial={toEducationInput(student)}
+          studentId={studentId}
+          onNext={(profile) => {
+            onUpdated(profile);
+            advanceToSection(2);
+          }}
+        />
       </InfoSection>
-      <InfoSection title={labels[2]}>
-        <GuarantorStep initial={toGuarantorInput(student)} studentId={studentId} onNext={onUpdated} />
+      <InfoSection
+        ref={(el) => {
+          sectionRefs.current[2] = el;
+        }}
+        title={labels[2]}
+      >
+        <GuarantorStep
+          initial={toGuarantorInput(student)}
+          studentId={studentId}
+          onNext={(profile) => {
+            onUpdated(profile);
+            advanceToSection(3);
+          }}
+        />
       </InfoSection>
-      <InfoSection title={labels[3]}>
+      <InfoSection
+        ref={(el) => {
+          sectionRefs.current[3] = el;
+        }}
+        title={labels[3]}
+      >
         <EmergencyContactStep
           initial={toEmergencyContactInput(student)}
           studentId={studentId}
-          onNext={onUpdated}
+          onNext={(profile) => {
+            onUpdated(profile);
+            advanceToSection(4);
+          }}
         />
       </InfoSection>
-      <InfoSection title={labels[4]}>
+      <InfoSection
+        ref={(el) => {
+          sectionRefs.current[4] = el;
+        }}
+        title={labels[4]}
+      >
         <FamilyStep initial={toFamilyInput(student)} studentId={studentId} onNext={onUpdated} />
       </InfoSection>
     </div>
@@ -325,13 +381,16 @@ function InfoSection({
   title,
   defaultOpen = false,
   children,
+  ref,
 }: {
   title: string;
   defaultOpen?: boolean;
   children: React.ReactNode;
+  ref?: React.Ref<HTMLDetailsElement>;
 }) {
   return (
     <details
+      ref={ref}
       open={defaultOpen}
       className="group rounded-2xl bg-white shadow-[0_1px_2px_rgba(15,23,42,0.08),0_8px_30px_rgba(15,23,42,0.04)] ring-1 ring-black/5"
     >

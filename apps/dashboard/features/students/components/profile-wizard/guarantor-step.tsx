@@ -53,6 +53,7 @@ export function GuarantorStep({
       onNext(profile);
     } catch (submitError) {
       setError(extractErrorMessage(submitError, t.common.somethingWentWrong));
+    } finally {
       setIsSubmitting(false);
     }
   }
