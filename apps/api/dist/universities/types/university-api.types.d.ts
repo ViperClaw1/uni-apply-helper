@@ -1,5 +1,5 @@
 import type { UniversitySchema } from '@uni-apply/shared';
-export type UniversitySummary = Pick<UniversitySchema, 'id' | 'displayName' | 'formUrl' | 'requiresEssay'> & {
+export type UniversitySummary = Pick<UniversitySchema, 'id' | 'displayName' | 'formUrl' | 'requiresEssay' | 'requiredDocuments'> & {
     aliases: string[];
 };
 export type UniversitySchemaResponse = UniversitySchema & {

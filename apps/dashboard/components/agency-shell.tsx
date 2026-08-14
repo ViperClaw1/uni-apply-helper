@@ -60,8 +60,8 @@ export function AgencyShell({
   return (
     <div className="flex min-h-screen w-full bg-slate-50">
       <aside
-        className={`sticky top-0 relative flex h-screen shrink-0 flex-col border-r border-slate-200 bg-white py-6 transition-[width] duration-200 ${
-          collapsed ? "w-[76px] px-2" : "w-60 px-3"
+        className={`sticky top-0 flex h-screen shrink-0 flex-col border-r border-slate-200 bg-white py-6 transition-[width] duration-200 ${
+          collapsed ? "w-19 px-2" : "w-60 px-3"
         }`}
       >
         <div className={`mb-6 flex items-center gap-2 px-2 ${collapsed ? "justify-center" : ""}`}>

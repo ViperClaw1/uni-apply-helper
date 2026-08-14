@@ -3,9 +3,8 @@ export type UniversitySummary = {
   displayName: string;
   formUrl: string;
   requiresEssay: boolean;
+  requiredDocuments: string[];
   aliases: string[];
 };
 
-export type UniversityDetail = UniversitySummary & {
-  requiredDocuments: string[];
-};
+export type UniversityDetail = UniversitySummary;

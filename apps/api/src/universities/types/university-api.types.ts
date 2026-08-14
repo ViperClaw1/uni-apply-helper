@@ -2,7 +2,7 @@ import type { UniversitySchema } from '@uni-apply/shared';
 
 export type UniversitySummary = Pick<
   UniversitySchema,
-  'id' | 'displayName' | 'formUrl' | 'requiresEssay'
+  'id' | 'displayName' | 'formUrl' | 'requiresEssay' | 'requiredDocuments'
 > & {
   aliases: string[];
 };

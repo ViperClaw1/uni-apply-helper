@@ -52,6 +52,7 @@ export class UniversitiesService {
         displayName: true,
         formUrl: true,
         requiresEssay: true,
+        requiredDocuments: true,
       },
     });
 
@@ -61,6 +62,7 @@ export class UniversitiesService {
 
     const databaseSummaries = universities.map((university) => ({
       ...university,
+      requiredDocuments: this.toStringArray(university.requiredDocuments),
       aliases: aliasesByUniversityId.get(university.id) ?? [],
     }));
 
@@ -74,6 +76,7 @@ export class UniversitiesService {
         displayName: university.displayName,
         formUrl: university.formUrl,
         requiresEssay: university.requiresEssay,
+        requiredDocuments: university.requiredDocuments,
         aliases: university.aliases,
       }));
 

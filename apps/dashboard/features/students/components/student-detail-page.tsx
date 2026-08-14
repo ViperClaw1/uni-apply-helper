@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { useT } from "@/lib/i18n/context";
@@ -30,12 +30,27 @@ import { FamilyStep } from "./profile-wizard/family-step";
 
 type TabKey = "overview" | "profile" | "documents" | "universities" | "applications";
 
+const VALID_TABS: readonly TabKey[] = [
+  "overview",
+  "profile",
+  "documents",
+  "universities",
+  "applications",
+];
+
+function parseTab(raw: string | null): TabKey {
+  return (VALID_TABS as readonly string[]).includes(raw ?? "")
+    ? (raw as TabKey)
+    : "overview";
+}
+
 export function StudentDetailPage() {
   const t = useT();
   const documentTypeLabel = useDocumentTypeLabel();
   const params = useParams<{ id: string }>();
   const studentId = params.id;
-  const [activeTab, setActiveTab] = useState<TabKey>("overview");
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState<TabKey>(() => parseTab(searchParams.get("tab")));
   const [readyCount, setReadyCount] = useState<number | null>(null);
 
   const {

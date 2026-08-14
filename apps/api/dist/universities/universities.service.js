@@ -34,11 +34,13 @@ let UniversitiesService = class UniversitiesService {
                 displayName: true,
                 formUrl: true,
                 requiresEssay: true,
+                requiredDocuments: true,
             },
         });
         const aliasesByUniversityId = await this.getAliasesByUniversityId(universities.map((university) => university.id));
         const databaseSummaries = universities.map((university) => ({
             ...university,
+            requiredDocuments: this.toStringArray(university.requiredDocuments),
             aliases: aliasesByUniversityId.get(university.id) ?? [],
         }));
         const existingIds = new Set(databaseSummaries.map((university) => university.id));
@@ -49,6 +51,7 @@ let UniversitiesService = class UniversitiesService {
             displayName: university.displayName,
             formUrl: university.formUrl,
             requiresEssay: university.requiresEssay,
+            requiredDocuments: university.requiredDocuments,
             aliases: university.aliases,
         }));
         return [...databaseSummaries, ...fileSummaries].sort((a, b) => a.displayName.localeCompare(b.displayName));

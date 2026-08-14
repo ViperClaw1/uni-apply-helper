@@ -20,7 +20,7 @@ export function LanguageSwitcher() {
   return (
     <div className="inline-flex items-center gap-2">
       <GlobeIcon className="shrink-0 text-slate-400" />
-      <div className="relative inline-flex h-8 w-[72px] shrink-0 rounded-full bg-slate-100 p-1">
+      <div className="relative inline-flex h-8 w-18 shrink-0 rounded-full bg-slate-100 p-1">
         <span
           aria-hidden
           className={`absolute left-1 top-1 h-6 w-8 rounded-full bg-white shadow-sm transition-transform duration-200 ease-out ${

@@ -186,7 +186,7 @@ export function StudentList({ companyName }: { companyName?: string } = {}) {
             />
           ) : (
             <div className="overflow-x-auto rounded-2xl bg-white shadow-[0_1px_2px_rgba(15,23,42,0.08),0_8px_30px_rgba(15,23,42,0.04)] ring-1 ring-black/5">
-              <table className="w-full min-w-[720px] text-left text-sm">
+              <table className="w-full min-w-180 text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-100 text-xs font-medium text-slate-400">
                     <th className="px-5 py-3">{t.students.list.columnStudent}</th>

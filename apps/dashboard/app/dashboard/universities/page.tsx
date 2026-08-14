@@ -1,4 +1,5 @@
-import { AgencyShell, ComingSoon } from "@/components/agency-shell";
+import { AgencyShell } from "@/components/agency-shell";
+import { UniversitiesList } from "@/features/universities/components/universities-list";
 import { getCurrentAccount } from "@/lib/server-api";
 
 export default async function UniversitiesPage() {
@@ -6,7 +7,7 @@ export default async function UniversitiesPage() {
 
   return (
     <AgencyShell active="universities" companyName={account?.agencyProfile?.legalName}>
-      <ComingSoon />
+      <UniversitiesList companyName={account?.agencyProfile?.legalName} />
     </AgencyShell>
   );
 }
