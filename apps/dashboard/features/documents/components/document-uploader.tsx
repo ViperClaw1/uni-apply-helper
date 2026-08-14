@@ -14,6 +14,7 @@ import {
 } from "../api/documents.api";
 import type { StudentDocument } from "../types/document.types";
 import { DocumentFileCard } from "./document-file-card";
+import { DocumentPreview } from "./document-preview";
 
 type UploadStatus = "idle" | "uploading" | "done" | "error";
 
@@ -244,9 +245,20 @@ export function DocumentUploader({
     return (
       <div className="rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.08)] ring-1 ring-black/5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <div className="text-sm font-semibold text-slate-950">{label}</div>
+          <div className="flex min-w-0 gap-3">
             {existingDocument ? (
+              <a
+                href={existingDocument.fileUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="block h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-slate-100 ring-1 ring-black/10"
+              >
+                <DocumentPreview fileUrl={existingDocument.fileUrl} />
+              </a>
+            ) : null}
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-slate-950">{label}</div>
+              {existingDocument ? (
               <div
                 className={[
                   "mt-1 text-xs font-medium",
@@ -283,6 +295,7 @@ export function DocumentUploader({
                 {formatParsedPreview(type, existingDocument.parsedData, t)}
               </div>
             ) : null}
+            </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             {existingDocument ? (

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import type { DragEvent } from "react";
 import { useT } from "@/lib/i18n/context";
 import type { StudentDocument } from "../types/document.types";
+import { DocumentPreview } from "./document-preview";
 
 type DocumentFileCardProps = {
   document: StudentDocument;
@@ -83,53 +83,6 @@ export function DocumentFileCard({
   );
 }
 
-function DocumentPreview({ fileUrl }: { fileUrl: string }) {
-  const extension = getFileExtension(fileUrl);
-  const [failed, setFailed] = useState(false);
-  const canShowImage = isImageExtension(extension) && !failed;
-
-  if (!canShowImage) {
-    return <ExtensionPlaceholder extension={extension} />;
-  }
-
-  return (
-    <img
-      src={fileUrl}
-      alt=""
-      className="h-full w-full object-cover"
-      onError={() => setFailed(true)}
-    />
-  );
-}
-
-function ExtensionPlaceholder({ extension }: { extension: string }) {
-  return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-slate-100 px-3 text-slate-500">
-      <FileIcon />
-      <span className="rounded-md bg-white px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-700 ring-1 ring-slate-200/80">
-        {extension || "FILE"}
-      </span>
-    </div>
-  );
-}
-
-function getFileExtension(fileUrl: string): string {
-  try {
-    const pathname = new URL(fileUrl).pathname;
-    const match = pathname.match(/\.([a-z0-9]+)$/i);
-    return match?.[1]?.toUpperCase() ?? "";
-  } catch {
-    const match = fileUrl.match(/\.([a-z0-9]+)(?:\?|#|$)/i);
-    return match?.[1]?.toUpperCase() ?? "";
-  }
-}
-
-function isImageExtension(extension: string) {
-  return ["JPG", "JPEG", "PNG", "WEBP", "GIF", "BMP", "AVIF"].includes(
-    extension.toUpperCase(),
-  );
-}
-
 function TrashIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -145,25 +98,6 @@ function TrashIcon() {
         stroke="currentColor"
         strokeWidth="1.75"
         strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function FileIcon() {
-  return (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-6Z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M14 2v6h6"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
       />
     </svg>
   );
