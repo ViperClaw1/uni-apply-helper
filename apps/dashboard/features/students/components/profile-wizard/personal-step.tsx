@@ -7,6 +7,7 @@ import {
   type MyProfileInput,
 } from "@/features/students/api/students.api";
 import { COUNTRIES, flagEmoji } from "@/features/auth/lib/countries";
+import type { StudentDocument } from "@/features/documents/types/document.types";
 import type { StudentProfile } from "@/features/students/types/student.types";
 import { useT } from "@/lib/i18n/context";
 import {
@@ -30,15 +31,31 @@ export function PersonalStep({
   initial,
   studentId,
   onNext,
+  passportDocument,
 }: {
   initial: MyProfileInput;
   studentId?: string;
   onNext: (profile: StudentProfile) => void;
+  passportDocument?: StudentDocument;
 }) {
   const t = useT();
   const [fields, setFields] = useState<MyProfileInput>(initial);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const parsedPassport = extractParsedPassport(passportDocument);
+  useDefaultedFromParse(parsedPassport.passportNo, fields.passportNo ?? "", (value) =>
+    updateField("passportNo", value),
+  );
+  useDefaultedFromParse(parsedPassport.passportExpiry, fields.passportExpiry ?? "", (value) =>
+    updateField("passportExpiry", value),
+  );
+  useDefaultedFromParse(parsedPassport.cityOfBirth, fields.cityOfBirth ?? "", (value) =>
+    updateField("cityOfBirth", value),
+  );
+  useDefaultedFromParse(parsedPassport.dateOfBirth, fields.dateOfBirth ?? "", (value) =>
+    updateField("dateOfBirth", value),
+  );
 
   const SEX_OPTIONS = [
     { value: "Male", label: t.profileWizard.personal.sexOptions.male },
@@ -227,4 +244,76 @@ export function PersonalStep({
       <StepActions isSubmitting={isSubmitting} />
     </form>
   );
+}
+
+function extractParsedPassport(document?: StudentDocument): {
+  passportNo?: string;
+  passportExpiry?: string;
+  cityOfBirth?: string;
+  dateOfBirth?: string;
+} {
+  if (
+    !document ||
+    document.parseStatus !== "parsed" ||
+    !document.parsedData ||
+    typeof document.parsedData !== "object"
+  ) {
+    return {};
+  }
+
+  const data = document.parsedData as Record<string, unknown>;
+
+  return {
+    passportNo: readTrimmedString(data.passportNo),
+    passportExpiry: normalizeDateInput(data.passportExpiry),
+    cityOfBirth: readTrimmedString(data.cityOfBirth),
+    dateOfBirth: normalizeDateInput(data.dateOfBirth),
+  };
+}
+
+function readTrimmedString(value: unknown): string | undefined {
+  return typeof value === "string" ? value.trim() || undefined : undefined;
+}
+
+// OCR output isn't guaranteed to be ISO — normalize the common formats we've seen
+// (ISO already, or DD.MM.YYYY) into what <input type="date"> requires.
+function normalizeDateInput(value: unknown): string | undefined {
+  if (typeof value !== "string" || !value.trim()) {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+
+  if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+    return trimmed.slice(0, 10);
+  }
+
+  const dotted = trimmed.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+  if (dotted) {
+    return `${dotted[3]}-${dotted[2]}-${dotted[1]}`;
+  }
+
+  const parsed = new Date(trimmed);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString().slice(0, 10);
+}
+
+// Renders-time "adjust state when external data changes" (React's own sanctioned pattern for
+// this — see https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes).
+// Applies the parsed value as a default whenever it changes, but only while the field still
+// matches the last value *we* applied (or is empty) — a manual edit away from that permanently
+// opts the field out of further auto-fill, so a later re-parse never clobbers a human correction.
+function useDefaultedFromParse(
+  parsedValue: string | undefined,
+  currentValue: string,
+  applyValue: (value: string) => void,
+) {
+  const [lastApplied, setLastApplied] = useState<string | undefined>(undefined);
+
+  if (parsedValue !== lastApplied) {
+    setLastApplied(parsedValue);
+
+    if (parsedValue && (!currentValue || currentValue === lastApplied)) {
+      applyValue(parsedValue);
+    }
+  }
 }

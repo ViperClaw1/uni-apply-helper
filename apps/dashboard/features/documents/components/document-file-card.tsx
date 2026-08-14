@@ -8,18 +8,18 @@ import { DocumentPreview } from "./document-preview";
 type DocumentFileCardProps = {
   document: StudentDocument;
   index: number;
-  isDragging: boolean;
+  isDragging?: boolean;
   isDeleting: boolean;
   onDelete: () => void;
-  onDragStart: () => void;
-  onDragOver: (event: DragEvent) => void;
-  onDragEnd: () => void;
+  onDragStart?: () => void;
+  onDragOver?: (event: DragEvent) => void;
+  onDragEnd?: () => void;
 };
 
 export function DocumentFileCard({
   document,
   index,
-  isDragging,
+  isDragging = false,
   isDeleting,
   onDelete,
   onDragStart,
@@ -27,18 +27,22 @@ export function DocumentFileCard({
   onDragEnd,
 }: DocumentFileCardProps) {
   const t = useT();
+  // Reordering only makes sense with siblings to reorder against — single-file uploaders
+  // pass no drag handlers, so the card renders as a plain (non-draggable) preview.
+  const draggable = Boolean(onDragStart);
 
   return (
     <div
-      draggable
+      draggable={draggable}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
       onDragEnd={onDragEnd}
       className={[
-        "group relative aspect-4/5 cursor-grab overflow-hidden rounded-xl bg-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.06)] outline-1 outline-black/10 active:cursor-grabbing",
+        "group relative aspect-4/5 overflow-hidden rounded-xl bg-slate-100 shadow-[0_1px_2px_rgba(15,23,42,0.06)] outline-1 outline-black/10",
+        draggable ? "cursor-grab active:cursor-grabbing" : "",
         isDragging ? "opacity-50 ring-2 ring-sky-300" : "",
       ].join(" ")}
-      title={t.documents.fileCard.dragToReorder}
+      title={draggable ? t.documents.fileCard.dragToReorder : undefined}
     >
       <a
         href={document.fileUrl}

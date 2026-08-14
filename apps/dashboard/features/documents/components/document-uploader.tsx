@@ -14,7 +14,6 @@ import {
 } from "../api/documents.api";
 import type { StudentDocument } from "../types/document.types";
 import { DocumentFileCard } from "./document-file-card";
-import { DocumentPreview } from "./document-preview";
 
 type UploadStatus = "idle" | "uploading" | "done" | "error";
 
@@ -244,21 +243,10 @@ export function DocumentUploader({
   if (hasDocuments) {
     return (
       <div className="rounded-2xl bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.08)] ring-1 ring-black/5">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex min-w-0 gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-slate-950">{label}</div>
             {existingDocument ? (
-              <a
-                href={existingDocument.fileUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="block h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-slate-100 ring-1 ring-black/10"
-              >
-                <DocumentPreview fileUrl={existingDocument.fileUrl} />
-              </a>
-            ) : null}
-            <div className="min-w-0">
-              <div className="text-sm font-semibold text-slate-950">{label}</div>
-              {existingDocument ? (
               <div
                 className={[
                   "mt-1 text-xs font-medium",
@@ -295,43 +283,31 @@ export function DocumentUploader({
                 {formatParsedPreview(type, existingDocument.parsedData, t)}
               </div>
             ) : null}
-            </div>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {existingDocument ? (
-              <a
-                href={existingDocument.fileUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex h-10 items-center justify-center rounded-xl px-3 text-xs font-semibold text-sky-700 ring-1 ring-sky-200 transition-colors hover:bg-sky-50"
-              >
-                {t.documents.uploader.open}
-              </a>
-            ) : null}
-            {existingDocument ? (
-              <button
-                type="button"
-                onClick={() => void handleDelete(existingDocument.id)}
-                disabled={deletingId === existingDocument.id}
-                className="inline-flex h-10 cursor-pointer items-center justify-center rounded-xl px-3 text-xs font-semibold text-rose-700 ring-1 ring-rose-200 transition-colors hover:bg-rose-50 disabled:opacity-60"
-              >
-                {deletingId === existingDocument.id ? "…" : t.common.delete}
-              </button>
-            ) : null}
-            <div
-              {...getRootProps()}
-              className={[
-                "inline-flex h-10 cursor-pointer items-center justify-center rounded-xl px-3 text-xs font-semibold ring-1 transition-colors",
-                status === "uploading"
-                  ? "pointer-events-none bg-slate-50 text-slate-400 ring-slate-200"
-                  : "text-slate-700 ring-slate-200 hover:bg-slate-50",
-              ].join(" ")}
-            >
-              <input {...getInputProps()} />
-              {status === "uploading" ? t.documents.uploader.uploading : t.documents.uploader.reupload}
-            </div>
+          <div
+            {...getRootProps()}
+            className={[
+              "inline-flex h-10 shrink-0 cursor-pointer items-center justify-center rounded-xl px-3 text-xs font-semibold ring-1 transition-colors",
+              status === "uploading"
+                ? "pointer-events-none bg-slate-50 text-slate-400 ring-slate-200"
+                : "text-slate-700 ring-slate-200 hover:bg-slate-50",
+            ].join(" ")}
+          >
+            <input {...getInputProps()} />
+            {status === "uploading" ? t.documents.uploader.uploading : t.documents.uploader.reupload}
           </div>
         </div>
+
+        {existingDocument ? (
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <DocumentFileCard
+              document={existingDocument}
+              index={0}
+              isDeleting={deletingId === existingDocument.id}
+              onDelete={() => void handleDelete(existingDocument.id)}
+            />
+          </div>
+        ) : null}
       </div>
     );
   }

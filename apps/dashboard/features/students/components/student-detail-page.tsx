@@ -188,7 +188,12 @@ export function StudentDetailPage() {
 
         {activeTab === "profile" ? (
           <div key="profile" className="page-transition">
-            <ProfileTab studentId={studentId} student={student} onUpdated={setStudent} />
+            <ProfileTab
+              studentId={studentId}
+              student={student}
+              documentsByType={documentsByType}
+              onUpdated={setStudent}
+            />
           </div>
         ) : null}
 
@@ -275,10 +280,12 @@ export function StudentDetailPage() {
 function ProfileTab({
   studentId,
   student,
+  documentsByType,
   onUpdated,
 }: {
   studentId: string;
   student: import("../types/student.types").StudentProfile;
+  documentsByType: Map<string, import("@/features/documents/types/document.types").StudentDocument[]>;
   onUpdated: (profile: import("../types/student.types").StudentProfile) => void;
 }) {
   const t = useT();
@@ -287,7 +294,12 @@ function ProfileTab({
   return (
     <div className="flex flex-col gap-4">
       <InfoSection title={labels[0]} defaultOpen>
-        <PersonalStep initial={toPersonalInput(student)} studentId={studentId} onNext={onUpdated} />
+        <PersonalStep
+          initial={toPersonalInput(student)}
+          studentId={studentId}
+          onNext={onUpdated}
+          passportDocument={documentsByType.get("passport")?.[0]}
+        />
       </InfoSection>
       <InfoSection title={labels[1]}>
         <EducationStep initial={toEducationInput(student)} studentId={studentId} onNext={onUpdated} />
