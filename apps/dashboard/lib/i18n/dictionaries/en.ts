@@ -24,6 +24,7 @@ const en = {
     getStarted: "Get started — it's free",
     bookDemo: "Book a demo",
     myApplications: "My applications",
+    goToDashboard: "Dashboard",
     openMenu: "Open menu",
     closeMenu: "Close menu",
   },
@@ -287,6 +288,7 @@ const en = {
   },
   agencyShell: {
     nav: {
+      landing: "Home",
       home: "Dashboard",
       students: "Students",
       universities: "Universities",

@@ -8,6 +8,7 @@ import { useT } from "@/lib/i18n/context";
 const COLLAPSED_STORAGE_KEY = "agency-sidebar-collapsed";
 
 type NavTab =
+  | "landing"
   | "home"
   | "students"
   | "universities"
@@ -17,8 +18,9 @@ type NavTab =
   | "settings";
 
 const NAV_ITEMS: { tab: NavTab; href: string; icon: () => React.ReactElement }[] = [
-  { tab: "home", href: "/dashboard/home", icon: HomeIcon },
-  { tab: "students", href: "/dashboard", icon: StudentsIcon },
+  { tab: "landing", href: "/welcome", icon: LandingIcon },
+  { tab: "home", href: "/", icon: HomeIcon },
+  { tab: "students", href: "/students", icon: StudentsIcon },
   { tab: "universities", href: "/dashboard/universities", icon: UniversityIcon },
   { tab: "applications", href: "/dashboard/all-applications", icon: ApplicationsIcon },
   { tab: "tasks", href: "/dashboard/tasks", icon: TasksIcon },
@@ -183,6 +185,21 @@ export function ComingSoon() {
         </p>
       </div>
     </div>
+  );
+}
+
+function LandingIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.75" />
+      <path
+        d="M3 12h18M12 3c2.5 2.5 4 5.5 4 9s-1.5 6.5-4 9c-2.5-2.5-4-5.5-4-9s1.5-6.5 4-9Z"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 

@@ -13,7 +13,7 @@ export type DashboardStatCounts = {
   submitted: number;
 };
 
-// Students tab lives at /dashboard and reads the same filter values used for its own KPI tiles
+// Students tab lives at /students and reads the same filter values used for its own KPI tiles
 // ("all" | StudentStatusBucket) — "students" here maps to the unfiltered "all" view.
 const FILTERS: Record<keyof DashboardStatCounts, string> = {
   students: "all",
@@ -74,7 +74,7 @@ export function DashboardStats({ counts }: { counts: DashboardStatCounts }) {
         <Link
           key={tile.key}
           data-kpi-tile
-          href={`/dashboard?filter=${FILTERS[tile.key]}`}
+          href={`/students?filter=${FILTERS[tile.key]}`}
           className="rounded-2xl bg-white px-4 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.08),0_8px_30px_rgba(15,23,42,0.04)] ring-1 ring-black/5 transition-[color,background-color,transform] duration-150 ease-out hover:bg-slate-50 active:scale-[0.96]"
         >
           <div

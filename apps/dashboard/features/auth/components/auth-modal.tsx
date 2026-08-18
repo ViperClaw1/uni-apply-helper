@@ -120,8 +120,8 @@ export function AuthModal({ open, initialMode, initialRole, onClose }: AuthModal
     setError(null);
 
     try {
-      await login({ email: fields.email, password: fields.password });
-      router.push("/dashboard");
+      const { account } = await login({ email: fields.email, password: fields.password });
+      router.push(account.role === "student" ? "/dashboard" : "/");
     } catch (submitError) {
       setError(extractErrorMessage(submitError, t.common.somethingWentWrong));
       setPhase("form");
@@ -179,7 +179,7 @@ export function AuthModal({ open, initialMode, initialRole, onClose }: AuthModal
       // the API already logged us in. Once it's required again, the API
       // stops returning `account` here and this falls back to "check email".
       if (result.account) {
-        router.push("/dashboard");
+        router.push(result.account.role === "student" ? "/dashboard" : "/");
       } else {
         setPhase("check-email");
       }

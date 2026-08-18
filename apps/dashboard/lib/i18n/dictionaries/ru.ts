@@ -26,6 +26,7 @@ const ru: Dictionary = {
     getStarted: "Начать — бесплатно",
     bookDemo: "Записаться на демо",
     myApplications: "Мои заявки",
+    goToDashboard: "Дашборд",
     openMenu: "Открыть меню",
     closeMenu: "Закрыть меню",
   },
@@ -294,6 +295,7 @@ const ru: Dictionary = {
   },
   agencyShell: {
     nav: {
+      landing: "Главная",
       home: "Дашборд",
       students: "Студенты",
       universities: "Университеты",

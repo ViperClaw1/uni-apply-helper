@@ -27,10 +27,10 @@ function VerifyEmailContent() {
     let cancelled = false;
 
     verifyEmail(token)
-      .then(() => {
+      .then(({ account }) => {
         if (cancelled) return;
         setStatus("success");
-        router.replace("/dashboard");
+        router.replace(account.role === "student" ? "/dashboard" : "/");
       })
       .catch((error) => {
         if (cancelled) return;

@@ -62,7 +62,7 @@ export function StudentProfilePage({
     >
       {showBackLink ? (
         <Link
-          href="/dashboard"
+          href="/students"
           className="mb-6 inline-flex h-10 w-fit items-center rounded-xl px-3 text-sm font-medium text-slate-600 transition-colors hover:bg-white hover:text-slate-950"
         >
           {t.students.profilePage.backToStudents}
