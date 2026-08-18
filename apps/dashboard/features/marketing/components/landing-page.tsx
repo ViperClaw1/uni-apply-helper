@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
+import { gsap, useGSAP } from "@/lib/gsap";
 import { Header, LogoutButton } from "@/components/header";
 import { useT } from "@/lib/i18n/context";
 import { AuthModal } from "@/features/auth/components/auth-modal";
@@ -36,6 +37,15 @@ const STATUS_STYLES: Record<ApplicationStatus, string> = {
   ready: "bg-blue-50 text-blue-700 ring-blue-100",
   draft: "bg-slate-100 text-slate-500 ring-slate-200",
 };
+
+const STATUS_CHAIN: Record<ApplicationStatus, ApplicationStatus[]> = {
+  draft: ["draft"],
+  inProgress: ["draft", "inProgress"],
+  ready: ["draft", "inProgress", "ready"],
+  submitted: ["draft", "inProgress", "submitted"],
+};
+
+const BADGE_STATUSES: ApplicationStatus[] = ["draft", "inProgress", "ready", "submitted"];
 
 const AGENCY_TRUST_LOGOS = [
   "EduGlobal Consultants",
@@ -291,11 +301,77 @@ function HeroSection({
   onOpenAuth: (mode: "login" | "signup") => void;
 }) {
   const t = useT();
+  const cardsRef = useRef<HTMLDivElement>(null);
   const features = [
     { icon: <ClockIcon />, title: t.landing.features.saveTime, description: t.landing.features.saveTimeDesc },
     { icon: <ShieldIcon />, title: t.landing.features.fewerErrors, description: t.landing.features.fewerErrorsDesc },
     { icon: <DocumentIcon />, title: t.landing.features.applyMore, description: t.landing.features.applyMoreDesc },
   ];
+  const statusLabels: Record<ApplicationStatus, string> = {
+    submitted: t.landing.hero.statusSubmitted,
+    inProgress: t.landing.hero.statusInProgress,
+    ready: t.landing.hero.statusReady,
+    draft: t.landing.hero.statusDraft,
+  };
+
+  useGSAP(
+    () => {
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        const root = cardsRef.current;
+        if (!root) return;
+
+        const checks = root.querySelectorAll("[data-hero-check]");
+        gsap.set(checks, { scale: 0.25, opacity: 0, filter: "blur(4px)" });
+        gsap.to(checks, {
+          scale: 1,
+          opacity: 1,
+          filter: "blur(0px)",
+          stagger: 0.1,
+          duration: 0.35,
+          ease: "power2.out",
+          scrollTrigger: { trigger: root, start: "top 85%", once: true },
+        });
+
+        const rows = gsap.utils.toArray<HTMLElement>("[data-uni-row]");
+        const tl = gsap.timeline({
+          scrollTrigger: {
+            trigger: root,
+            start: "top 60%",
+            end: "bottom top",
+            scrub: true,
+          },
+        });
+
+        rows.forEach((row, rowIndex) => {
+          const final = row.dataset.finalStatus as ApplicationStatus;
+          const chain = STATUS_CHAIN[final];
+          const badges = Object.fromEntries(
+            BADGE_STATUSES.map((status) => [
+              status,
+              row.querySelector(`[data-hero-badge="${status}"]`),
+            ]),
+          ) as Record<ApplicationStatus, Element | null>;
+
+          gsap.set(
+            BADGE_STATUSES.filter((status) => status !== "draft").map((status) => badges[status]),
+            { opacity: 0 },
+          );
+          gsap.set(badges.draft, { opacity: 1 });
+
+          const offset = rowIndex * 0.12;
+          chain.forEach((status, step) => {
+            if (step === 0) return;
+            const prev = chain[step - 1];
+            const at = offset + step * 0.25;
+            tl.to(badges[prev], { opacity: 0, duration: 0.12 }, at);
+            tl.to(badges[status], { opacity: 1, duration: 0.12 }, at);
+          });
+        });
+      });
+    },
+    { scope: cardsRef },
+  );
 
   return (
     <section className="mx-auto grid w-full max-w-7xl gap-12 px-6 py-16 lg:grid-cols-2 lg:items-center lg:py-24">
@@ -352,7 +428,7 @@ function HeroSection({
         <span className="pointer-events-none absolute -top-6 right-2 text-blue-300">
           <PaperPlaneIcon />
         </span>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div ref={cardsRef} className="grid gap-4 sm:grid-cols-2">
           <div className="rounded-2xl bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.08),0_12px_45px_rgba(15,23,42,0.06)] ring-1 ring-black/5">
             <h2 className="text-sm font-semibold text-slate-950">
               {t.landing.hero.profileCardTitle}
@@ -364,8 +440,13 @@ function HeroSection({
                   className="flex items-center justify-between text-sm text-slate-600"
                 >
                   {step}
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-                    <CheckIcon />
+                  <span className="relative flex h-5 w-5 items-center justify-center rounded-full border border-slate-200 bg-white">
+                    <span
+                      data-hero-check
+                      className="absolute inset-0 flex items-center justify-center rounded-full bg-emerald-50 text-emerald-600"
+                    >
+                      <CheckIcon />
+                    </span>
                   </span>
                 </li>
               ))}
@@ -389,6 +470,8 @@ function HeroSection({
               {APPLICATION_TARGETS.map((target) => (
                 <li
                   key={target.nameEn}
+                  data-uni-row
+                  data-final-status={target.status}
                   className="flex items-center gap-2.5"
                 >
                   <UniversityBadge
@@ -399,16 +482,17 @@ function HeroSection({
                     {target.nameEn}{" "}
                     <span className="text-slate-400">({target.nameZh})</span>
                   </span>
-                  <span
-                    className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ${STATUS_STYLES[target.status]}`}
-                  >
-                    {t.landing.hero[
-                      `status${target.status.charAt(0).toUpperCase()}${target.status.slice(1)}` as
-                        | "statusSubmitted"
-                        | "statusInProgress"
-                        | "statusReady"
-                        | "statusDraft"
-                    ]}
+                  <span className="relative inline-flex h-5 w-[6.75rem] shrink-0 items-center justify-end">
+                    {BADGE_STATUSES.map((status) => (
+                      <span
+                        key={status}
+                        data-hero-badge={status}
+                        className={`absolute right-0 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ${STATUS_STYLES[status]}`}
+                        style={{ opacity: target.status === status ? 1 : 0 }}
+                      >
+                        {statusLabels[status]}
+                      </span>
+                    ))}
                   </span>
                 </li>
               ))}

@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useT } from "@/lib/i18n/context";
+import { gsap, useGSAP } from "@/lib/gsap";
 import type {
   UniversitySession,
   UniversitySessionStatus,
@@ -24,7 +25,39 @@ export function UniversitySessionsPanel({
   onRenewed: () => void;
 }) {
   const t = useT();
+  const root = useRef<HTMLElement>(null);
+  const prevStatus = useRef<Map<string, UniversitySessionStatus>>(new Map());
   const [renewing, setRenewing] = useState<UniversitySession | null>(null);
+
+  useGSAP(
+    () => {
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        for (const session of sessions) {
+          const last = prevStatus.current.get(session.universityId);
+          prevStatus.current.set(session.universityId, session.status);
+          if (session.status !== "expired" || last === undefined || last === "expired") continue;
+          const badge = root.current?.querySelector(
+            `[data-session-badge="${session.universityId}"]`,
+          );
+          if (!badge) continue;
+          gsap.fromTo(
+            badge,
+            { boxShadow: "0 0 0 0 rgba(244, 63, 94, 0)" },
+            {
+              boxShadow: "0 0 0 6px rgba(244, 63, 94, 0.35)",
+              duration: 0.45,
+              yoyo: true,
+              repeat: 5,
+              ease: "power1.inOut",
+              onComplete: () => gsap.set(badge, { boxShadow: "none" }),
+            },
+          );
+        }
+      });
+    },
+    { scope: root, dependencies: [sessions] },
+  );
 
   const activeCount = useMemo(
     () => sessions.filter((session) => session.status === "active").length,
@@ -41,7 +74,10 @@ export function UniversitySessionsPanel({
   };
 
   return (
-    <section className="rounded-2xl bg-white shadow-[0_1px_2px_rgba(15,23,42,0.08),0_8px_30px_rgba(15,23,42,0.04)] ring-1 ring-black/5">
+    <section
+      ref={root}
+      className="rounded-2xl bg-white shadow-[0_1px_2px_rgba(15,23,42,0.08),0_8px_30px_rgba(15,23,42,0.04)] ring-1 ring-black/5"
+    >
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-6 py-4">
         <h2 className="text-base font-semibold text-slate-950">{t.dashboard.sessions.title}</h2>
         <div className="text-sm text-slate-500">
@@ -78,6 +114,7 @@ export function UniversitySessionsPanel({
                   <td className="px-6 py-3 font-medium text-slate-950">{session.displayName}</td>
                   <td className="px-6 py-3">
                     <span
+                      data-session-badge={session.universityId}
                       className={`inline-flex h-6 items-center rounded-full px-2.5 text-xs font-medium ring-1 ${STATUS_CLASSES[session.status]}`}
                     >
                       {statusLabel[session.status]}

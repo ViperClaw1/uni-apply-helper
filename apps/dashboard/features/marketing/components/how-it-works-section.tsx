@@ -1,9 +1,9 @@
-import type { CSSProperties } from "react";
-import { useT } from "@/lib/i18n/context";
-import { HOW_IT_WORKS_SLIDES } from "../constants/how-it-works";
+"use client";
 
-const SLIDE_SECONDS = 4;
-const TOTAL_SECONDS = SLIDE_SECONDS * HOW_IT_WORKS_SLIDES.length;
+import { useRef } from "react";
+import { useT } from "@/lib/i18n/context";
+import { gsap, useGSAP } from "@/lib/gsap";
+import { HOW_IT_WORKS_SLIDES, type HowItWorksSlide } from "../constants/how-it-works";
 
 const MOCK_UNIVERSITIES = [
   { name: "Peking University", picked: true },
@@ -13,87 +13,236 @@ const MOCK_UNIVERSITIES = [
 ];
 const APPLY_UNIVERSITY_COUNT = 3;
 
-function slideAnimation(name: string, delaySeconds: number): CSSProperties {
-  return {
-    animationName: name,
-    animationDuration: `${TOTAL_SECONDS}s`,
-    animationDelay: `${-delaySeconds}s`,
-    animationTimingFunction: "ease-in-out",
-    animationIterationCount: "infinite",
-  };
-}
-
 export function HowItWorksSection() {
   const t = useT();
+  const root = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        const pin = root.current;
+        if (!pin) return;
+
+        const panels = gsap.utils.toArray<HTMLElement>("[data-hiw-panel]");
+        const captions = gsap.utils.toArray<HTMLElement>("[data-hiw-caption]");
+        const ticks = gsap.utils.toArray<HTMLElement>("[data-hiw-tick]");
+        const counter = pin.querySelector<HTMLElement>("[data-hiw-counter]");
+        if (panels.length === 0) return;
+
+        gsap.set(panels.slice(1), { opacity: 0, y: 16, filter: "blur(4px)" });
+        gsap.set(captions.slice(1), { opacity: 0, y: 16 });
+
+        const tl = gsap.timeline({
+          scrollTrigger: {
+            trigger: pin,
+            start: "top top",
+            end: () => `+=${panels.length * 80}vh`,
+            pin: true,
+            scrub: 1,
+            anticipatePin: 1,
+            invalidateOnRefresh: true,
+          },
+        });
+
+        panels.forEach((panel, i) => {
+          if (i > 0) {
+            tl.to(panels[i - 1], { opacity: 0, y: -16, filter: "blur(4px)", duration: 0.35 }, i);
+            tl.to(captions[i - 1], { opacity: 0, y: -16, duration: 0.35 }, i);
+            tl.fromTo(
+              panel,
+              { opacity: 0, y: 16, filter: "blur(4px)" },
+              { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.35 },
+              i,
+            );
+            tl.fromTo(captions[i], { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.35 }, i);
+            if (ticks[i - 1]) tl.to(ticks[i - 1], { backgroundColor: "#e2e8f0", duration: 0.2 }, i);
+            if (ticks[i]) tl.to(ticks[i], { backgroundColor: "#2563eb", duration: 0.2 }, i);
+          }
+
+          const kind = panel.dataset.kind;
+          if (kind === "form") {
+            const bar = panel.querySelector("[data-hiw-progress]");
+            if (bar) tl.fromTo(bar, { scaleX: 0 }, { scaleX: 1, duration: 0.8, ease: "none" }, i);
+          }
+          if (kind === "universities" || kind === "upload") {
+            const marks = panel.querySelectorAll("[data-hiw-check]");
+            tl.fromTo(
+              marks,
+              { scale: 0.25, opacity: 0, filter: "blur(4px)" },
+              { scale: 1, opacity: 1, filter: "blur(0px)", stagger: 0.08, duration: 0.3 },
+              i,
+            );
+          }
+          if (kind === "apply") {
+            const loading = panel.querySelector("[data-hiw-apply-loading]");
+            const done = panel.querySelector("[data-hiw-apply-done]");
+            gsap.set(done, { opacity: 0 });
+            tl.to(loading, { opacity: 0, duration: 0.2 }, i + 0.5);
+            tl.to(done, { opacity: 1, duration: 0.2 }, i + 0.5);
+          }
+          if (kind === "status") {
+            const a = panel.querySelector("[data-hiw-status-a]");
+            const b = panel.querySelector("[data-hiw-status-b]");
+            const c = panel.querySelector("[data-hiw-status-c]");
+            gsap.set([b, c], { opacity: 0 });
+            tl.to(a, { opacity: 0, duration: 0.15 }, i + 0.33);
+            tl.to(b, { opacity: 1, duration: 0.15 }, i + 0.33);
+            tl.to(b, { opacity: 0, duration: 0.15 }, i + 0.66);
+            tl.to(c, { opacity: 1, duration: 0.15 }, i + 0.66);
+          }
+        });
+
+        if (counter) {
+          tl.eventCallback("onUpdate", () => {
+            const index = Math.min(panels.length, Math.floor(tl.progress() * panels.length) + 1);
+            counter.textContent = `${index} / ${panels.length}`;
+          });
+        }
+      });
+
+      mm.add("(prefers-reduced-motion: reduce)", () => {
+        const pin = root.current;
+        if (!pin) return;
+        const panels = gsap.utils.toArray<HTMLElement>("[data-hiw-panel]");
+        const captions = gsap.utils.toArray<HTMLElement>("[data-hiw-caption]");
+        const last = panels.length - 1;
+        if (last < 0) return;
+        gsap.set(panels.slice(0, last), { opacity: 0 });
+        gsap.set(panels[last], { opacity: 1, y: 0, filter: "none" });
+        gsap.set(captions.slice(0, last), { opacity: 0 });
+        gsap.set(captions[last], { opacity: 1, y: 0 });
+      });
+    },
+    { scope: root },
+  );
 
   return (
     <section id="how-it-works" className="border-t border-slate-100 bg-white">
-      <div className="mx-auto w-full max-w-7xl px-6 py-16">
-        <div className="mx-auto max-w-2xl text-center">
-          <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
-            {t.landing.howItWorks.badge}
-          </span>
-          <h2 className="mt-4 text-3xl font-bold tracking-tight text-slate-950">
-            {t.landing.howItWorks.title}
-          </h2>
-          <p className="mt-3 text-base leading-7 text-slate-500">
-            {t.landing.howItWorks.description}
-          </p>
-        </div>
-
-        <div className="relative mx-auto mt-10 h-105 max-w-lg overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgba(15,23,42,0.08),0_12px_45px_rgba(15,23,42,0.06)] ring-1 ring-black/5">
-          <div className="flex h-9 items-center gap-1.5 border-b border-slate-100 bg-slate-50 px-4">
-            <span className="h-2.5 w-2.5 rounded-full bg-rose-300" />
-            <span className="h-2.5 w-2.5 rounded-full bg-amber-300" />
-            <span className="h-2.5 w-2.5 rounded-full bg-emerald-300" />
+      <div ref={root} className="flex h-svh flex-col justify-center">
+        <div className="mx-auto w-full max-w-7xl px-6 py-8 lg:py-16">
+          <div className="mx-auto max-w-2xl text-center">
+            <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
+              {t.landing.howItWorks.badge}
+            </span>
+            <h2 className="mt-4 text-3xl font-bold tracking-tight text-slate-950">
+              {t.landing.howItWorks.title}
+            </h2>
+            <p className="mt-3 text-base leading-7 text-slate-500">
+              {t.landing.howItWorks.description}
+            </p>
           </div>
 
-          {HOW_IT_WORKS_SLIDES.map((slide, index) => {
-            const delaySeconds = index * SLIDE_SECONDS;
-            return (
-              <div
-                key={index}
-                className="absolute inset-x-0 top-9 bottom-0 p-6"
-                style={slideAnimation("how-it-works-slide", delaySeconds)}
-              >
-                {slide.kind === "form" ? (
-                  <FormSlide {...slide} delaySeconds={delaySeconds} />
-                ) : slide.kind === "upload" ? (
-                  <UploadSlide />
-                ) : slide.kind === "universities" ? (
-                  <UniversitiesSlide />
-                ) : slide.kind === "apply" ? (
-                  <ApplySlide delaySeconds={delaySeconds} />
-                ) : (
-                  <StatusSlide delaySeconds={delaySeconds} />
-                )}
+          <div className="mt-10 grid items-center gap-10 lg:grid-cols-2">
+            <div>
+              <div className="relative min-h-24">
+                {HOW_IT_WORKS_SLIDES.map((slide, index) => {
+                  const caption = captionFor(slide, t.landing.howItWorks);
+                  return (
+                    <div
+                      key={index}
+                      data-hiw-caption
+                      className="absolute inset-x-0 top-0"
+                      style={{ opacity: index === 0 ? 1 : 0 }}
+                    >
+                      <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+                        {caption.step}
+                      </p>
+                      <h3 className="mt-2 text-2xl font-bold tracking-tight text-slate-950">
+                        {caption.title}
+                      </h3>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
+              <div className="mt-8 flex items-center gap-3">
+                <div className="flex flex-1 gap-1.5" aria-hidden>
+                  {HOW_IT_WORKS_SLIDES.map((_, index) => (
+                    <span
+                      key={index}
+                      data-hiw-tick
+                      className={`h-1 flex-1 rounded-full ${index === 0 ? "bg-blue-600" : "bg-slate-200"}`}
+                    />
+                  ))}
+                </div>
+                <span
+                  data-hiw-counter
+                  className="shrink-0 text-xs font-medium tabular-nums text-slate-400"
+                >
+                  1 / {HOW_IT_WORKS_SLIDES.length}
+                </span>
+              </div>
+            </div>
+
+            <div className="relative mx-auto h-[min(22rem,42vh)] w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-[0_1px_2px_rgba(15,23,42,0.08),0_12px_45px_rgba(15,23,42,0.06)] ring-1 ring-black/5 lg:h-[min(26.25rem,52vh)]">
+              <div className="flex h-9 items-center gap-1.5 border-b border-slate-100 bg-slate-50 px-4">
+                <span className="h-2.5 w-2.5 rounded-full bg-rose-300" />
+                <span className="h-2.5 w-2.5 rounded-full bg-amber-300" />
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-300" />
+              </div>
+
+              {HOW_IT_WORKS_SLIDES.map((slide, index) => (
+                <div
+                  key={index}
+                  data-hiw-panel
+                  data-kind={slide.kind}
+                  className="absolute inset-x-0 top-9 bottom-0 p-6"
+                  style={{ opacity: index === 0 ? 1 : 0 }}
+                >
+                  {slide.kind === "form" ? (
+                    <FormSlide {...slide} />
+                  ) : slide.kind === "upload" ? (
+                    <UploadSlide />
+                  ) : slide.kind === "universities" ? (
+                    <UniversitiesSlide />
+                  ) : slide.kind === "apply" ? (
+                    <ApplySlide />
+                  ) : (
+                    <StatusSlide />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </section>
   );
 }
 
+function captionFor(
+  slide: HowItWorksSlide,
+  copy: {
+    documentsLabel: string;
+    uploadTitle: string;
+    universitiesLabel: string;
+    chooseTitle: string;
+    oneClickLabel: string;
+    applyTitle: string;
+    statusLabel: string;
+    statusTitle: string;
+  },
+) {
+  if (slide.kind === "form") return { step: slide.step, title: slide.title };
+  if (slide.kind === "upload") return { step: copy.documentsLabel, title: copy.uploadTitle };
+  if (slide.kind === "universities") return { step: copy.universitiesLabel, title: copy.chooseTitle };
+  if (slide.kind === "apply") return { step: copy.oneClickLabel, title: copy.applyTitle };
+  return { step: copy.statusLabel, title: copy.statusTitle };
+}
+
 function FormSlide({
   step,
   title,
   fields,
-  delaySeconds,
 }: {
   step: string;
   title: string;
   fields: { label: string; labelEn: string; value: string }[];
-  delaySeconds: number;
 }) {
   return (
     <div className="flex h-full flex-col">
       <div className="h-1 w-full overflow-hidden rounded-full bg-slate-100">
-        <div
-          className="h-full rounded-full bg-blue-600"
-          style={slideAnimation("how-it-works-progress", delaySeconds)}
-        />
+        <div data-hiw-progress className="h-full origin-left scale-x-0 rounded-full bg-blue-600 motion-reduce:scale-x-100" />
       </div>
       <p className="mt-3 text-xs font-semibold text-blue-600">{step}</p>
       <h3 className="mt-1 text-sm font-semibold text-slate-950">{title}</h3>
@@ -130,7 +279,10 @@ function UploadSlide() {
             className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5"
           >
             <span className="text-xs font-medium text-slate-800">{name}</span>
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+            <span
+              data-hiw-check
+              className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"
+            >
               <CheckIcon />
             </span>
           </div>
@@ -169,7 +321,11 @@ function UniversitiesSlide() {
                   : "border-slate-300 bg-white"
               }`}
             >
-              {university.picked ? <CheckIcon /> : null}
+              {university.picked ? (
+                <span data-hiw-check>
+                  <CheckIcon />
+                </span>
+              ) : null}
             </span>
           </div>
         ))}
@@ -178,7 +334,7 @@ function UniversitiesSlide() {
   );
 }
 
-function ApplySlide({ delaySeconds }: { delaySeconds: number }) {
+function ApplySlide() {
   const t = useT();
 
   return (
@@ -190,15 +346,15 @@ function ApplySlide({ delaySeconds }: { delaySeconds: number }) {
 
       <div className="relative mt-6 flex h-12 w-56 items-center justify-center">
         <div
-          className="absolute inset-0 flex items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-semibold text-white"
-          style={slideAnimation("how-it-works-apply-loading", delaySeconds)}
+          data-hiw-apply-loading
+          className="absolute inset-0 flex items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-semibold text-white motion-reduce:opacity-0"
         >
           <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
           {t.landing.howItWorks.submitting}
         </div>
         <div
-          className="absolute inset-0 flex items-center justify-center gap-2 rounded-xl bg-emerald-600 text-sm font-semibold text-white"
-          style={slideAnimation("how-it-works-apply-done", delaySeconds)}
+          data-hiw-apply-done
+          className="absolute inset-0 flex items-center justify-center gap-2 rounded-xl bg-emerald-600 text-sm font-semibold text-white opacity-0 motion-reduce:opacity-100"
         >
           <CheckIcon />
           {APPLY_UNIVERSITY_COUNT} {t.landing.howItWorks.applicationsSubmitted}
@@ -208,7 +364,7 @@ function ApplySlide({ delaySeconds }: { delaySeconds: number }) {
   );
 }
 
-function StatusSlide({ delaySeconds }: { delaySeconds: number }) {
+function StatusSlide() {
   const t = useT();
 
   return (
@@ -226,20 +382,20 @@ function StatusSlide({ delaySeconds }: { delaySeconds: number }) {
           </span>
           <span className="relative inline-flex h-5 w-24 shrink-0 items-center justify-end">
             <span
-              className="absolute right-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500 ring-1 ring-slate-200"
-              style={slideAnimation("how-it-works-status-a", delaySeconds)}
+              data-hiw-status-a
+              className="absolute right-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500 ring-1 ring-slate-200 motion-reduce:opacity-0"
             >
               {t.landing.howItWorks.statusDraft}
             </span>
             <span
-              className="absolute right-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-amber-100"
-              style={slideAnimation("how-it-works-status-b", delaySeconds)}
+              data-hiw-status-b
+              className="absolute right-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 opacity-0 ring-1 ring-amber-100"
             >
               {t.landing.howItWorks.statusInProgress}
             </span>
             <span
-              className="absolute right-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-emerald-100"
-              style={slideAnimation("how-it-works-status-c", delaySeconds)}
+              data-hiw-status-c
+              className="absolute right-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 opacity-0 ring-1 ring-emerald-100 motion-reduce:opacity-100"
             >
               {t.landing.howItWorks.statusSubmitted}
             </span>
