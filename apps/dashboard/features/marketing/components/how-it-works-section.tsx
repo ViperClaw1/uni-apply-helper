@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import { useT } from "@/lib/i18n/context";
-import { gsap, Observer, ScrollTrigger, useGSAP } from "@/lib/gsap";
+import { gsap, ScrollTrigger, useGSAP } from "@/lib/gsap";
 import { HOW_IT_WORKS_SLIDES, type HowItWorksSlide } from "../constants/how-it-works";
 
 const MOCK_UNIVERSITIES = [
@@ -101,84 +101,102 @@ export function HowItWorksSection() {
           if (counter) counter.textContent = `${index + 1} / ${steps}`;
         };
 
+        const jumpTo = (index: number) => {
+          current = index;
+          animating = false;
+          setCounter(index);
+          tl.time(tl.labels[`step-${index}`] ?? 0);
+        };
+
         const goto = (index: number) => {
           if (animating || index < 0 || index >= steps || index === current) return;
           animating = true;
           current = index;
           setCounter(index);
           tl.tweenTo(`step-${index}`, {
-            duration: 0.5,
+            duration: 0.45,
             ease: "power2.inOut",
             overwrite: true,
             onComplete: () => {
-              gsap.delayedCall(0.12, () => {
-                animating = false;
-              });
+              animating = false;
             },
           });
         };
 
-        let st: ScrollTrigger;
+        let engaged = false;
 
-        const observer = Observer.create({
-          type: "wheel,touch",
-          wheelSpeed: -1,
-          tolerance: 12,
-          preventDefault: true,
-          lockAxis: true,
-          onUp: () => tryStep(1),
-          onDown: () => tryStep(-1),
-        });
-        observer.disable();
-
-        function tryStep(dir: 1 | -1) {
-          if (animating) return;
-          const next = current + dir;
-          if (next < 0 || next >= steps) {
-            observer.disable();
-            window.scrollTo(0, dir > 0 ? st.end + 2 : Math.max(0, st.start - 2));
-            return;
-          }
-          goto(next);
-        }
-
-        function arm() {
-          observer.enable();
-          animating = true;
-          gsap.delayedCall(0.35, () => {
-            animating = false;
-          });
-        }
-
-        function disarm() {
-          observer.disable();
-          animating = false;
-        }
-
-        st = ScrollTrigger.create({
+        const st = ScrollTrigger.create({
           trigger: pin,
           start: "top top",
-          end: "+=120%",
+          end: "+=64",
           pin: true,
-          anticipatePin: 1,
           invalidateOnRefresh: true,
-          onEnter: (self) => {
-            current = 0;
-            tl.time(tl.labels["step-0"] ?? 0);
-            setCounter(0);
-            self.scroll(self.start);
-            arm();
+          onEnter: () => {
+            if (engaged) return;
+            engaged = true;
+            jumpTo(0);
           },
-          onEnterBack: (self) => {
-            current = steps - 1;
-            tl.time(tl.labels[`step-${steps - 1}`] ?? tl.duration());
-            setCounter(steps - 1);
-            self.scroll(self.end);
-            arm();
+          onEnterBack: () => {
+            if (engaged) return;
+            engaged = true;
+            jumpTo(steps - 1);
           },
-          onLeave: disarm,
-          onLeaveBack: disarm,
+          onLeave: () => {
+            engaged = false;
+            animating = false;
+          },
+          onLeaveBack: () => {
+            engaged = false;
+            animating = false;
+          },
         });
+
+        const onWheel = (event: WheelEvent) => {
+          if (!engaged) return;
+          if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+
+          const dir: 1 | -1 = event.deltaY > 0 ? 1 : -1;
+          const next = current + dir;
+
+          if (next < 0 || next >= steps) return;
+
+          event.preventDefault();
+          if (animating) return;
+          goto(next);
+        };
+
+        window.addEventListener("wheel", onWheel, { passive: false, capture: true });
+
+        let touchY = 0;
+        const onTouchStart = (event: TouchEvent) => {
+          touchY = event.touches[0]?.clientY ?? 0;
+        };
+        const onTouchMove = (event: TouchEvent) => {
+          if (!engaged) return;
+          const y = event.touches[0]?.clientY ?? touchY;
+          const dy = touchY - y;
+          if (Math.abs(dy) < 24) return;
+
+          const dir: 1 | -1 = dy > 0 ? 1 : -1;
+          touchY = y;
+          const next = current + dir;
+
+          if (next < 0 || next >= steps) return;
+
+          event.preventDefault();
+          if (animating) return;
+          goto(next);
+        };
+
+        pin.addEventListener("touchstart", onTouchStart, { passive: true });
+        pin.addEventListener("touchmove", onTouchMove, { passive: false });
+
+        return () => {
+          window.removeEventListener("wheel", onWheel, { capture: true });
+          pin.removeEventListener("touchstart", onTouchStart);
+          pin.removeEventListener("touchmove", onTouchMove);
+          st.kill();
+        };
       });
 
       mm.add("(prefers-reduced-motion: reduce)", () => {
