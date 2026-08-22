@@ -2,8 +2,8 @@
 
 import { useRef } from "react";
 import { useT } from "@/lib/i18n/context";
-import { gsap, ScrollTrigger, useGSAP } from "@/lib/gsap";
 import { HOW_IT_WORKS_SLIDES, type HowItWorksSlide } from "../constants/how-it-works";
+import { useHiwScrollLock } from "../hooks/use-hiw-scroll-lock";
 
 const MOCK_UNIVERSITIES = [
   { name: "Peking University", picked: true },
@@ -12,246 +12,19 @@ const MOCK_UNIVERSITIES = [
   { name: "Beijing University of Technology", picked: false },
 ];
 const APPLY_UNIVERSITY_COUNT = 3;
+const STEP_COUNT = HOW_IT_WORKS_SLIDES.length;
 
 export function HowItWorksSection() {
   const t = useT();
-  const root = useRef<HTMLDivElement>(null);
-
-  useGSAP(
-    () => {
-      const pin = root.current;
-      if (!pin) return;
-      pin.dataset.hiwReady = "booting";
-
-      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        pin.dataset.hiwReady = "reduce";
-        const panels = gsap.utils.toArray<HTMLElement>("[data-hiw-panel]");
-        const captions = gsap.utils.toArray<HTMLElement>("[data-hiw-caption]");
-        const last = panels.length - 1;
-        if (last < 0) return;
-        gsap.set(panels.slice(0, last), { opacity: 0 });
-        gsap.set(panels[last], { opacity: 1, y: 0, filter: "none" });
-        gsap.set(captions.slice(0, last), { opacity: 0 });
-        gsap.set(captions[last], { opacity: 1, y: 0 });
-        return;
-      }
-
-      const panels = gsap.utils.toArray<HTMLElement>("[data-hiw-panel]");
-        const captions = gsap.utils.toArray<HTMLElement>("[data-hiw-caption]");
-        const ticks = gsap.utils.toArray<HTMLElement>("[data-hiw-tick]");
-        const counter = pin.querySelector<HTMLElement>("[data-hiw-counter]");
-        const steps = panels.length;
-        if (steps === 0) return;
-
-        gsap.set(panels.slice(1), { autoAlpha: 0, y: 16, filter: "blur(4px)" });
-        gsap.set(captions.slice(1), { autoAlpha: 0, y: 16 });
-        gsap.set(panels[0], { autoAlpha: 1, y: 0, filter: "blur(0px)" });
-        gsap.set(captions[0], { autoAlpha: 1, y: 0 });
-
-        const tl = gsap.timeline({ paused: true, defaults: { ease: "power2.inOut" } });
-
-        panels.forEach((panel, i) => {
-          if (i > 0) {
-            tl.to(panels[i - 1], { autoAlpha: 0, y: -16, filter: "blur(4px)", duration: 0.4 });
-            tl.to(captions[i - 1], { autoAlpha: 0, y: -12, duration: 0.18 }, "<");
-            tl.fromTo(
-              panel,
-              { autoAlpha: 0, y: 16, filter: "blur(4px)" },
-              { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.4 },
-              "<",
-            );
-            tl.fromTo(
-              captions[i],
-              { autoAlpha: 0, y: 12 },
-              { autoAlpha: 1, y: 0, duration: 0.25 },
-              "<0.14",
-            );
-            if (ticks[i - 1]) tl.to(ticks[i - 1], { backgroundColor: "#e2e8f0", duration: 0.2 }, "<");
-            if (ticks[i]) tl.to(ticks[i], { backgroundColor: "#2563eb", duration: 0.2 }, "<");
-          }
-
-          const kind = panel.dataset.kind;
-          if (kind === "form") {
-            const bar = panel.querySelector("[data-hiw-progress]");
-            if (bar) tl.fromTo(bar, { scaleX: 0 }, { scaleX: 1, duration: 0.45, ease: "none" });
-          }
-          if (kind === "universities" || kind === "upload") {
-            const marks = panel.querySelectorAll("[data-hiw-check]");
-            tl.fromTo(
-              marks,
-              { scale: 0.25, autoAlpha: 0, filter: "blur(4px)" },
-              { scale: 1, autoAlpha: 1, filter: "blur(0px)", stagger: 0.08, duration: 0.3 },
-            );
-          }
-          if (kind === "apply") {
-            const loading = panel.querySelector("[data-hiw-apply-loading]");
-            const done = panel.querySelector("[data-hiw-apply-done]");
-            gsap.set(done, { autoAlpha: 0 });
-            tl.to(loading, { autoAlpha: 0, duration: 0.2 });
-            tl.to(done, { autoAlpha: 1, duration: 0.2 }, "<");
-          }
-          if (kind === "status") {
-            const a = panel.querySelector("[data-hiw-status-a]");
-            const b = panel.querySelector("[data-hiw-status-b]");
-            const c = panel.querySelector("[data-hiw-status-c]");
-            gsap.set([b, c], { autoAlpha: 0 });
-            tl.to(a, { autoAlpha: 0, duration: 0.15 });
-            tl.to(b, { autoAlpha: 1, duration: 0.15 }, "<");
-            tl.to(b, { autoAlpha: 0, duration: 0.15 });
-            tl.to(c, { autoAlpha: 1, duration: 0.15 }, "<");
-          }
-
-          tl.addLabel(`step-${i}`);
-        });
-
-        tl.time(tl.labels["step-0"] ?? 0);
-
-        let current = 0;
-        let animating = false;
-        let allowStep = true;
-
-        const syncBusy = () => {
-          if (animating || !allowStep) pin.dataset.hiwBusy = "true";
-          else delete pin.dataset.hiwBusy;
-        };
-
-        const setCounter = (index: number) => {
-          if (!counter) return;
-          counter.dataset.hiwStep = String(index + 1);
-          counter.textContent = `${index + 1} / ${steps}`;
-        };
-
-        const unlock = gsap.delayedCall(0.28, () => {
-          allowStep = true;
-          syncBusy();
-        }).pause();
-
-        let st: ScrollTrigger;
-
-        const goto = (index: number, scrollingDown: boolean) => {
-          if ((index >= steps && scrollingDown) || (index < 0 && !scrollingDown)) {
-            observer.disable();
-            if (scrollingDown) st.scroll(st.end + 1);
-            else st.scroll(Math.max(0, st.start - 1));
-            return;
-          }
-          if (animating || !allowStep || index < 0 || index >= steps || index === current) return;
-
-          animating = true;
-          allowStep = false;
-          syncBusy();
-          current = index;
-          setCounter(index);
-          tl.tweenTo(`step-${index}`, {
-            duration: 0.45,
-            ease: "power2.inOut",
-            overwrite: true,
-            onComplete: () => {
-              animating = false;
-              allowStep = true;
-              syncBusy();
-            },
-          });
-        };
-
-        let lastY = 0;
-
-        const observer = ScrollTrigger.observe({
-          type: "wheel,touch",
-          tolerance: 10,
-          preventDefault: true,
-          onDown: () => goto(current + 1, true),
-          onUp: () => goto(current - 1, false),
-          onEnable() {
-            pin.dataset.hiwLocked = "true";
-            allowStep = false;
-            syncBusy();
-            lastY = window.scrollY;
-            unlock.restart(true);
-          },
-          onDisable() {
-            delete pin.dataset.hiwLocked;
-            delete pin.dataset.hiwBusy;
-            unlock.pause();
-            allowStep = true;
-            animating = false;
-          },
-        });
-        observer.disable();
-        pin.dataset.hiwReady = "true";
-
-        const showStep = (index: number) => {
-          current = index;
-          tl.time(tl.labels[`step-${index}`] ?? 0);
-          setCounter(index);
-        };
-
-        st = ScrollTrigger.create({
-          trigger: pin,
-          pin: true,
-          start: "top top",
-          end: "+=50%",
-          invalidateOnRefresh: true,
-          onEnter: () => {
-            if (observer.isEnabled) return;
-            showStep(0);
-            observer.enable();
-          },
-          onEnterBack: () => {
-            if (observer.isEnabled) return;
-            showStep(steps - 1);
-            observer.enable();
-          },
-          onLeave: () => observer.disable(),
-          onLeaveBack: () => observer.disable(),
-        });
-
-        const onWheelCapture = (event: WheelEvent) => {
-          if (observer.isEnabled || event.deltaY === 0) return;
-
-          const top = pin.getBoundingClientRect().top;
-
-          if (event.deltaY > 0 && top > 0 && top <= event.deltaY) {
-            event.preventDefault();
-            window.scrollTo(0, st.start);
-            return;
-          }
-
-          if (event.deltaY < 0 && top < 0 && top - event.deltaY >= 0) {
-            event.preventDefault();
-            window.scrollTo(0, st.end);
-          }
-        };
-
-        window.addEventListener("wheel", onWheelCapture, { passive: false, capture: true });
-
-        const onWindowScroll = () => {
-          const y = window.scrollY;
-          const dy = y - lastY;
-          lastY = y;
-          if (!observer.isEnabled || animating || !allowStep) return;
-          if (Math.abs(dy) < 16) return;
-          goto(current + (dy > 0 ? 1 : -1), dy > 0);
-        };
-        window.addEventListener("scroll", onWindowScroll, { passive: true });
-
-        return () => {
-          unlock.kill();
-          window.removeEventListener("wheel", onWheelCapture, { capture: true });
-          window.removeEventListener("scroll", onWindowScroll);
-          observer.kill();
-          st.kill();
-        };
-    },
-    { scope: root },
-  );
+  const sectionRef = useRef<HTMLElement>(null);
+  const { step, ready, reducedMotion, bindRoot } = useHiwScrollLock(sectionRef, STEP_COUNT);
 
   return (
-    <section id="how-it-works" className="border-t border-slate-100 bg-white">
+    <section id="how-it-works" ref={sectionRef} className="border-t border-slate-100 bg-white">
       <div
-        ref={root}
+        ref={bindRoot}
         data-hiw-root="pin"
-        data-hiw-ready="ssr"
+        data-hiw-ready={ready}
         className="flex h-svh flex-col justify-center"
       >
         <div className="mx-auto w-full max-w-7xl px-6 py-8 lg:py-16">
@@ -272,12 +45,13 @@ export function HowItWorksSection() {
               <div className="relative min-h-24 overflow-hidden">
                 {HOW_IT_WORKS_SLIDES.map((slide, index) => {
                   const caption = captionFor(slide, t.landing.howItWorks);
+                  const active = reducedMotion ? index === STEP_COUNT - 1 : index === step;
                   return (
                     <div
                       key={index}
                       data-hiw-caption
-                      className="absolute inset-x-0 top-0"
-                      style={{ opacity: index === 0 ? 1 : 0 }}
+                      data-active={active || undefined}
+                      className="absolute inset-x-0 top-0 transition-[opacity,transform] duration-[450ms] ease-in-out motion-reduce:transition-none data-[active]:pointer-events-auto data-[active]:translate-y-0 data-[active]:opacity-100 pointer-events-none translate-y-4 opacity-0"
                     >
                       <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
                         {caption.step}
@@ -291,20 +65,25 @@ export function HowItWorksSection() {
               </div>
               <div className="mt-8 flex items-center gap-3">
                 <div className="flex flex-1 gap-1.5" aria-hidden>
-                  {HOW_IT_WORKS_SLIDES.map((_, index) => (
-                    <span
-                      key={index}
-                      data-hiw-tick
-                      className={`h-1 flex-1 rounded-full ${index === 0 ? "bg-blue-600" : "bg-slate-200"}`}
-                    />
-                  ))}
+                  {HOW_IT_WORKS_SLIDES.map((_, index) => {
+                    const activeIndex = reducedMotion ? STEP_COUNT - 1 : step;
+                    return (
+                      <span
+                        key={index}
+                        data-hiw-tick
+                        className={`h-1 flex-1 rounded-full transition-colors duration-200 ${
+                          index <= activeIndex ? "bg-blue-600" : "bg-slate-200"
+                        }`}
+                      />
+                    );
+                  })}
                 </div>
                 <span
                   data-hiw-counter
-                  data-hiw-step="1"
+                  data-hiw-step={reducedMotion ? STEP_COUNT : step + 1}
                   className="shrink-0 text-xs font-medium tabular-nums text-slate-400"
                 >
-                  1 / {HOW_IT_WORKS_SLIDES.length}
+                  {reducedMotion ? STEP_COUNT : step + 1} / {STEP_COUNT}
                 </span>
               </div>
             </div>
@@ -316,27 +95,30 @@ export function HowItWorksSection() {
                 <span className="h-2.5 w-2.5 rounded-full bg-emerald-300" />
               </div>
 
-              {HOW_IT_WORKS_SLIDES.map((slide, index) => (
-                <div
-                  key={index}
-                  data-hiw-panel
-                  data-kind={slide.kind}
-                  className="absolute inset-x-0 top-9 bottom-0 p-6"
-                  style={{ opacity: index === 0 ? 1 : 0 }}
-                >
-                  {slide.kind === "form" ? (
-                    <FormSlide {...slide} />
-                  ) : slide.kind === "upload" ? (
-                    <UploadSlide />
-                  ) : slide.kind === "universities" ? (
-                    <UniversitiesSlide />
-                  ) : slide.kind === "apply" ? (
-                    <ApplySlide />
-                  ) : (
-                    <StatusSlide />
-                  )}
-                </div>
-              ))}
+              {HOW_IT_WORKS_SLIDES.map((slide, index) => {
+                const active = reducedMotion ? index === STEP_COUNT - 1 : index === step;
+                return (
+                  <div
+                    key={index}
+                    data-hiw-panel
+                    data-kind={slide.kind}
+                    data-active={active || undefined}
+                    className="group absolute inset-x-0 top-9 bottom-0 p-6 transition-[opacity,transform,filter] duration-[450ms] ease-in-out motion-reduce:transition-none data-[active]:pointer-events-auto data-[active]:translate-y-0 data-[active]:opacity-100 data-[active]:blur-0 pointer-events-none translate-y-4 opacity-0 blur-sm"
+                  >
+                    {slide.kind === "form" ? (
+                      <FormSlide {...slide} />
+                    ) : slide.kind === "upload" ? (
+                      <UploadSlide />
+                    ) : slide.kind === "universities" ? (
+                      <UniversitiesSlide />
+                    ) : slide.kind === "apply" ? (
+                      <ApplySlide />
+                    ) : (
+                      <StatusSlide />
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -377,7 +159,10 @@ function FormSlide({
   return (
     <div className="flex h-full flex-col">
       <div className="h-1 w-full overflow-hidden rounded-full bg-slate-100">
-        <div data-hiw-progress className="h-full origin-left scale-x-0 rounded-full bg-blue-600 motion-reduce:scale-x-100" />
+        <div
+          data-hiw-progress
+          className="h-full origin-left scale-x-0 rounded-full bg-blue-600 transition-transform duration-500 ease-linear motion-reduce:scale-x-100 group-data-[active]:scale-x-100"
+        />
       </div>
       <p className="mt-3 text-xs font-semibold text-blue-600">{step}</p>
       <h3 className="mt-1 text-sm font-semibold text-slate-950">{title}</h3>
@@ -408,7 +193,7 @@ function UploadSlide() {
         {t.landing.howItWorks.uploadTitle}
       </h3>
       <div className="mt-4 flex flex-col gap-2.5">
-        {t.landing.howItWorks.mockDocuments.map((name) => (
+        {t.landing.howItWorks.mockDocuments.map((name, index) => (
           <div
             key={name}
             className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5"
@@ -416,7 +201,8 @@ function UploadSlide() {
             <span className="text-xs font-medium text-slate-800">{name}</span>
             <span
               data-hiw-check
-              className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"
+              style={{ transitionDelay: `${index * 80}ms` }}
+              className="flex h-5 w-5 scale-75 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 opacity-0 blur-sm transition-all duration-300 ease-out motion-reduce:scale-100 motion-reduce:opacity-100 motion-reduce:blur-0 group-data-[active]:scale-100 group-data-[active]:opacity-100 group-data-[active]:blur-0"
             >
               <CheckIcon />
             </span>
@@ -437,7 +223,7 @@ function UniversitiesSlide() {
         {t.landing.howItWorks.chooseTitle}
       </h3>
       <div className="mt-4 flex flex-col gap-2.5">
-        {MOCK_UNIVERSITIES.map((university) => (
+        {MOCK_UNIVERSITIES.map((university, index) => (
           <div
             key={university.name}
             className={`flex items-center justify-between rounded-lg border px-3 py-2.5 ${
@@ -457,7 +243,11 @@ function UniversitiesSlide() {
               }`}
             >
               {university.picked ? (
-                <span data-hiw-check>
+                <span
+                  data-hiw-check
+                  style={{ transitionDelay: `${index * 80}ms` }}
+                  className="inline-flex scale-75 opacity-0 blur-sm transition-all duration-300 ease-out motion-reduce:scale-100 motion-reduce:opacity-100 motion-reduce:blur-0 group-data-[active]:scale-100 group-data-[active]:opacity-100 group-data-[active]:blur-0"
+                >
                   <CheckIcon />
                 </span>
               ) : null}
@@ -482,14 +272,14 @@ function ApplySlide() {
       <div className="relative mt-6 flex h-12 w-56 items-center justify-center">
         <div
           data-hiw-apply-loading
-          className="absolute inset-0 flex items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-semibold text-white motion-reduce:opacity-0"
+          className="absolute inset-0 flex items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-semibold text-white transition-opacity duration-200 motion-reduce:opacity-0 group-data-[active]:opacity-100"
         >
           <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
           {t.landing.howItWorks.submitting}
         </div>
         <div
           data-hiw-apply-done
-          className="absolute inset-0 flex items-center justify-center gap-2 rounded-xl bg-emerald-600 text-sm font-semibold text-white opacity-0 motion-reduce:opacity-100"
+          className="absolute inset-0 flex items-center justify-center gap-2 rounded-xl bg-emerald-600 text-sm font-semibold text-white opacity-0 transition-opacity delay-200 duration-200 motion-reduce:opacity-100 group-data-[active]:opacity-100"
         >
           <CheckIcon />
           {APPLY_UNIVERSITY_COUNT} {t.landing.howItWorks.applicationsSubmitted}
@@ -518,19 +308,19 @@ function StatusSlide() {
           <span className="relative inline-flex h-5 w-24 shrink-0 items-center justify-end">
             <span
               data-hiw-status-a
-              className="absolute right-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500 ring-1 ring-slate-200 motion-reduce:opacity-0"
+              className="absolute right-0 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500 ring-1 ring-slate-200 transition-opacity duration-150 motion-reduce:opacity-0 group-data-[active]:opacity-100"
             >
               {t.landing.howItWorks.statusDraft}
             </span>
             <span
               data-hiw-status-b
-              className="absolute right-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 opacity-0 ring-1 ring-amber-100"
+              className="absolute right-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 opacity-0 ring-1 ring-amber-100 transition-opacity duration-150 group-data-[active]:opacity-100 group-data-[active]:delay-150"
             >
               {t.landing.howItWorks.statusInProgress}
             </span>
             <span
               data-hiw-status-c
-              className="absolute right-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 opacity-0 ring-1 ring-emerald-100 motion-reduce:opacity-100"
+              className="absolute right-0 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 opacity-0 ring-1 ring-emerald-100 transition-opacity duration-150 motion-reduce:opacity-100 group-data-[active]:opacity-100 group-data-[active]:delay-300"
             >
               {t.landing.howItWorks.statusSubmitted}
             </span>

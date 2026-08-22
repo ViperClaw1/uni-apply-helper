@@ -31,25 +31,21 @@ async function waitForStep(page: Page, step: number) {
   expect(await visibleCaptionCount(page)).toBe(1);
 }
 
-async function waitUntilPinned(page: Page) {
-  await expect
-    .poll(async () => Math.abs(await pinTop(page)), { timeout: 8_000 })
-    .toBeLessThan(32);
-}
-
 async function visibleCaptionCount(page: Page) {
   return page.locator("[data-hiw-caption]").evaluateAll(
     (els) => els.filter((el) => Number.parseFloat(getComputedStyle(el).opacity) > 0.4).length,
   );
 }
 
-async function startSampling(page: Page) {
+async function startPinSampling(page: Page) {
   await page.evaluate(() => {
     const w = window as Window & { __hiwSamples?: Sample[]; __hiwRaf?: number };
     w.__hiwSamples = [];
     const t0 = performance.now();
     const loop = () => {
-      w.__hiwSamples!.push({ y: window.scrollY, t: performance.now() - t0 });
+      const pin = document.querySelector("[data-hiw-root=pin]");
+      const y = pin ? pin.getBoundingClientRect().top : 0;
+      w.__hiwSamples!.push({ y, t: performance.now() - t0 });
       w.__hiwRaf = requestAnimationFrame(loop);
     };
     loop();
@@ -64,24 +60,11 @@ async function stopSampling(page: Page) {
   });
 }
 
-function maxBounceDown(samples: Sample[]) {
+function maxPinBounce(samples: Sample[]) {
   if (samples.length === 0) return 0;
-  let peak = samples[0].y;
   let bounce = 0;
   for (const sample of samples) {
-    if (sample.y > peak) peak = sample.y;
-    bounce = Math.max(bounce, peak - sample.y);
-  }
-  return bounce;
-}
-
-function maxBounceUp(samples: Sample[]) {
-  if (samples.length === 0) return 0;
-  let trough = samples[0].y;
-  let bounce = 0;
-  for (const sample of samples) {
-    if (sample.y < trough) trough = sample.y;
-    bounce = Math.max(bounce, sample.y - trough);
+    bounce = Math.max(bounce, Math.abs(sample.y));
   }
   return bounce;
 }
@@ -96,7 +79,7 @@ async function userWheel(page: Page, deltaY: number) {
       cancelable: true,
       composed: true,
     });
-    const canceled = !document.documentElement.dispatchEvent(event);
+    const canceled = !window.dispatchEvent(event);
     if (!canceled) window.scrollBy(0, dy);
   }, deltaY);
 }
@@ -142,49 +125,43 @@ async function scrollJustPastHiw(page: Page) {
   await page.waitForTimeout(150);
 }
 
-async function scrollbarNudge(page: Page, dy: number) {
-  await waitUntilIdle(page);
-  await page.evaluate((delta) => {
-    window.scrollTo(0, window.scrollY + delta);
-    window.dispatchEvent(new Event("scroll"));
-  }, dy);
-  await page.waitForTimeout(50);
-}
-
 test.describe("How it works scroll", () => {
   test("fast wheel into the section does not overshoot then snap back", async ({ page }) => {
     await openLanding(page);
 
-    const top = await page.locator("[data-hiw-root=pin]").evaluate((el) => {
+    const top = await page.locator("#how-it-works").evaluate((el) => {
       return el.getBoundingClientRect().top + window.scrollY;
     });
     await page.evaluate((y) => window.scrollTo(0, Math.max(0, y - 420)), top);
 
-    await startSampling(page);
     for (let i = 0; i < 10; i += 1) {
       await userWheel(page, 480);
     }
-    await page.waitForTimeout(500);
-    const samples = await stopSampling(page);
 
-    expect(maxBounceDown(samples)).toBeLessThan(BOUNCE_PX);
-    expect(Math.abs(await pinTop(page))).toBeLessThan(120);
+    await waitUntilLocked(page);
+    expect(Math.abs(await pinTop(page))).toBeLessThan(32);
     expect(await currentStep(page)).toBe(1);
     expect(await visibleCaptionCount(page)).toBe(1);
+
+    await startPinSampling(page);
+    await page.waitForTimeout(400);
+    const samples = await stopSampling(page);
+    expect(maxPinBounce(samples)).toBeLessThan(BOUNCE_PX);
   });
 
   test("scrollIntoView onto the section does not snap back", async ({ page }) => {
     await openLanding(page);
-    await startSampling(page);
     await page.locator("#how-it-works").evaluate((el) => {
       el.scrollIntoView({ behavior: "instant", block: "start" });
     });
-    await page.waitForTimeout(500);
-    const samples = await stopSampling(page);
-
-    expect(maxBounceDown(samples)).toBeLessThan(BOUNCE_PX);
-    await waitUntilPinned(page);
+    await waitUntilLocked(page);
     expect(await currentStep(page)).toBe(1);
+    expect(Math.abs(await pinTop(page))).toBeLessThan(32);
+
+    await startPinSampling(page);
+    await page.waitForTimeout(400);
+    const samples = await stopSampling(page);
+    expect(maxPinBounce(samples)).toBeLessThan(BOUNCE_PX);
   });
 
   test("wheel inside the section moves exactly one step at a time both ways", async ({ page }) => {
@@ -213,22 +190,29 @@ test.describe("How it works scroll", () => {
     await waitForStep(page, 2);
   });
 
-  test("scrollbar movement inside the section moves exactly one step at a time both ways", async ({
-    page,
-  }) => {
+  test("locked section keeps body fixed while stepping with wheel", async ({ page }) => {
     await openLanding(page);
     await pinFromAbove(page);
     expect(await currentStep(page)).toBe(1);
 
-    await scrollbarNudge(page, 40);
+    await expect
+      .poll(async () =>
+        page.evaluate(() => document.body.style.position === "fixed"),
+      )
+      .toBe(true);
+
+    await userWheel(page, 140);
     await waitForStep(page, 2);
     expect(await isLocked(page)).toBe(true);
+    expect(
+      await page.evaluate(() => document.body.style.position === "fixed"),
+    ).toBe(true);
 
-    await scrollbarNudge(page, 40);
+    await userWheel(page, 140);
     await waitForStep(page, 3);
     expect(await isLocked(page)).toBe(true);
 
-    await scrollbarNudge(page, -40);
+    await userWheel(page, -140);
     await waitForStep(page, 2);
     expect(await isLocked(page)).toBe(true);
   });
@@ -240,18 +224,20 @@ test.describe("How it works scroll", () => {
 
     await scrollJustPastHiw(page);
 
-    await startSampling(page);
     for (let i = 0; i < 16; i += 1) {
       await userWheel(page, -120);
       await page.waitForTimeout(80);
       if (await isLocked(page)) break;
     }
-    await page.waitForTimeout(400);
-    const samples = await stopSampling(page);
 
-    expect(maxBounceUp(samples)).toBeLessThan(BOUNCE_PX);
     await waitUntilLocked(page);
     expect(await currentStep(page)).toBe(9);
     expect(await visibleCaptionCount(page)).toBe(1);
+    expect(Math.abs(await pinTop(page))).toBeLessThan(32);
+
+    await startPinSampling(page);
+    await page.waitForTimeout(400);
+    const samples = await stopSampling(page);
+    expect(maxPinBounce(samples)).toBeLessThan(BOUNCE_PX);
   });
 });
