@@ -4,12 +4,21 @@ import { useCallback, useEffect, useRef, useState, type RefObject } from "react"
 
 const STEP_MS = 450;
 const ENTRY_MS = 280;
-const UNLOCK_COOLDOWN_MS = 700;
+const UNLOCK_COOLDOWN_MS = 900;
 const WHEEL_THRESHOLD = 12;
 const APPROACH_PAD = 32;
-const EXIT_PAD = 48;
+const EXIT_PAD = 64;
 
 type ReadyState = "ssr" | "booting" | "true" | "reduce";
+
+type LockMeta = {
+  scrollY: number;
+  sectionTop: number;
+  sectionHeight: number;
+  maxScroll: number;
+};
+
+type ExitIntent = "down" | "up" | null;
 
 export function useHiwScrollLock(
   sectionRef: RefObject<HTMLElement | null>,
@@ -20,7 +29,12 @@ export function useHiwScrollLock(
   const [busy, setBusy] = useState(false);
   const [ready, setReady] = useState<ReadyState>("ssr");
 
-  const savedScrollRef = useRef(0);
+  const lockMetaRef = useRef<LockMeta>({
+    scrollY: 0,
+    sectionTop: 0,
+    sectionHeight: 0,
+    maxScroll: 0,
+  });
   const stepRef = useRef(0);
   const lockedRef = useRef(false);
   const busyRef = useRef(false);
@@ -28,6 +42,7 @@ export function useHiwScrollLock(
   const reducedRef = useRef(false);
   const rootRef = useRef<HTMLElement | null>(null);
   const cooldownRef = useRef(false);
+  const exitIntentRef = useRef<ExitIntent>(null);
 
   const syncDataset = useCallback(() => {
     const root = rootRef.current;
@@ -43,29 +58,43 @@ export function useHiwScrollLock(
     }
   }, [stepCount]);
 
+  const captureLockMeta = useCallback(
+    (scrollY: number) => {
+      const section = sectionRef.current;
+      const sectionTop = section?.offsetTop ?? scrollY;
+      const sectionHeight = section?.offsetHeight ?? window.innerHeight;
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      lockMetaRef.current = { scrollY, sectionTop, sectionHeight, maxScroll };
+    },
+    [sectionRef],
+  );
+
   const applyBodyLock = useCallback((scrollY: number) => {
-    savedScrollRef.current = scrollY;
+    captureLockMeta(scrollY);
     document.body.style.position = "fixed";
     document.body.style.top = `-${scrollY}px`;
     document.body.style.left = "0";
     document.body.style.right = "0";
     document.body.style.width = "100%";
     document.body.style.overflow = "hidden";
-  }, []);
+  }, [captureLockMeta]);
 
   const releaseBodyLock = useCallback((scrollY: number) => {
+    const y = Math.max(0, Math.round(scrollY));
     document.body.style.position = "";
     document.body.style.top = "";
     document.body.style.left = "";
     document.body.style.right = "";
     document.body.style.width = "";
     document.body.style.overflow = "";
-    requestAnimationFrame(() => window.scrollTo(0, scrollY));
+    window.scrollTo(0, y);
+    requestAnimationFrame(() => window.scrollTo(0, y));
   }, []);
 
   const lock = useCallback(
     (scrollY: number, initialStep: number) => {
-      if (lockedRef.current || reducedRef.current) return;
+      if (lockedRef.current || reducedRef.current || cooldownRef.current) return;
+      exitIntentRef.current = null;
       applyBodyLock(scrollY);
       lockedRef.current = true;
       allowStepRef.current = false;
@@ -82,42 +111,35 @@ export function useHiwScrollLock(
   );
 
   const unlock = useCallback(
-    (targetScrollY: number) => {
+    (targetScrollY: number, intent: ExitIntent) => {
       if (!lockedRef.current) return;
       lockedRef.current = false;
       busyRef.current = false;
       allowStepRef.current = true;
       cooldownRef.current = true;
+      exitIntentRef.current = intent;
       setLocked(false);
       setBusy(false);
       syncDataset();
       releaseBodyLock(targetScrollY);
       window.setTimeout(() => {
         cooldownRef.current = false;
+        exitIntentRef.current = null;
       }, UNLOCK_COOLDOWN_MS);
     },
     [releaseBodyLock, syncDataset],
   );
 
-  const sectionMetrics = useCallback(() => {
-    const section = sectionRef.current;
-    if (!section) return null;
-    const top = section.offsetTop;
-    return { top, bottom: top + section.offsetHeight, height: section.offsetHeight };
-  }, [sectionRef]);
-
   const exitDown = useCallback(() => {
-    const metrics = sectionMetrics();
-    if (!metrics) return;
-    const exitY = Math.min(
-      document.documentElement.scrollHeight - window.innerHeight,
-      savedScrollRef.current + metrics.height + EXIT_PAD,
-    );
-    unlock(exitY);
-  }, [sectionMetrics, unlock]);
+    const { scrollY, sectionHeight, maxScroll } = lockMetaRef.current;
+    const exitY = Math.min(maxScroll, scrollY + sectionHeight + EXIT_PAD);
+    unlock(exitY, "down");
+  }, [unlock]);
 
   const exitUp = useCallback(() => {
-    unlock(Math.max(0, savedScrollRef.current - EXIT_PAD));
+    const { scrollY } = lockMetaRef.current;
+    const exitY = Math.max(0, scrollY - window.innerHeight + EXIT_PAD);
+    unlock(exitY, "up");
   }, [unlock]);
 
   const gotoStep = useCallback(
@@ -143,17 +165,23 @@ export function useHiwScrollLock(
   const tryLockFromScroll = useCallback(
     (direction: "down" | "up") => {
       if (lockedRef.current || reducedRef.current || cooldownRef.current) return;
+      if (exitIntentRef.current === direction) return;
+
       const section = sectionRef.current;
       if (!section) return;
       const rect = section.getBoundingClientRect();
       const vh = window.innerHeight;
 
-      if (direction === "down" && rect.top <= 1 && rect.top >= -APPROACH_PAD && rect.bottom > vh * 0.55) {
-        lock(window.scrollY + rect.top, 0);
+      if (direction === "down") {
+        if (rect.bottom < vh * 0.35) return;
+        if (rect.top <= 1 && rect.top >= -APPROACH_PAD && rect.bottom > vh * 0.55) {
+          lock(window.scrollY + rect.top, 0);
+        }
         return;
       }
 
-      if (direction === "up" && rect.top <= -APPROACH_PAD && rect.top >= -vh && rect.bottom > vh * 0.75) {
+      if (rect.top > vh * 0.35) return;
+      if (rect.top <= -APPROACH_PAD && rect.top >= -vh && rect.bottom > vh * 0.75) {
         lock(window.scrollY + rect.top, stepCount - 1);
       }
     },
@@ -230,7 +258,6 @@ export function useHiwScrollLock(
       const section = sectionRef.current;
       if (!section || cooldownRef.current) return;
       const rect = section.getBoundingClientRect();
-      const vh = window.innerHeight;
 
       if (event.deltaY > 0) {
         if (rect.top > 0) {

@@ -125,6 +125,17 @@ async function scrollJustPastHiw(page: Page) {
   await page.waitForTimeout(150);
 }
 
+async function advanceToStep(page: Page, targetStep: number) {
+  for (let step = 1; step < targetStep; step += 1) {
+    await userWheel(page, 140);
+    await waitForStep(page, step + 1);
+  }
+}
+
+async function hiwDocumentTop(page: Page) {
+  return page.locator("#how-it-works").evaluate((el) => el.offsetTop);
+}
+
 test.describe("How it works scroll", () => {
   test("fast wheel into the section does not overshoot then snap back", async ({ page }) => {
     await openLanding(page);
@@ -136,9 +147,11 @@ test.describe("How it works scroll", () => {
 
     for (let i = 0; i < 10; i += 1) {
       await userWheel(page, 480);
+      if (await isLocked(page)) break;
     }
 
     await waitUntilLocked(page);
+    await waitUntilIdle(page);
     expect(Math.abs(await pinTop(page))).toBeLessThan(32);
     expect(await currentStep(page)).toBe(1);
     expect(await visibleCaptionCount(page)).toBe(1);
@@ -239,5 +252,61 @@ test.describe("How it works scroll", () => {
     await page.waitForTimeout(400);
     const samples = await stopSampling(page);
     expect(maxPinBounce(samples)).toBeLessThan(BOUNCE_PX);
+  });
+
+  test("exiting down from step 9 scrolls past the section without jumping to top", async ({
+    page,
+  }) => {
+    await openLanding(page);
+    await pinFromAbove(page);
+    const hiwTop = await hiwDocumentTop(page);
+
+    await advanceToStep(page, 9);
+    expect(await currentStep(page)).toBe(9);
+
+    await userWheel(page, 140);
+    await page.waitForTimeout(500);
+
+    expect(await isLocked(page)).toBe(false);
+    const scrollY = await page.evaluate(() => window.scrollY);
+    expect(scrollY).toBeGreaterThan(120);
+    expect(scrollY).toBeGreaterThan(hiwTop + 120);
+
+    const hiwViewportTop = await page.locator("#how-it-works").evaluate((el) => {
+      return el.getBoundingClientRect().top;
+    });
+    expect(hiwViewportTop).toBeLessThan(-40);
+
+    await userWheel(page, 200);
+    await page.waitForTimeout(400);
+    expect(await isLocked(page)).toBe(false);
+    await expect(page.locator("#universities")).toBeInViewport();
+  });
+
+  test("exiting up from step 1 scrolls to hero without snapping back to how it works", async ({
+    page,
+  }) => {
+    await openLanding(page);
+    await pinFromAbove(page);
+    expect(await currentStep(page)).toBe(1);
+
+    const hiwTop = await hiwDocumentTop(page);
+
+    await userWheel(page, -140);
+    await page.waitForTimeout(500);
+
+    expect(await isLocked(page)).toBe(false);
+    const scrollY = await page.evaluate(() => window.scrollY);
+    expect(scrollY).toBeLessThan(hiwTop - 120);
+
+    const hiwViewportTop = await page.locator("#how-it-works").evaluate((el) => {
+      return el.getBoundingClientRect().top;
+    });
+    expect(hiwViewportTop).toBeGreaterThan(80);
+
+    await userWheel(page, -120);
+    await page.waitForTimeout(400);
+    expect(await isLocked(page)).toBe(false);
+    await expect(page.getByRole("heading", { name: /Fill it once/i })).toBeInViewport();
   });
 });
