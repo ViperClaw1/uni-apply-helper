@@ -96,21 +96,30 @@ export function HowItWorksSection() {
 
         let current = 0;
         let animating = false;
+        let allowStep = true;
+        let restoreScroll: (() => void) | undefined;
 
         const setCounter = (index: number) => {
           if (counter) counter.textContent = `${index + 1} / ${steps}`;
         };
 
-        const jumpTo = (index: number) => {
-          current = index;
-          animating = false;
-          setCounter(index);
-          tl.time(tl.labels[`step-${index}`] ?? 0);
-        };
+        const unlock = gsap.delayedCall(0.28, () => {
+          allowStep = true;
+        }).pause();
 
-        const goto = (index: number) => {
-          if (animating || index < 0 || index >= steps || index === current) return;
+        let st: ScrollTrigger;
+
+        const goto = (index: number, scrollingDown: boolean) => {
+          if ((index >= steps && scrollingDown) || (index < 0 && !scrollingDown)) {
+            observer.disable();
+            if (scrollingDown) st.scroll(st.end + 1);
+            else st.scroll(Math.max(0, st.start - 1));
+            return;
+          }
+          if (animating || !allowStep || index < 0 || index >= steps || index === current) return;
+
           animating = true;
+          allowStep = false;
           current = index;
           setCounter(index);
           tl.tweenTo(`step-${index}`, {
@@ -119,82 +128,64 @@ export function HowItWorksSection() {
             overwrite: true,
             onComplete: () => {
               animating = false;
+              allowStep = true;
             },
           });
         };
 
-        let engaged = false;
+        const observer = ScrollTrigger.observe({
+          type: "wheel,touch",
+          tolerance: 10,
+          preventDefault: true,
+          onDown: () => goto(current + 1, true),
+          onUp: () => goto(current - 1, false),
+          onEnable(self) {
+            allowStep = false;
+            unlock.restart(true);
+            const saved = self.scrollY();
+            restoreScroll = () => self.scrollY(saved);
+            document.addEventListener("scroll", restoreScroll, { passive: false });
+          },
+          onDisable() {
+            unlock.pause();
+            allowStep = true;
+            animating = false;
+            if (restoreScroll) {
+              document.removeEventListener("scroll", restoreScroll);
+              restoreScroll = undefined;
+            }
+          },
+        });
+        observer.disable();
 
-        const st = ScrollTrigger.create({
+        st = ScrollTrigger.create({
           trigger: pin,
-          start: "top top",
-          end: "+=64",
           pin: true,
+          start: "top top",
+          end: "+=200",
           invalidateOnRefresh: true,
-          onEnter: () => {
-            if (engaged) return;
-            engaged = true;
-            jumpTo(0);
+          onEnter: (self) => {
+            if (observer.isEnabled) return;
+            current = 0;
+            tl.time(tl.labels["step-0"] ?? 0);
+            setCounter(0);
+            self.scroll(self.start + 1);
+            observer.enable();
           },
-          onEnterBack: () => {
-            if (engaged) return;
-            engaged = true;
-            jumpTo(steps - 1);
-          },
-          onLeave: () => {
-            engaged = false;
-            animating = false;
-          },
-          onLeaveBack: () => {
-            engaged = false;
-            animating = false;
+          onEnterBack: (self) => {
+            if (observer.isEnabled) return;
+            current = steps - 1;
+            tl.time(tl.labels[`step-${steps - 1}`] ?? tl.duration());
+            setCounter(steps - 1);
+            self.scroll(self.end - 1);
+            observer.enable();
           },
         });
 
-        const onWheel = (event: WheelEvent) => {
-          if (!engaged) return;
-          if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
-
-          const dir: 1 | -1 = event.deltaY > 0 ? 1 : -1;
-          const next = current + dir;
-
-          if (next < 0 || next >= steps) return;
-
-          event.preventDefault();
-          if (animating) return;
-          goto(next);
-        };
-
-        window.addEventListener("wheel", onWheel, { passive: false, capture: true });
-
-        let touchY = 0;
-        const onTouchStart = (event: TouchEvent) => {
-          touchY = event.touches[0]?.clientY ?? 0;
-        };
-        const onTouchMove = (event: TouchEvent) => {
-          if (!engaged) return;
-          const y = event.touches[0]?.clientY ?? touchY;
-          const dy = touchY - y;
-          if (Math.abs(dy) < 24) return;
-
-          const dir: 1 | -1 = dy > 0 ? 1 : -1;
-          touchY = y;
-          const next = current + dir;
-
-          if (next < 0 || next >= steps) return;
-
-          event.preventDefault();
-          if (animating) return;
-          goto(next);
-        };
-
-        pin.addEventListener("touchstart", onTouchStart, { passive: true });
-        pin.addEventListener("touchmove", onTouchMove, { passive: false });
-
         return () => {
-          window.removeEventListener("wheel", onWheel, { capture: true });
-          pin.removeEventListener("touchstart", onTouchStart);
-          pin.removeEventListener("touchmove", onTouchMove);
+          unlock.kill();
+          if (restoreScroll) document.removeEventListener("scroll", restoreScroll);
+          observer.kill();
           st.kill();
         };
       });
