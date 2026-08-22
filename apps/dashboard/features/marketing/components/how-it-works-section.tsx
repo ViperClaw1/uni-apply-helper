@@ -19,12 +19,24 @@ export function HowItWorksSection() {
 
   useGSAP(
     () => {
-      const mm = gsap.matchMedia();
-      mm.add("(prefers-reduced-motion: no-preference)", () => {
-        const pin = root.current;
-        if (!pin) return;
+      const pin = root.current;
+      if (!pin) return;
+      pin.dataset.hiwReady = "booting";
 
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        pin.dataset.hiwReady = "reduce";
         const panels = gsap.utils.toArray<HTMLElement>("[data-hiw-panel]");
+        const captions = gsap.utils.toArray<HTMLElement>("[data-hiw-caption]");
+        const last = panels.length - 1;
+        if (last < 0) return;
+        gsap.set(panels.slice(0, last), { opacity: 0 });
+        gsap.set(panels[last], { opacity: 1, y: 0, filter: "none" });
+        gsap.set(captions.slice(0, last), { opacity: 0 });
+        gsap.set(captions[last], { opacity: 1, y: 0 });
+        return;
+      }
+
+      const panels = gsap.utils.toArray<HTMLElement>("[data-hiw-panel]");
         const captions = gsap.utils.toArray<HTMLElement>("[data-hiw-caption]");
         const ticks = gsap.utils.toArray<HTMLElement>("[data-hiw-tick]");
         const counter = pin.querySelector<HTMLElement>("[data-hiw-counter]");
@@ -98,12 +110,20 @@ export function HowItWorksSection() {
         let animating = false;
         let allowStep = true;
 
+        const syncBusy = () => {
+          if (animating || !allowStep) pin.dataset.hiwBusy = "true";
+          else delete pin.dataset.hiwBusy;
+        };
+
         const setCounter = (index: number) => {
-          if (counter) counter.textContent = `${index + 1} / ${steps}`;
+          if (!counter) return;
+          counter.dataset.hiwStep = String(index + 1);
+          counter.textContent = `${index + 1} / ${steps}`;
         };
 
         const unlock = gsap.delayedCall(0.28, () => {
           allowStep = true;
+          syncBusy();
         }).pause();
 
         let st: ScrollTrigger;
@@ -119,6 +139,7 @@ export function HowItWorksSection() {
 
           animating = true;
           allowStep = false;
+          syncBusy();
           current = index;
           setCounter(index);
           tl.tweenTo(`step-${index}`, {
@@ -128,9 +149,12 @@ export function HowItWorksSection() {
             onComplete: () => {
               animating = false;
               allowStep = true;
+              syncBusy();
             },
           });
         };
+
+        let lastY = 0;
 
         const observer = ScrollTrigger.observe({
           type: "wheel,touch",
@@ -139,16 +163,22 @@ export function HowItWorksSection() {
           onDown: () => goto(current + 1, true),
           onUp: () => goto(current - 1, false),
           onEnable() {
+            pin.dataset.hiwLocked = "true";
             allowStep = false;
+            syncBusy();
+            lastY = window.scrollY;
             unlock.restart(true);
           },
           onDisable() {
+            delete pin.dataset.hiwLocked;
+            delete pin.dataset.hiwBusy;
             unlock.pause();
             allowStep = true;
             animating = false;
           },
         });
         observer.disable();
+        pin.dataset.hiwReady = "true";
 
         const showStep = (index: number) => {
           current = index;
@@ -195,33 +225,35 @@ export function HowItWorksSection() {
 
         window.addEventListener("wheel", onWheelCapture, { passive: false, capture: true });
 
+        const onWindowScroll = () => {
+          const y = window.scrollY;
+          const dy = y - lastY;
+          lastY = y;
+          if (!observer.isEnabled || animating || !allowStep) return;
+          if (Math.abs(dy) < 16) return;
+          goto(current + (dy > 0 ? 1 : -1), dy > 0);
+        };
+        window.addEventListener("scroll", onWindowScroll, { passive: true });
+
         return () => {
           unlock.kill();
           window.removeEventListener("wheel", onWheelCapture, { capture: true });
+          window.removeEventListener("scroll", onWindowScroll);
           observer.kill();
           st.kill();
         };
-      });
-
-      mm.add("(prefers-reduced-motion: reduce)", () => {
-        const pin = root.current;
-        if (!pin) return;
-        const panels = gsap.utils.toArray<HTMLElement>("[data-hiw-panel]");
-        const captions = gsap.utils.toArray<HTMLElement>("[data-hiw-caption]");
-        const last = panels.length - 1;
-        if (last < 0) return;
-        gsap.set(panels.slice(0, last), { opacity: 0 });
-        gsap.set(panels[last], { opacity: 1, y: 0, filter: "none" });
-        gsap.set(captions.slice(0, last), { opacity: 0 });
-        gsap.set(captions[last], { opacity: 1, y: 0 });
-      });
     },
     { scope: root },
   );
 
   return (
     <section id="how-it-works" className="border-t border-slate-100 bg-white">
-      <div ref={root} className="flex h-svh flex-col justify-center">
+      <div
+        ref={root}
+        data-hiw-root="pin"
+        data-hiw-ready="ssr"
+        className="flex h-svh flex-col justify-center"
+      >
         <div className="mx-auto w-full max-w-7xl px-6 py-8 lg:py-16">
           <div className="mx-auto max-w-2xl text-center">
             <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100">
@@ -269,6 +301,7 @@ export function HowItWorksSection() {
                 </div>
                 <span
                   data-hiw-counter
+                  data-hiw-step="1"
                   className="shrink-0 text-xs font-medium tabular-nums text-slate-400"
                 >
                   1 / {HOW_IT_WORKS_SLIDES.length}
