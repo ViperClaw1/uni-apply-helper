@@ -103,7 +103,11 @@ export function HowItWorksSection() {
                     data-hiw-panel
                     data-kind={slide.kind}
                     data-active={active || undefined}
-                    className="group absolute inset-x-0 top-9 bottom-0 p-6 transition-[opacity,transform,filter] duration-[450ms] ease-in-out motion-reduce:transition-none data-[active]:pointer-events-auto data-[active]:translate-y-0 data-[active]:opacity-100 data-[active]:blur-0 pointer-events-none translate-y-4 opacity-0 blur-sm"
+                    className={`group absolute inset-x-0 top-9 bottom-0 p-6 transition-[opacity,transform] duration-[450ms] ease-in-out motion-reduce:transition-none ${
+                      active
+                        ? "z-10 translate-y-0 opacity-100"
+                        : "z-0 pointer-events-none translate-y-4 opacity-0"
+                    }`}
                   >
                     {slide.kind === "form" ? (
                       <FormSlide {...slide} />
@@ -202,7 +206,7 @@ function UploadSlide() {
             <span
               data-hiw-check
               style={{ transitionDelay: `${index * 80}ms` }}
-              className="flex h-5 w-5 scale-75 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 opacity-0 blur-sm transition-all duration-300 ease-out motion-reduce:scale-100 motion-reduce:opacity-100 motion-reduce:blur-0 group-data-[active]:scale-100 group-data-[active]:opacity-100 group-data-[active]:blur-0"
+              className="flex h-5 w-5 scale-75 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 opacity-0 transition-all duration-300 ease-out motion-reduce:scale-100 motion-reduce:opacity-100 group-data-[active]:scale-100 group-data-[active]:opacity-100"
             >
               <CheckIcon />
             </span>
@@ -246,7 +250,7 @@ function UniversitiesSlide() {
                 <span
                   data-hiw-check
                   style={{ transitionDelay: `${index * 80}ms` }}
-                  className="inline-flex scale-75 opacity-0 blur-sm transition-all duration-300 ease-out motion-reduce:scale-100 motion-reduce:opacity-100 motion-reduce:blur-0 group-data-[active]:scale-100 group-data-[active]:opacity-100 group-data-[active]:blur-0"
+                  className="inline-flex scale-75 opacity-0 transition-all duration-300 ease-out motion-reduce:scale-100 motion-reduce:opacity-100 group-data-[active]:scale-100 group-data-[active]:opacity-100"
                 >
                   <CheckIcon />
                 </span>

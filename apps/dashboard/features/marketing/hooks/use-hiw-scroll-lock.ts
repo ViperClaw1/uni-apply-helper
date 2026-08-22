@@ -4,8 +4,10 @@ import { useCallback, useEffect, useRef, useState, type RefObject } from "react"
 
 const STEP_MS = 450;
 const ENTRY_MS = 280;
+const UNLOCK_COOLDOWN_MS = 700;
 const WHEEL_THRESHOLD = 12;
 const APPROACH_PAD = 32;
+const EXIT_PAD = 48;
 
 type ReadyState = "ssr" | "booting" | "true" | "reduce";
 
@@ -25,6 +27,7 @@ export function useHiwScrollLock(
   const allowStepRef = useRef(true);
   const reducedRef = useRef(false);
   const rootRef = useRef<HTMLElement | null>(null);
+  const cooldownRef = useRef(false);
 
   const syncDataset = useCallback(() => {
     const root = rootRef.current;
@@ -84,10 +87,14 @@ export function useHiwScrollLock(
       lockedRef.current = false;
       busyRef.current = false;
       allowStepRef.current = true;
+      cooldownRef.current = true;
       setLocked(false);
       setBusy(false);
       syncDataset();
       releaseBodyLock(targetScrollY);
+      window.setTimeout(() => {
+        cooldownRef.current = false;
+      }, UNLOCK_COOLDOWN_MS);
     },
     [releaseBodyLock, syncDataset],
   );
@@ -104,16 +111,14 @@ export function useHiwScrollLock(
     if (!metrics) return;
     const exitY = Math.min(
       document.documentElement.scrollHeight - window.innerHeight,
-      savedScrollRef.current + metrics.height - window.innerHeight + 1,
+      savedScrollRef.current + metrics.height + EXIT_PAD,
     );
     unlock(exitY);
   }, [sectionMetrics, unlock]);
 
   const exitUp = useCallback(() => {
-    const metrics = sectionMetrics();
-    if (!metrics) return;
-    unlock(Math.max(0, metrics.top - 1));
-  }, [sectionMetrics, unlock]);
+    unlock(Math.max(0, savedScrollRef.current - EXIT_PAD));
+  }, [unlock]);
 
   const gotoStep = useCallback(
     (next: number) => {
@@ -137,18 +142,18 @@ export function useHiwScrollLock(
 
   const tryLockFromScroll = useCallback(
     (direction: "down" | "up") => {
-      if (lockedRef.current || reducedRef.current) return;
+      if (lockedRef.current || reducedRef.current || cooldownRef.current) return;
       const section = sectionRef.current;
       if (!section) return;
       const rect = section.getBoundingClientRect();
       const vh = window.innerHeight;
 
-      if (direction === "down" && rect.top <= 1 && rect.bottom > vh * 0.55) {
+      if (direction === "down" && rect.top <= 1 && rect.top >= -APPROACH_PAD && rect.bottom > vh * 0.55) {
         lock(window.scrollY + rect.top, 0);
         return;
       }
 
-      if (direction === "up" && rect.top <= 1 && rect.top >= -APPROACH_PAD && rect.bottom >= vh * 0.5) {
+      if (direction === "up" && rect.top <= -APPROACH_PAD && rect.top >= -vh && rect.bottom > vh * 0.75) {
         lock(window.scrollY + rect.top, stepCount - 1);
       }
     },
@@ -223,7 +228,7 @@ export function useHiwScrollLock(
       }
 
       const section = sectionRef.current;
-      if (!section) return;
+      if (!section || cooldownRef.current) return;
       const rect = section.getBoundingClientRect();
       const vh = window.innerHeight;
 
@@ -238,7 +243,7 @@ export function useHiwScrollLock(
         return;
       }
 
-      if (event.deltaY < 0 && rect.top < 0) {
+      if (event.deltaY < 0 && rect.top < -APPROACH_PAD) {
         const nextTop = rect.top - event.deltaY;
         if (nextTop >= -APPROACH_PAD) {
           event.preventDefault();
