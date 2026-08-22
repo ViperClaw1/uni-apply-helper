@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import { useT } from "@/lib/i18n/context";
-import { gsap, useGSAP } from "@/lib/gsap";
+import { gsap, Observer, ScrollTrigger, useGSAP } from "@/lib/gsap";
 import { HOW_IT_WORKS_SLIDES, type HowItWorksSlide } from "../constants/how-it-works";
 
 const MOCK_UNIVERSITIES = [
@@ -28,77 +28,157 @@ export function HowItWorksSection() {
         const captions = gsap.utils.toArray<HTMLElement>("[data-hiw-caption]");
         const ticks = gsap.utils.toArray<HTMLElement>("[data-hiw-tick]");
         const counter = pin.querySelector<HTMLElement>("[data-hiw-counter]");
-        if (panels.length === 0) return;
+        const steps = panels.length;
+        if (steps === 0) return;
 
-        gsap.set(panels.slice(1), { opacity: 0, y: 16, filter: "blur(4px)" });
-        gsap.set(captions.slice(1), { opacity: 0, y: 16 });
+        gsap.set(panels.slice(1), { autoAlpha: 0, y: 16, filter: "blur(4px)" });
+        gsap.set(captions.slice(1), { autoAlpha: 0, y: 16 });
+        gsap.set(panels[0], { autoAlpha: 1, y: 0, filter: "blur(0px)" });
+        gsap.set(captions[0], { autoAlpha: 1, y: 0 });
 
-        const tl = gsap.timeline({
-          scrollTrigger: {
-            trigger: pin,
-            start: "top top",
-            end: () => `+=${panels.length * 80}vh`,
-            pin: true,
-            scrub: 1,
-            anticipatePin: 1,
-            invalidateOnRefresh: true,
-          },
-        });
+        const tl = gsap.timeline({ paused: true, defaults: { ease: "power2.inOut" } });
 
         panels.forEach((panel, i) => {
           if (i > 0) {
-            tl.to(panels[i - 1], { opacity: 0, y: -16, filter: "blur(4px)", duration: 0.35 }, i);
-            tl.to(captions[i - 1], { opacity: 0, y: -16, duration: 0.35 }, i);
+            tl.to(panels[i - 1], { autoAlpha: 0, y: -16, filter: "blur(4px)", duration: 0.4 });
+            tl.to(captions[i - 1], { autoAlpha: 0, y: -12, duration: 0.18 }, "<");
             tl.fromTo(
               panel,
-              { opacity: 0, y: 16, filter: "blur(4px)" },
-              { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.35 },
-              i,
+              { autoAlpha: 0, y: 16, filter: "blur(4px)" },
+              { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 0.4 },
+              "<",
             );
-            tl.fromTo(captions[i], { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.35 }, i);
-            if (ticks[i - 1]) tl.to(ticks[i - 1], { backgroundColor: "#e2e8f0", duration: 0.2 }, i);
-            if (ticks[i]) tl.to(ticks[i], { backgroundColor: "#2563eb", duration: 0.2 }, i);
+            tl.fromTo(
+              captions[i],
+              { autoAlpha: 0, y: 12 },
+              { autoAlpha: 1, y: 0, duration: 0.25 },
+              "<0.14",
+            );
+            if (ticks[i - 1]) tl.to(ticks[i - 1], { backgroundColor: "#e2e8f0", duration: 0.2 }, "<");
+            if (ticks[i]) tl.to(ticks[i], { backgroundColor: "#2563eb", duration: 0.2 }, "<");
           }
 
           const kind = panel.dataset.kind;
           if (kind === "form") {
             const bar = panel.querySelector("[data-hiw-progress]");
-            if (bar) tl.fromTo(bar, { scaleX: 0 }, { scaleX: 1, duration: 0.8, ease: "none" }, i);
+            if (bar) tl.fromTo(bar, { scaleX: 0 }, { scaleX: 1, duration: 0.45, ease: "none" });
           }
           if (kind === "universities" || kind === "upload") {
             const marks = panel.querySelectorAll("[data-hiw-check]");
             tl.fromTo(
               marks,
-              { scale: 0.25, opacity: 0, filter: "blur(4px)" },
-              { scale: 1, opacity: 1, filter: "blur(0px)", stagger: 0.08, duration: 0.3 },
-              i,
+              { scale: 0.25, autoAlpha: 0, filter: "blur(4px)" },
+              { scale: 1, autoAlpha: 1, filter: "blur(0px)", stagger: 0.08, duration: 0.3 },
             );
           }
           if (kind === "apply") {
             const loading = panel.querySelector("[data-hiw-apply-loading]");
             const done = panel.querySelector("[data-hiw-apply-done]");
-            gsap.set(done, { opacity: 0 });
-            tl.to(loading, { opacity: 0, duration: 0.2 }, i + 0.5);
-            tl.to(done, { opacity: 1, duration: 0.2 }, i + 0.5);
+            gsap.set(done, { autoAlpha: 0 });
+            tl.to(loading, { autoAlpha: 0, duration: 0.2 });
+            tl.to(done, { autoAlpha: 1, duration: 0.2 }, "<");
           }
           if (kind === "status") {
             const a = panel.querySelector("[data-hiw-status-a]");
             const b = panel.querySelector("[data-hiw-status-b]");
             const c = panel.querySelector("[data-hiw-status-c]");
-            gsap.set([b, c], { opacity: 0 });
-            tl.to(a, { opacity: 0, duration: 0.15 }, i + 0.33);
-            tl.to(b, { opacity: 1, duration: 0.15 }, i + 0.33);
-            tl.to(b, { opacity: 0, duration: 0.15 }, i + 0.66);
-            tl.to(c, { opacity: 1, duration: 0.15 }, i + 0.66);
+            gsap.set([b, c], { autoAlpha: 0 });
+            tl.to(a, { autoAlpha: 0, duration: 0.15 });
+            tl.to(b, { autoAlpha: 1, duration: 0.15 }, "<");
+            tl.to(b, { autoAlpha: 0, duration: 0.15 });
+            tl.to(c, { autoAlpha: 1, duration: 0.15 }, "<");
           }
+
+          tl.addLabel(`step-${i}`);
         });
 
-        if (counter) {
-          tl.eventCallback("onUpdate", () => {
-            const index = Math.min(panels.length, Math.floor(tl.progress() * panels.length) + 1);
-            counter.textContent = `${index} / ${panels.length}`;
+        tl.time(tl.labels["step-0"] ?? 0);
+
+        let current = 0;
+        let animating = false;
+
+        const setCounter = (index: number) => {
+          if (counter) counter.textContent = `${index + 1} / ${steps}`;
+        };
+
+        const goto = (index: number) => {
+          if (animating || index < 0 || index >= steps || index === current) return;
+          animating = true;
+          current = index;
+          setCounter(index);
+          tl.tweenTo(`step-${index}`, {
+            duration: 0.5,
+            ease: "power2.inOut",
+            overwrite: true,
+            onComplete: () => {
+              gsap.delayedCall(0.12, () => {
+                animating = false;
+              });
+            },
+          });
+        };
+
+        let st: ScrollTrigger;
+
+        const observer = Observer.create({
+          type: "wheel,touch",
+          wheelSpeed: -1,
+          tolerance: 12,
+          preventDefault: true,
+          lockAxis: true,
+          onUp: () => tryStep(1),
+          onDown: () => tryStep(-1),
+        });
+        observer.disable();
+
+        function tryStep(dir: 1 | -1) {
+          if (animating) return;
+          const next = current + dir;
+          if (next < 0 || next >= steps) {
+            observer.disable();
+            window.scrollTo(0, dir > 0 ? st.end + 2 : Math.max(0, st.start - 2));
+            return;
+          }
+          goto(next);
+        }
+
+        function arm() {
+          observer.enable();
+          animating = true;
+          gsap.delayedCall(0.35, () => {
+            animating = false;
           });
         }
+
+        function disarm() {
+          observer.disable();
+          animating = false;
+        }
+
+        st = ScrollTrigger.create({
+          trigger: pin,
+          start: "top top",
+          end: "+=120%",
+          pin: true,
+          anticipatePin: 1,
+          invalidateOnRefresh: true,
+          onEnter: (self) => {
+            current = 0;
+            tl.time(tl.labels["step-0"] ?? 0);
+            setCounter(0);
+            self.scroll(self.start);
+            arm();
+          },
+          onEnterBack: (self) => {
+            current = steps - 1;
+            tl.time(tl.labels[`step-${steps - 1}`] ?? tl.duration());
+            setCounter(steps - 1);
+            self.scroll(self.end);
+            arm();
+          },
+          onLeave: disarm,
+          onLeaveBack: disarm,
+        });
       });
 
       mm.add("(prefers-reduced-motion: reduce)", () => {
@@ -135,7 +215,7 @@ export function HowItWorksSection() {
 
           <div className="mt-10 grid items-center gap-10 lg:grid-cols-2">
             <div>
-              <div className="relative min-h-24">
+              <div className="relative min-h-24 overflow-hidden">
                 {HOW_IT_WORKS_SLIDES.map((slide, index) => {
                   const caption = captionFor(slide, t.landing.howItWorks);
                   return (
