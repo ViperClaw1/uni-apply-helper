@@ -97,7 +97,6 @@ export function HowItWorksSection() {
         let current = 0;
         let animating = false;
         let allowStep = true;
-        let restoreScroll: (() => void) | undefined;
 
         const setCounter = (index: number) => {
           if (counter) counter.textContent = `${index + 1} / ${steps}`;
@@ -139,52 +138,66 @@ export function HowItWorksSection() {
           preventDefault: true,
           onDown: () => goto(current + 1, true),
           onUp: () => goto(current - 1, false),
-          onEnable(self) {
+          onEnable() {
             allowStep = false;
             unlock.restart(true);
-            const saved = self.scrollY();
-            restoreScroll = () => self.scrollY(saved);
-            document.addEventListener("scroll", restoreScroll, { passive: false });
           },
           onDisable() {
             unlock.pause();
             allowStep = true;
             animating = false;
-            if (restoreScroll) {
-              document.removeEventListener("scroll", restoreScroll);
-              restoreScroll = undefined;
-            }
           },
         });
         observer.disable();
+
+        const showStep = (index: number) => {
+          current = index;
+          tl.time(tl.labels[`step-${index}`] ?? 0);
+          setCounter(index);
+        };
 
         st = ScrollTrigger.create({
           trigger: pin,
           pin: true,
           start: "top top",
-          end: "+=200",
+          end: "+=50%",
           invalidateOnRefresh: true,
-          onEnter: (self) => {
+          onEnter: () => {
             if (observer.isEnabled) return;
-            current = 0;
-            tl.time(tl.labels["step-0"] ?? 0);
-            setCounter(0);
-            self.scroll(self.start + 1);
+            showStep(0);
             observer.enable();
           },
-          onEnterBack: (self) => {
+          onEnterBack: () => {
             if (observer.isEnabled) return;
-            current = steps - 1;
-            tl.time(tl.labels[`step-${steps - 1}`] ?? tl.duration());
-            setCounter(steps - 1);
-            self.scroll(self.end - 1);
+            showStep(steps - 1);
             observer.enable();
           },
+          onLeave: () => observer.disable(),
+          onLeaveBack: () => observer.disable(),
         });
+
+        const onWheelCapture = (event: WheelEvent) => {
+          if (observer.isEnabled || event.deltaY === 0) return;
+
+          const top = pin.getBoundingClientRect().top;
+
+          if (event.deltaY > 0 && top > 0 && top <= event.deltaY) {
+            event.preventDefault();
+            window.scrollTo(0, st.start);
+            return;
+          }
+
+          if (event.deltaY < 0 && top < 0 && top - event.deltaY >= 0) {
+            event.preventDefault();
+            window.scrollTo(0, st.end);
+          }
+        };
+
+        window.addEventListener("wheel", onWheelCapture, { passive: false, capture: true });
 
         return () => {
           unlock.kill();
-          if (restoreScroll) document.removeEventListener("scroll", restoreScroll);
+          window.removeEventListener("wheel", onWheelCapture, { capture: true });
           observer.kill();
           st.kill();
         };
